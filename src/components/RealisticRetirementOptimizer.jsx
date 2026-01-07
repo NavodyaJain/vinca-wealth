@@ -1,13 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { formatCurrency } from '../lib/formatters';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, ReferenceLine, BarChart, Bar, ComposedChart,
+  Area
+} from 'recharts';
+import { formatCurrency, formatAge } from '../lib/formatters';
 import {
   calculateFinancialReality,
   calculateSurvivalMode,
   calculateRealisticOptimization,
   calculateAggressiveFantasy,
-  calculateRealityConfidence
+  calculateRealityConfidence,
+  generateFantasyChartData
 } from '../lib/realisticRetirement';
 
 const RealityConfidenceGauge = ({ score, label, components }) => {
@@ -56,7 +62,7 @@ const RealityConfidenceGauge = ({ score, label, components }) => {
             {label}
           </div>
           <p className="text-sm text-slate-600 mt-2">
-            Reality check based on your income, expenses, and savings
+            How well your retirement plan aligns with income reality
           </p>
         </div>
       </div>
@@ -81,6 +87,17 @@ const RealityConfidenceGauge = ({ score, label, components }) => {
           <div 
             className="bg-blue-600 h-1.5 rounded-full" 
             style={{ width: `${components.lifespanCoverage}%` }}
+          ></div>
+        </div>
+        
+        <div className="flex justify-between text-sm">
+          <span className="text-slate-600">SIP Feasibility</span>
+          <span className="font-medium text-slate-900">{components.sipFeasibility}/100</span>
+        </div>
+        <div className="w-full bg-slate-200 rounded-full h-1.5">
+          <div 
+            className="bg-blue-600 h-1.5 rounded-full" 
+            style={{ width: `${components.sipFeasibility}%` }}
           ></div>
         </div>
       </div>
@@ -330,14 +347,32 @@ const SurvivalModeCard = ({ survivalMode }) => {
     }
   };
 
+  const getIcon = (status) => {
+    switch(status) {
+      case 'safe': return '✓';
+      case 'warning': return '⚠';
+      case 'danger': return '✗';
+      default: return 'ℹ';
+    }
+  };
+
   return (
     <div className="card mb-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">1. Survival Check</h3>
+      <div className="flex items-center mb-4">
+        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3">
+          <span className="text-slate-700 font-medium">1</span>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Survival Check</h3>
+          <p className="text-slate-600 text-sm mt-1">{survivalMode.label}</p>
+        </div>
+      </div>
+      
       <div className="space-y-4">
         <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
           <div className="flex items-start">
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-              <span className="text-slate-700">①</span>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mr-3 mt-0.5 ${getStatusColor(survivalMode.survivalStatus)}`}>
+              <span className="font-medium">{getIcon(survivalMode.survivalStatus)}</span>
             </div>
             <div>
               <h4 className="font-medium text-slate-900 mb-1">Will I run out of money?</h4>
@@ -355,8 +390,15 @@ const SurvivalModeCard = ({ survivalMode }) => {
           </div>
         </div>
         
-        <div className="text-sm text-slate-600">
-          <p><strong>Note:</strong> This checks basic sustainability, not early retirement. Survival is cheap, early retirement is expensive.</p>
+        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-start">
+            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
+              <span className="text-blue-600 text-xs">ℹ</span>
+            </div>
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">Important:</span> {survivalMode.importantNote}
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -367,7 +409,16 @@ const RealisticOptimizationCard = ({ realisticMode, financialReality }) => {
   if (financialReality.monthlyIncome === 0) {
     return (
       <div className="card mb-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">2. Realistic Optimization</h3>
+        <div className="flex items-center mb-4">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+            <span className="text-blue-700 font-medium">2</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Realistic Optimization</h3>
+            <p className="text-slate-600 text-sm mt-1">{realisticMode.label}</p>
+          </div>
+        </div>
+        
         <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-start">
             <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
@@ -388,7 +439,16 @@ const RealisticOptimizationCard = ({ realisticMode, financialReality }) => {
   if (!realisticMode.isRealistic) {
     return (
       <div className="card mb-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">2. Realistic Optimization</h3>
+        <div className="flex items-center mb-4">
+          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+            <span className="text-blue-700 font-medium">2</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900">Realistic Optimization</h3>
+            <p className="text-slate-600 text-sm mt-1">{realisticMode.label}</p>
+          </div>
+        </div>
+        
         <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
           <div className="flex items-start">
             <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
@@ -407,57 +467,108 @@ const RealisticOptimizationCard = ({ realisticMode, financialReality }) => {
 
   return (
     <div className="card mb-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">2. Realistic Optimization</h3>
-      <div className="space-y-4">
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <div className="flex items-center mb-4">
+        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+          <span className="text-blue-700 font-medium">2</span>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">Realistic Optimization</h3>
+          <p className="text-slate-600 text-sm mt-1">{realisticMode.label}</p>
+        </div>
+      </div>
+      
+      <div className="space-y-6">
+        {/* Key Insight */}
+        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
           <div className="flex items-start">
-            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-              <span className="text-blue-600">②</span>
+            <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
+              <span className="text-blue-600 text-xs">💡</span>
             </div>
-            <div>
-              <h4 className="font-medium text-blue-900 mb-1">What is the best I can realistically do?</h4>
-              <p className="text-blue-800 mb-3">Based on your income and expenses</p>
-              
-              {realisticMode.yearsEarlier > 0 ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-white rounded border">
-                    <span className="text-slate-700">Monthly action needed</span>
-                    <span className="text-lg font-bold text-blue-700">+{formatCurrency(realisticMode.usedSurplus)}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-white rounded border">
-                    <span className="text-slate-700">Earliest realistic retirement</span>
-                    <span className="text-lg font-bold text-blue-700">Age {realisticMode.earliestRetirementAge}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-3 bg-white rounded border">
-                    <span className="text-slate-700">Years earlier</span>
-                    <span className="text-lg font-bold text-green-700">-{realisticMode.yearsEarlier} years</span>
-                  </div>
-                  
-                  <p className="text-sm text-slate-700 mt-2">
-                    <strong>Note:</strong> {realisticMode.note}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-3 bg-white rounded border">
-                  <p className="text-slate-800">
-                    Your current plan of {formatCurrency(financialReality.currentSIP)}/month 
-                    is already optimal within realistic constraints.
-                  </p>
-                  <p className="text-sm text-slate-600 mt-1">
-                    You could increase to {formatCurrency(financialReality.maxPossibleSIP)}/month for faster results, 
-                    but that would eliminate your surplus completely.
-                  </p>
-                </div>
-              )}
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">Key insight:</span> {realisticMode.keyInsight}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="relative">
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center">
+                <span className="text-slate-700 font-medium">Now</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">Current</p>
+            </div>
+            
+            <div className="flex-1 h-1 bg-slate-200 mx-4 relative">
+              <div 
+                className="h-1 bg-blue-500 rounded-full absolute top-0 left-0"
+                style={{ width: '70%' }}
+              ></div>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center">
+                <span className="text-blue-700 font-medium">+{formatCurrency(realisticMode.usedSurplus)}</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">Optimized</p>
+            </div>
+            
+            <div className="flex-1 h-1 bg-slate-200 mx-4 relative">
+              <div 
+                className="h-1 bg-green-500 rounded-full absolute top-0 left-0"
+                style={{ width: '30%' }}
+              ></div>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 border-2 border-green-500 flex items-center justify-center">
+                <span className="text-green-700 font-medium">{realisticMode.earliestRetirementAge}</span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">Retire</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Key Metrics */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-white rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-600 mb-1">Monthly Action Needed</p>
+              <p className="text-2xl font-bold text-blue-700">+{formatCurrency(realisticMode.usedSurplus)}</p>
+              <p className="text-xs text-slate-500 mt-1">{realisticMode.explanation?.monthlyAction}</p>
+            </div>
+            
+            <div className="p-4 bg-white rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-600 mb-1">Earliest Realistic Retirement</p>
+              <p className="text-2xl font-bold text-blue-700">Age {realisticMode.earliestRetirementAge}</p>
+              <p className="text-xs text-slate-500 mt-1">{realisticMode.explanation?.earliestAge}</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-white rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-600 mb-1">Years Earlier</p>
+              <p className="text-2xl font-bold text-green-700">-{realisticMode.yearsEarlier} years</p>
+              <p className="text-xs text-slate-500 mt-1">{realisticMode.explanation?.yearsEarlier}</p>
+            </div>
+            
+            <div className="p-4 bg-white rounded-lg border border-slate-200">
+              <p className="text-sm text-slate-600 mb-1">Comfort Level</p>
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                realisticMode.requiresSacrifice 
+                  ? 'bg-amber-100 text-amber-800' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {realisticMode.comfortLevel}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">{realisticMode.note}</p>
             </div>
           </div>
         </div>
         
         <div className="text-sm text-slate-600">
-          <p><strong>How this works:</strong> We use only your available surplus (₹{formatCurrency(financialReality.monthlySurplus)}) 
-          to find improvements that don't break your cash flow.</p>
+          <p><strong>Constraints used:</strong> Only uses actual monthly surplus (₹{formatCurrency(financialReality.monthlySurplus)}), caps SIP to safe % of income, does not assume income growth or extreme sacrifice.</p>
         </div>
       </div>
     </div>
@@ -468,7 +579,16 @@ const AggressiveFantasyCard = ({ aggressiveMode, onExploreFantasy, financialReal
   if (financialReality.monthlyIncome === 0) {
     return (
       <div className="card mb-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">3. Aggressive Fantasy</h3>
+        <div className="flex items-center mb-4">
+          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center mr-3 opacity-50">
+            <span className="text-slate-700 font-medium">3</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 opacity-50">Aggressive Fantasy</h3>
+            <p className="text-slate-600 text-sm mt-1 opacity-50">{aggressiveMode?.label || "If I insist on retiring very early, what would it mathematically cost?"}</p>
+          </div>
+        </div>
+        
         <div className="p-4 bg-slate-100 rounded-lg border border-slate-300 opacity-75">
           <div className="flex items-start">
             <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
@@ -486,58 +606,261 @@ const AggressiveFantasyCard = ({ aggressiveMode, onExploreFantasy, financialReal
     );
   }
 
+  // Generate chart data
+  const chartData = generateFantasyChartData({
+    ...financialReality,
+    monthlySIP: financialReality.currentSIP,
+    currentAge: 30, // Default if not provided
+    lifespan: 85,
+    expectedReturns: 12,
+    inflationRate: 6,
+    moneySaved: 0
+  });
+
+  const FantasyLineChart = () => {
+    const CustomTooltip = ({ active, payload, label }) => {
+      if (active && payload && payload.length) {
+        return (
+          <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-sm">
+            <p className="font-medium text-slate-900">Retire at age {label}</p>
+            <p className="text-sm text-slate-600">
+              Required SIP: <span className="font-medium">{formatCurrency(payload[0].value)}/month</span>
+            </p>
+            {payload[1] && (
+              <p className="text-sm text-slate-600">
+                Max realistic: <span className="font-medium text-blue-600">{formatCurrency(payload[1].value)}/month</span>
+              </p>
+            )}
+          </div>
+        );
+      }
+      return null;
+    };
+
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="retirementAge" 
+            label={{ value: 'Retirement Age', position: 'insideBottom', offset: -10 }}
+            tick={{ fill: '#64748b' }}
+          />
+          <YAxis 
+            label={{ value: 'Monthly SIP Required', angle: -90, position: 'insideLeft' }}
+            tick={{ fill: '#64748b' }}
+            tickFormatter={(value) => formatCurrency(value).replace('₹', '')}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          
+          {/* Current SIP Reference Line */}
+          <ReferenceLine 
+            y={financialReality.currentSIP} 
+            stroke="#94a3b8" 
+            strokeDasharray="3 3"
+            label={{ value: 'Current SIP', position: 'right', fill: '#64748b' }}
+          />
+          
+          {/* Max Realistic SIP Reference Line */}
+          <ReferenceLine 
+            y={financialReality.maxPossibleSIP} 
+            stroke="#3b82f6" 
+            strokeDasharray="3 3"
+            label={{ value: 'Max Realistic SIP', position: 'right', fill: '#3b82f6' }}
+          />
+          
+          {/* Area for realistic zone */}
+          <Area
+            type="monotone"
+            dataKey="maxRealisticSIP"
+            stroke="#3b82f6"
+            fill="#3b82f6"
+            fillOpacity={0.1}
+            name="Realistic Range"
+          />
+          
+          {/* Line for required SIP */}
+          <Line
+            type="monotone"
+            dataKey="requiredSIP"
+            stroke="#ef4444"
+            strokeWidth={2}
+            dot={{ r: 3 }}
+            activeDot={{ r: 6 }}
+            name="Required SIP for Early Retirement"
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    );
+  };
+
+  const IncomeComparisonChart = () => {
+    const sampleData = chartData.filter((_, i) => i % 3 === 0).slice(0, 5);
+
+    return (
+      <ResponsiveContainer width="100%" height={250}>
+        <BarChart data={sampleData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis 
+            dataKey="retirementAge" 
+            tick={{ fill: '#64748b' }}
+          />
+          <YAxis 
+            tick={{ fill: '#64748b' }}
+            tickFormatter={(value) => formatCurrency(value).replace('₹', '')}
+          />
+          <Tooltip 
+            formatter={(value) => [formatCurrency(value), '']}
+            labelFormatter={(label) => `Retire at ${label}`}
+          />
+          <Legend />
+          
+          <Bar 
+            dataKey="monthlyExpenses" 
+            stackId="a" 
+            fill="#94a3b8" 
+            name="Expenses" 
+            radius={[2, 2, 0, 0]}
+          />
+          <Bar 
+            dataKey="requiredSIP" 
+            stackId="a" 
+            fill="#ef4444" 
+            name="Required SIP" 
+            radius={[2, 2, 0, 0]}
+          />
+          
+          <Line
+            type="monotone"
+            dataKey="currentIncome"
+            stroke="#10b981"
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            name="Current Income"
+          />
+          <Line
+            type="monotone"
+            dataKey="requiredIncome"
+            stroke="#8b5cf6"
+            strokeWidth={2}
+            strokeDasharray="3 3"
+            dot={{ r: 4 }}
+            name="Required Income"
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
+
   return (
     <div className="card mb-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">3. Aggressive Fantasy</h3>
-      <div className="space-y-4">
-        <div className="p-4 bg-slate-100 rounded-lg border border-slate-300 opacity-75">
+      <div className="flex items-center mb-4">
+        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center mr-3 opacity-75">
+          <span className="text-slate-700 font-medium">3</span>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900 opacity-75">Aggressive Fantasy</h3>
+          <p className="text-slate-600 text-sm mt-1 opacity-75">{aggressiveMode.label}</p>
+        </div>
+      </div>
+      
+      <div className="space-y-6">
+        {/* Disclaimer */}
+        <div className="p-4 bg-slate-100 rounded-lg border border-slate-300">
           <div className="flex items-start">
-            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-              <span className="text-slate-600">③</span>
+            <div className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
+              <span className="text-amber-600">⚠</span>
             </div>
             <div>
-              <h4 className="font-medium text-slate-700 mb-1">What would it take to retire very early?</h4>
-              <p className="text-slate-600 mb-3">These scenarios are mathematically possible but financially unrealistic today.</p>
-              
-              <div className="space-y-3">
-                {aggressiveMode.fantasies.slice(0, 2).map((fantasy, index) => (
-                  <div key={index} className={`p-3 rounded border ${
-                    fantasy.isRealistic ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium text-slate-900">Retire at {fantasy.targetAge}</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        fantasy.isRealistic ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-700'
-                      }`}>
-                        {fantasy.isRealistic ? 'Borderline possible' : 'Not realistic today'}
-                      </span>
+              <h4 className="font-medium text-slate-900 mb-1">Explicit Disclaimer</h4>
+              <p className="text-slate-700">{aggressiveMode.disclaimer}</p>
+              <div className="mt-3 space-y-2">
+                {aggressiveMode.purpose?.map((purpose, index) => (
+                  <div key={index} className="flex items-start">
+                    <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
+                      <span className="text-slate-600 text-xs">•</span>
                     </div>
-                    <p className="text-sm text-slate-700">{fantasy.message}</p>
-                    {!fantasy.isRealistic && (
-                      <p className="text-xs text-slate-500 mt-1">
-                        Requires {fantasy.incomeMultiplier.toFixed(1)}× your current income
-                      </p>
-                    )}
+                    <p className="text-sm text-slate-600">{purpose}</p>
                   </div>
                 ))}
-              </div>
-              
-              <div className="mt-4">
-                <button
-                  onClick={onExploreFantasy}
-                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-                >
-                  See more aggressive scenarios
-                  <span className="ml-1">→</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="text-sm text-slate-600">
-          <p><strong>Important:</strong> Early retirement requires exponential increases in savings. 
-          These scenarios show what's mathematically possible, not what's financially prudent.</p>
+
+        {/* Charts */}
+        <div className="space-y-8">
+          <div>
+            <h4 className="font-medium text-slate-900 mb-3">Exponential Rise in SIP as Retirement Age Moves Earlier</h4>
+            <p className="text-sm text-slate-600 mb-4">
+              Shows how required monthly SIP increases dramatically for earlier retirement
+            </p>
+            <FantasyLineChart />
+          </div>
+          
+          <div>
+            <h4 className="font-medium text-slate-900 mb-3">Income Comparison: Required vs Current</h4>
+            <p className="text-sm text-slate-600 mb-4">
+              Compares required income (SIP + expenses) against your current income
+            </p>
+            <IncomeComparisonChart />
+          </div>
+        </div>
+
+        {/* Sample Scenarios */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {aggressiveMode.scenarios?.slice(0, 4).map((scenario, index) => (
+            <div key={index} className={`p-4 rounded-lg border ${
+              scenario.isRealistic ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50 opacity-75'
+            }`}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <div className="text-lg font-bold text-slate-900">Retire at {scenario.targetAge}</div>
+                  <div className="text-sm text-slate-600">{scenario.yearsToTarget} years from now</div>
+                </div>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  scenario.isRealistic ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {scenario.feasibility}
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Required SIP:</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(scenario.requiredSIP)}/month</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-600">Required income:</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(scenario.requiredIncome)}/month</span>
+                </div>
+                
+                {!scenario.isRealistic && (
+                  <div className="mt-3 p-2 bg-red-50 rounded border border-red-100">
+                    <p className="text-xs text-red-700">
+                      Requires {scenario.incomeMultiplier}× your current income
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+          <p className="text-sm text-slate-600">
+            <strong>Free tier:</strong> Preview shows first 4 scenarios. Upgrade for full analysis.
+          </p>
+          
+          <button
+            onClick={onExploreFantasy}
+            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          >
+            Explore full fantasy scenarios
+            <span className="ml-1">→</span>
+          </button>
         </div>
       </div>
     </div>
@@ -550,7 +873,9 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h4 className="font-semibold text-blue-900 text-lg">Unlock Premium Reality Analysis</h4>
-          <p className="text-blue-700 text-sm mt-1">Get deeper insights and personalized action plans</p>
+          <p className="text-blue-700 text-sm mt-1">
+            Pay to understand trade-offs clearly, not for generic advice
+          </p>
         </div>
         <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
           Premium
@@ -562,8 +887,8 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
           <div className="flex items-start space-x-3">
             <span className="text-xl flex-shrink-0">📊</span>
             <div>
-              <h5 className="font-medium text-slate-900">Multiple Optimization Paths</h5>
-              <p className="text-sm text-slate-600 mt-1">Compare different income-expense scenarios</p>
+              <h5 className="font-medium text-slate-900">Full Aggressive Fantasy Scenarios</h5>
+              <p className="text-sm text-slate-600 mt-1">All early retirement scenarios with detailed projections</p>
             </div>
           </div>
         </div>
@@ -572,8 +897,8 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
           <div className="flex items-start space-x-3">
             <span className="text-xl flex-shrink-0">📈</span>
             <div>
-              <h5 className="font-medium text-slate-900">Income Growth Scenarios</h5>
-              <p className="text-sm text-slate-600 mt-1">What happens if your income grows by 10%, 20%, etc.</p>
+              <h5 className="font-medium text-slate-900">Year-by-Year Projections</h5>
+              <p className="text-sm text-slate-600 mt-1">Detailed timeline for each retirement scenario</p>
             </div>
           </div>
         </div>
@@ -582,8 +907,8 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
           <div className="flex items-start space-x-3">
             <span className="text-xl flex-shrink-0">📥</span>
             <div>
-              <h5 className="font-medium text-slate-900">Reality Action Plan</h5>
-              <p className="text-sm text-slate-600 mt-1">Downloadable plan with specific steps</p>
+              <h5 className="font-medium text-slate-900">Downloadable Action Plan</h5>
+              <p className="text-sm text-slate-600 mt-1">Personalized steps for realistic optimization</p>
             </div>
           </div>
         </div>
@@ -592,8 +917,8 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
           <div className="flex items-start space-x-3">
             <span className="text-xl flex-shrink-0">🤝</span>
             <div>
-              <h5 className="font-medium text-slate-900">Advisor-Ready Reality Report</h5>
-              <p className="text-sm text-slate-600 mt-1">Pre-filled analysis for financial advisor</p>
+              <h5 className="font-medium text-slate-900">Advisor Handoff Preparation</h5>
+              <p className="text-sm text-slate-600 mt-1">Pre-filled analysis for financial advisor consultation</p>
             </div>
           </div>
         </div>
@@ -649,17 +974,19 @@ export default function RealisticRetirementOptimizer({ formData, results, onExpl
         <div className="mb-6">
           <h3 className="text-xl font-semibold text-slate-900">Realistic Retirement Optimizer</h3>
           <p className="text-slate-600 mt-2">
-            Given my income and expenses, what is the smartest, realistic way to improve my retirement outcome without lying to me?
+            An income-aware retirement optimizer that tells you whether you will survive till your expected lifespan, 
+            what you can realistically improve today, and what early retirement would actually cost — without lying or overselling.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column: Financial Reality */}
+          {/* Left Column: Financial Reality & Sequential Modes */}
           <div className="space-y-6">
             <FinancialRealityCard 
               financialReality={financialReality} 
               onUpdateIncome={handleUpdateIncome}
             />
+            <SurvivalModeCard survivalMode={survivalMode} />
             <RealisticOptimizationCard 
               realisticMode={realisticMode} 
               financialReality={financialReality} 
@@ -682,37 +1009,54 @@ export default function RealisticRetirementOptimizer({ formData, results, onExpl
               />
             </div>
 
-            <SurvivalModeCard survivalMode={survivalMode} />
-
             <div className="card">
               <h4 className="font-semibold text-slate-900 mb-4">How This Works</h4>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-start">
-                  <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-                    <span className="text-slate-700 text-xs">1</span>
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mr-3">
+                    <span className="text-slate-700 font-medium">1</span>
                   </div>
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium">Survival is cheap:</span> We first check if you'll run out of money.
-                  </p>
+                  <div>
+                    <h5 className="font-medium text-slate-900 mb-1">Survival Check</h5>
+                    <p className="text-sm text-slate-600">
+                      Checks if your money lasts till your expected lifespan. This is NOT early retirement.
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-                    <span className="text-slate-700 text-xs">2</span>
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-3">
+                    <span className="text-blue-700 font-medium">2</span>
                   </div>
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium">Optimization is realistic:</span> We only use your actual surplus money.
-                  </p>
+                  <div>
+                    <h5 className="font-medium text-slate-900 mb-1">Realistic Optimization</h5>
+                    <p className="text-sm text-slate-600">
+                      Uses only your actual surplus to find what's possible without breaking cash flow.
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex items-start">
-                  <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
-                    <span className="text-slate-700 text-xs">3</span>
+                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 mr-3">
+                    <span className="text-slate-700 font-medium">3</span>
                   </div>
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium">Early retirement is expensive:</span> We show what it mathematically takes, even if unrealistic.
-                  </p>
+                  <div>
+                    <h5 className="font-medium text-slate-900 mb-1">Aggressive Fantasy</h5>
+                    <p className="text-sm text-slate-600">
+                      Shows mathematically possible scenarios to expose the true cost of early retirement.
+                    </p>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="card">
+              <h4 className="font-semibold text-slate-900 mb-4">Core Design Principle</h4>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <p className="text-sm text-slate-700">
+                  <span className="font-medium">Never mix realism and fantasy in the same mental model.</span> 
+                  Each mode has a different emotional tone and serves a distinct purpose.
+                </p>
               </div>
             </div>
           </div>
@@ -721,13 +1065,20 @@ export default function RealisticRetirementOptimizer({ formData, results, onExpl
         {/* Premium Features */}
         <PremiumFeaturesCard onUpgrade={onUpgradeToPremium} />
 
-        {/* Disclaimer */}
+        {/* Final Note */}
         <div className="mt-6 pt-6 border-t border-slate-200">
-          <p className="text-xs text-slate-500 text-center">
-            <strong>Note:</strong> This is an income-aware, mathematically realistic analysis based on your inputs. 
-            Survival and optimization are treated separately. Early retirement requires exponential increases in savings. 
-            This is not investment advice.
-          </p>
+          <div className="flex items-start">
+            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mr-3 mt-0.5">
+              <span className="text-slate-700">💡</span>
+            </div>
+            <div>
+              <p className="text-sm text-slate-700">
+                <span className="font-medium">Trend context:</span> FIRE (Financial Independence Retire Early) is trending heavily, 
+                but most content ignores income constraints and post-retirement lifespan sustainability. This feature 
+                grounds FIRE dreams in income reality while still allowing aspiration exploration.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

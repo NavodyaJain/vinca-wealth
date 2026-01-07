@@ -50,3 +50,15 @@
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
 }
+
+/* Add to your global.css or a relevant CSS file */
+@media (max-width: 1023px) {
+  body {
+    padding-left: 0 !important;
+  }
+  
+  /* Adjust content padding when sidebar is open */
+  .sidebar-open {
+    padding-left: 260px;
+  }
+}

@@ -63,7 +63,7 @@ export const calculateFinancialReality = (formData) => {
     cashFlowStatus = 'tight';
     warnings.push({
       type: 'warning',
-      message: `You have only ${formatNumber(monthlySurplus)} monthly surplus. Consider building emergency savings first.`,
+      message: `You have only ₹${formatNumber(monthlySurplus)} monthly surplus. Consider building emergency savings first.`,
       fix: 'Aim for at least ₹10,000 monthly surplus before aggressive retirement planning.'
     });
     realityScore += 20;
@@ -130,11 +130,11 @@ export const calculateSurvivalMode = (formData, results) => {
   } = results || {};
 
   let survivalMessage = '';
-  let survivalStatus = 'safe';
+  let survivalStatus = 'unknown';
   let yearsCovered = 0;
 
   if (freedomAge === 'Achieved') {
-    survivalMessage = 'Your money lasts beyond your expected lifespan.';
+    survivalMessage = 'Your retirement corpus lasts beyond your expected lifespan.';
     survivalStatus = 'safe';
     yearsCovered = lifespan - currentAge;
   } else if (depletionAge) {
@@ -142,17 +142,17 @@ export const calculateSurvivalMode = (formData, results) => {
     const yearsShort = lifespan - depletionAge;
     
     if (depletionAge >= lifespan) {
-      survivalMessage = `Your money lasts until age ${depletionAge}, beyond your expected lifespan.`;
+      survivalMessage = `Your money lasts until age ${depletionAge}, beyond your expected lifespan of ${lifespan}.`;
       survivalStatus = 'safe';
     } else if (yearsShort <= 5) {
-      survivalMessage = `Your money lasts until age ${depletionAge}, just ${yearsShort} years short of your lifespan.`;
+      survivalMessage = `Your money lasts until age ${depletionAge}, just ${yearsShort} years short of your lifespan of ${lifespan}.`;
       survivalStatus = 'warning';
     } else {
-      survivalMessage = `Your money may deplete by age ${depletionAge}, ${yearsShort} years before your expected lifespan.`;
+      survivalMessage = `Your money may deplete by age ${depletionAge}, ${yearsShort} years before your expected lifespan of ${lifespan}.`;
       survivalStatus = 'danger';
     }
   } else {
-    survivalMessage = 'Unable to determine survival timeline with current inputs.';
+    survivalMessage = 'Complete the retirement calculator to check sustainability.';
     survivalStatus = 'unknown';
   }
 
@@ -161,14 +161,14 @@ export const calculateSurvivalMode = (formData, results) => {
   
   return {
     mode: 'survival',
-    label: 'Will I run out of money?',
+    label: 'Will I run out of money before my expected lifespan?',
     survivalMessage,
     survivalStatus,
     yearsCovered,
     safetyMargin,
     depletionAge: depletionAge || lifespan,
     lifespan,
-    tone: 'calm, non-optimistic'
+    importantNote: 'This checks sustainability assuming you retire at your chosen retirement age. This is NOT early retirement.'
   };
 };
 
@@ -179,7 +179,7 @@ export const calculateRealisticOptimization = (formData, results, financialReali
   if (!financialReality.canOptimize) {
     return {
       mode: 'realistic',
-      label: 'Realistic Optimization',
+      label: 'What is the best I can realistically do based on my income and expenses?',
       message: 'Cannot optimize until cash flow is safe.',
       realisticSIP: formData.monthlySIP || 0,
       earliestRetirementAge: formData.retirementAge || 60,
@@ -243,23 +243,31 @@ export const calculateRealisticOptimization = (formData, results, financialReali
 
   const yearsEarlier = retirementAge - earliestAge;
   const requiresSacrifice = usedSurplus > monthlySurplus * 0.5;
+  const comfortLevel = requiresSacrifice ? 'Requires sacrifice' : 'Fits comfortably';
 
   return {
     mode: 'realistic',
-    label: 'What is the best I can realistically do?',
+    label: 'What is the best I can realistically do based on my income and expenses?',
+    keyInsight: 'Early retirement is limited by surplus, not desire.',
     optimalSIP,
     earliestRetirementAge: Math.max(earliestAge, currentAge + 5), // Minimum 5 years
     usedSurplus,
     availableSurplus: monthlySurplus,
     yearsEarlier: Math.max(0, yearsEarlier),
     requiresSacrifice,
+    comfortLevel,
     message: yearsEarlier > 0 
-      ? `Adding ₹${formatNumber(usedSurplus)}/month could let you retire at ${earliestAge}, ${yearsEarlier} years earlier.`
+      ? `This is the maximum additional SIP you can safely add today without breaking cash flow.`
       : 'Your current plan is already optimal within realistic constraints.',
     isRealistic: true,
     note: requiresSacrifice 
       ? 'This requires significant commitment but stays within your income limits.'
-      : 'This fits comfortably within your current financial situation.'
+      : 'This fits comfortably within your current financial situation.',
+    explanation: {
+      monthlyAction: 'Maximum additional SIP you can safely add today without breaking cash flow',
+      earliestAge: 'Earliest age achievable without lying to your income (NOT a dream age)',
+      yearsEarlier: 'Calculated relative to your original retirement age, not fantasy scenarios'
+    }
   };
 };
 
@@ -273,17 +281,20 @@ export const calculateAggressiveFantasy = (formData, results) => {
     expectedReturns = 12,
     inflationRate = 6,
     lifespan = 85,
-    monthlyIncome = 0
+    monthlyIncome = 0,
+    monthlySIP: currentSIP = 0,
+    moneySaved = 0
   } = formData;
 
-  const targetAges = [55, 50, 45, 40];
-  const fantasies = [];
+  const retirementAges = Array.from({ length: 15 }, (_, i) => currentAge + 5 + i).filter(age => age < lifespan);
+  const scenarios = [];
+  const chartData = [];
 
-  for (const targetAge of targetAges) {
+  for (const targetAge of retirementAges) {
     if (targetAge <= currentAge) continue;
 
     const yearsToTarget = targetAge - currentAge;
-    if (yearsToTarget < 10) continue; // Too aggressive to be meaningful
+    if (yearsToTarget < 5) continue;
 
     // Calculate required SIP for this early retirement
     const requiredSIP = calculateRequiredSIPForAge(
@@ -293,32 +304,101 @@ export const calculateAggressiveFantasy = (formData, results) => {
       expectedReturns,
       inflationRate,
       lifespan,
-      formData.moneySaved || 0
+      moneySaved
     );
 
-    // Calculate required income (SIP + expenses + buffer)
-    const requiredIncome = requiredSIP + monthlyExpenses + 20000; // 20k buffer
-    const isRealistic = requiredIncome <= monthlyIncome * 1.5; // Within 50% of current income
+    // Calculate required income (SIP + expenses + 20% buffer for other savings)
+    const requiredIncome = Math.round(requiredSIP + monthlyExpenses * 1.2);
+    const isRealistic = requiredIncome <= monthlyIncome * 1.3; // Within 30% of current income
+    const incomeMultiplier = monthlyIncome > 0 ? (requiredIncome / monthlyIncome).toFixed(1) : '∞';
     
-    fantasies.push({
+    scenarios.push({
       targetAge,
-      requiredSIP,
+      requiredSIP: Math.round(requiredSIP),
       requiredIncome,
+      currentIncome: monthlyIncome,
+      currentSIP,
       isRealistic,
-      incomeMultiplier: monthlyIncome > 0 ? requiredIncome / monthlyIncome : Infinity,
-      message: isRealistic 
-        ? `To retire at ${targetAge}, you would need ₹${formatNumber(requiredSIP)}/month.`
-        : `To retire at ${targetAge}, you would need ₹${formatNumber(requiredSIP)}/month and income of ₹${formatNumber(requiredIncome)}/month.`
+      yearsToTarget,
+      incomeMultiplier,
+      feasibility: isRealistic ? 'Borderline possible' : 'Not realistic today',
+      message: `To retire at ${targetAge}, you would need ₹${formatNumber(requiredSIP)}/month SIP.`
+    });
+
+    // Generate chart data
+    chartData.push({
+      retirementAge: targetAge,
+      requiredSIP: Math.round(requiredSIP),
+      currentSIP,
+      maxRealisticSIP: monthlyIncome > 0 ? monthlyIncome - monthlyExpenses : 0,
+      requiredIncome,
+      currentIncome: monthlyIncome,
+      monthlyExpenses,
+      isFeasible: isRealistic
     });
   }
 
   return {
     mode: 'aggressive',
-    label: 'What would it take to retire very early?',
-    fantasies,
-    disclaimer: 'These scenarios are NOT realistic with your current earnings and expenses.',
-    visualStyle: 'greyed_out'
+    label: 'If I insist on retiring very early, what would it mathematically cost?',
+    disclaimer: 'These scenarios ignore income limits and are not recommendations.',
+    purpose: [
+      'To expose the cost of early retirement',
+      'To prevent blind optimism',
+      'To educate users why FIRE is expensive'
+    ],
+    scenarios,
+    chartData: chartData.slice(0, 10), // Limit to 10 data points for readability
+    visualStyle: 'Educational, not aspirational'
   };
+};
+
+/**
+ * Generate Fantasy Chart Data
+ */
+export const generateFantasyChartData = (formData) => {
+  const {
+    currentAge = 30,
+    monthlyExpenses = 0,
+    expectedReturns = 12,
+    inflationRate = 6,
+    lifespan = 85,
+    monthlyIncome = 0,
+    monthlySIP: currentSIP = 0,
+    moneySaved = 0
+  } = formData;
+
+  const ages = [];
+  for (let age = currentAge + 5; age <= Math.min(currentAge + 25, lifespan - 5); age += 1) {
+    ages.push(age);
+  }
+
+  return ages.map(targetAge => {
+    const yearsToTarget = targetAge - currentAge;
+    const requiredSIP = calculateRequiredSIPForAge(
+      currentAge,
+      targetAge,
+      monthlyExpenses,
+      expectedReturns,
+      inflationRate,
+      lifespan,
+      moneySaved
+    );
+
+    const requiredIncome = Math.round(requiredSIP + monthlyExpenses * 1.2);
+    
+    return {
+      retirementAge: targetAge,
+      requiredSIP: Math.round(requiredSIP),
+      currentSIP,
+      maxRealisticSIP: monthlyIncome > 0 ? Math.min(monthlyIncome - monthlyExpenses, monthlyIncome * 0.6) : 0,
+      requiredIncome,
+      currentIncome: monthlyIncome,
+      monthlyExpenses,
+      yearsToTarget,
+      isFeasible: requiredIncome <= monthlyIncome * 1.5
+    };
+  });
 };
 
 /**
@@ -408,7 +488,7 @@ const calculateRequiredSIPForAge = (currentAge, targetAge, monthlyExpenses, expe
     return Infinity;
   }
   
-  // Calculate required retirement corpus using 4% rule
+  // Calculate required retirement corpus using 4% rule with inflation adjustment
   const annualExpense = monthlyExpenses * 12;
   const requiredCorpus = annualExpense * 25 * Math.pow(1 + inflationRate/100, yearsToTarget);
   
@@ -417,22 +497,20 @@ const calculateRequiredSIPForAge = (currentAge, targetAge, monthlyExpenses, expe
   const monthsToTarget = yearsToTarget * 12;
   
   const futureValueFactor = (Math.pow(1 + monthlyRate, monthsToTarget) - 1) / monthlyRate;
-  const requiredSIP = Math.max(0, (requiredCorpus - currentCorpus) / futureValueFactor);
+  const requiredSIP = Math.max(0, (requiredCorpus - (currentCorpus || 0)) / futureValueFactor);
   
   return Math.round(requiredSIP);
 };
 
-// Import formatters from your existing utility
-// Note: Since this is a helper file, we'll use the same logic but keep it independent
 const formatNumber = (num) => {
   if (!num && num !== 0) return '₹0';
   
   if (num >= 10000000) {
-    return `₹${(num / 10000000).toFixed(1)}Cr`;
+    return `₹${(num / 10000000).toFixed(1)} Cr`;
   } else if (num >= 100000) {
-    return `₹${(num / 100000).toFixed(1)}L`;
+    return `₹${(num / 100000).toFixed(1)} L`;
   } else if (num >= 1000) {
-    return `₹${(num / 1000).toFixed(1)}K`;
+    return `₹${(num / 1000).toFixed(1)} K`;
   } else {
     return `₹${Math.round(num).toLocaleString('en-IN')}`;
   }
