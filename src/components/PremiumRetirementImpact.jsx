@@ -65,7 +65,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
 
   if (!isPremium) {
     return (
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200 overflow-hidden">
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-200 overflow-hidden">
         <div className="p-8 text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-md mb-6">
             <Crown size={32} className="text-amber-500" />
@@ -113,7 +113,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
   // Premium View
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+    <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-white rounded-xl shadow-sm">
@@ -137,19 +137,19 @@ export default function PremiumRetirementImpact({ formData, results }) {
         <div className="flex gap-3 mt-6">
           <button
             onClick={() => setActiveTab('survival')}
-            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'survival' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
+            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'survival' ? 'bg-white text-green-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
           >
             Survival Probability
           </button>
           <button
             onClick={() => setActiveTab('sequence')}
-            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'sequence' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
+            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'sequence' ? 'bg-white text-green-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
           >
             Sequence Risk
           </button>
           <button
             onClick={() => setActiveTab('confidence')}
-            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'confidence' ? 'bg-white text-blue-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
+            className={`px-5 py-3 text-sm font-medium rounded-xl transition-all ${activeTab === 'confidence' ? 'bg-white text-green-700 shadow-md' : 'text-slate-700 hover:bg-white/50'}`}
           >
             Confidence Score
           </button>
@@ -161,10 +161,10 @@ export default function PremiumRetirementImpact({ formData, results }) {
           <div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               {/* Survival Probability Card */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-6">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-emerald-200 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 bg-white rounded-lg">
-                    <Percent size={20} className="text-blue-600" />
+                    <Percent size={20} className="text-green-600" />
                   </div>
                   <div>
                     <h3 className="font-medium text-slate-900">Survival Probability</h3>
@@ -172,7 +172,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
                   </div>
                 </div>
                 <div className="text-center py-4">
-                  <div className="text-5xl font-bold text-blue-600 mb-2">{simulationData?.survivalProbability}%</div>
+                  <div className="text-5xl font-bold text-green-600 mb-2">{simulationData?.survivalProbability}%</div>
                   <div className="text-sm text-slate-600">Based on historical patterns</div>
                 </div>
                 <div className="text-xs text-slate-600 mt-4">
@@ -319,7 +319,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
               </ResponsiveContainer>
             </ChartContainer>
             
-            <div className="mt-8 bg-blue-50 p-6 rounded-xl">
+            <div className="mt-8 bg-green-50 p-6 rounded-xl">
               <p className="font-medium text-slate-900 mb-2">💡 Understanding Sequence Risk:</p>
               <p className="text-slate-600">
                 Shows how your retirement corpus could evolve under different historical return sequences. 
@@ -369,7 +369,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
                     const colors = {
                       growthAdequacy: 'bg-emerald-500',
                       drawdownSafety: 'bg-amber-500',
-                      inflationProtection: 'bg-blue-500',
+                      inflationProtection: 'bg-emerald-500',
                       longevityRisk: 'bg-purple-500'
                     };
                     
@@ -420,7 +420,7 @@ export default function PremiumRetirementImpact({ formData, results }) {
                 
                 <div className="bg-slate-50 p-6 rounded-xl">
                   <div className="flex items-start gap-4">
-                    <DollarSign size={20} className="text-blue-600 mt-1 flex-shrink-0" />
+                    <DollarSign size={20} className="text-green-600 mt-1 flex-shrink-0" />
                     <div>
                       <h4 className="font-medium text-slate-900 mb-2">Inflation Protection</h4>
                       <p className="text-sm text-slate-600">

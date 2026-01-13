@@ -74,7 +74,7 @@ const RealityConfidenceGauge = ({ score, label, components }) => {
         </div>
         <div className="w-full bg-slate-200 rounded-full h-1.5">
           <div 
-            className="bg-blue-600 h-1.5 rounded-full" 
+            className="bg-green-600 h-1.5 rounded-full" 
             style={{ width: `${components.incomeExpenseHealth}%` }}
           ></div>
         </div>
@@ -85,7 +85,7 @@ const RealityConfidenceGauge = ({ score, label, components }) => {
         </div>
         <div className="w-full bg-slate-200 rounded-full h-1.5">
           <div 
-            className="bg-blue-600 h-1.5 rounded-full" 
+            className="bg-green-600 h-1.5 rounded-full" 
             style={{ width: `${components.lifespanCoverage}%` }}
           ></div>
         </div>
@@ -96,7 +96,7 @@ const RealityConfidenceGauge = ({ score, label, components }) => {
         </div>
         <div className="w-full bg-slate-200 rounded-full h-1.5">
           <div 
-            className="bg-blue-600 h-1.5 rounded-full" 
+            className="bg-green-600 h-1.5 rounded-full" 
             style={{ width: `${components.sipFeasibility}%` }}
           ></div>
         </div>
@@ -119,11 +119,11 @@ const FinancialRealityCard = ({ financialReality, onUpdateIncome }) => {
 
   return (
     <div className="card mb-6">
-      <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-start mb-4">
         <h3 className="text-lg font-semibold text-slate-900">Your Financial Reality</h3>
         <button
           onClick={() => setShowIncomeInput(!showIncomeInput)}
-          className="text-sm text-blue-600 hover:text-blue-800"
+          className="text-sm text-green-600 hover:text-green-800"
         >
           {showIncomeInput ? 'Cancel' : 'Edit income'}
         </button>
@@ -144,7 +144,7 @@ const FinancialRealityCard = ({ financialReality, onUpdateIncome }) => {
                   type="number"
                   value={incomeInput}
                   onChange={(e) => setIncomeInput(e.target.value)}
-                  className="pl-8 w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-8 w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="Enter your monthly take-home pay"
                   min="0"
                   step="1000"
@@ -156,12 +156,12 @@ const FinancialRealityCard = ({ financialReality, onUpdateIncome }) => {
             </div>
             
             <div className="flex space-x-3">
-              <button
-                onClick={handleSaveIncome}
-                className="btn-primary flex-1"
-              >
-                Save Income
-              </button>
+                <button
+                  onClick={handleSaveIncome}
+                  className="btn-primary flex-1"
+                >
+                  Save Income
+                </button>
               <button
                 onClick={() => {
                   setShowIncomeInput(false);
@@ -198,7 +198,7 @@ const FinancialRealityCard = ({ financialReality, onUpdateIncome }) => {
               {financialReality.monthlyIncome === 0 && (
                 <button
                   onClick={() => setShowIncomeInput(true)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
+                  className="text-sm text-green-600 hover:text-green-800"
                 >
                   Add income
                 </button>
@@ -479,12 +479,12 @@ const RealisticOptimizationCard = ({ realisticMode, financialReality }) => {
       
       <div className="space-y-6">
         {/* Key Insight */}
-        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
           <div className="flex items-start">
             <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-2 mt-0.5">
-              <span className="text-blue-600 text-xs">💡</span>
+              <span className="text-green-600 text-xs">💡</span>
             </div>
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-green-700">
               <span className="font-medium">Key insight:</span> {realisticMode.keyInsight}
             </p>
           </div>
@@ -855,8 +855,8 @@ const AggressiveFantasyCard = ({ aggressiveMode, onExploreFantasy, financialReal
           </p>
           
           <button
-            onClick={onExploreFantasy}
-            className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+          onClick={onExploreFantasy}
+            className="text-sm text-green-600 hover:text-green-800 flex items-center"
           >
             Explore full fantasy scenarios
             <span className="ml-1">→</span>
@@ -869,7 +869,7 @@ const AggressiveFantasyCard = ({ aggressiveMode, onExploreFantasy, financialReal
 
 const PremiumFeaturesCard = ({ onUpgrade }) => {
   return (
-    <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+    <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200">
       <div className="flex justify-between items-start mb-4">
         <div>
           <h4 className="font-semibold text-blue-900 text-lg">Unlock Premium Reality Analysis</h4>
@@ -927,11 +927,11 @@ const PremiumFeaturesCard = ({ onUpgrade }) => {
       <div className="pt-4 border-t border-blue-200">
         <button
           onClick={onUpgrade}
-          className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm hover:shadow"
+          className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm hover:shadow"
         >
           Upgrade to Premium Reality Analysis — ₹999/year
         </button>
-        <p className="text-xs text-blue-700 text-center mt-3">
+        <p className="text-xs text-green-700 text-center mt-3">
           Cancel anytime • 7-day money-back guarantee
         </p>
       </div>
@@ -977,6 +977,33 @@ export default function RealisticRetirementOptimizer({ formData, results, onExpl
             An income-aware retirement optimizer that tells you whether you will survive till your expected lifespan, 
             what you can realistically improve today, and what early retirement would actually cost — without lying or overselling.
           </p>
+        </div>
+
+        {/* KPI Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="p-4 rounded-lg bg-white border border-slate-200">
+            <p className="text-sm text-slate-600">Reality Confidence</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-2xl font-bold text-green-700">{confidence.score}</div>
+              <div className="text-sm text-slate-500">{confidence.label}</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-white border border-slate-200">
+            <p className="text-sm text-slate-600">Monthly Surplus</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-2xl font-bold text-green-700">{formatCurrency(financialReality.monthlySurplus)}</div>
+              <div className="text-sm text-slate-500">Available today</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-white border border-slate-200">
+            <p className="text-sm text-slate-600">Earliest Realistic Retirement</p>
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-2xl font-bold text-green-700">Age {realisticMode.earliestRetirementAge}</div>
+              <div className="text-sm text-slate-500">Based on current surplus</div>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  HeartPulse
+  HeartPulse,
+  TrendingUp
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
 
@@ -30,16 +31,23 @@ export default function DashboardSidebar() {
       icon: <Calculator size={20} />
     },
     {
-      id: 'blind-spot',
-      label: 'Blind Spot Analysis',
-      path: '/dashboard/blind-spot',
-      icon: <EyeOff size={20} />
+      id: 'lifestyle-planner',
+      label: 'Lifestyle Planner',
+      path: '/dashboard/lifestyle-planner',
+      icon: <TrendingUp size={20} />,
+      description: 'Plan your retirement lifestyle'
     },
     {
       id: 'health-stress',
       label: 'Health Stress Test',
       path: '/dashboard/health-stress',
       icon: <HeartPulse size={20} />
+    },
+    {
+      id: 'blind-spot',
+      label: 'Blind Spot Analysis',
+      path: '/dashboard/blind-spot',
+      icon: <EyeOff size={20} />
     },
     {
       id: 'top-deals',
@@ -135,7 +143,12 @@ export default function DashboardSidebar() {
                   <div className={isActive(feature.path) ? 'text-green-600' : 'text-slate-500'}>
                     {feature.icon}
                   </div>
-                  <span className="text-sm">{feature.label}</span>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">{feature.label}</div>
+                    {feature.description && (
+                      <div className="text-xs text-slate-500">{feature.description}</div>
+                    )}
+                  </div>
                 </button>
               ))}
             </nav>
