@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useCalculator } from '@/context/CalculatorContext';
 import FinancialReadinessResultsDashboard from '@/components/financialReadiness/FinancialReadinessResultsDashboard';
 import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
+import FinancialEssentialsSection from '@/components/financialReadiness/FinancialEssentialsSection';
+import ProfessionalGuidanceSection from '@/components/financialReadiness/ProfessionalGuidanceSection';
 
 export default function FinancialReadinessPage() {
   const { formData, results } = useCalculator();
@@ -115,10 +117,18 @@ export default function FinancialReadinessPage() {
         </p>
       </div>
 
-      <FinancialReadinessResultsDashboard 
-        formData={safeFormData}
-        results={calculatedResults || results?.financialReadiness}
-      />
+      <div className="space-y-8">
+        <FinancialReadinessResultsDashboard 
+          formData={safeFormData}
+          results={calculatedResults || results?.financialReadiness}
+        />
+
+        {/* Financial Essentials Section */}
+        <FinancialEssentialsSection />
+
+        {/* Professional Guidance Section */}
+        <ProfessionalGuidanceSection />
+      </div>
     </div>
   );
 }
