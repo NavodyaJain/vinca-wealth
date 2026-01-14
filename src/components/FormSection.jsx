@@ -33,6 +33,13 @@ const stepConfigs = {
         helper: 'Your current monthly living expenses'
       },
       {
+        id: 'monthlyIncome',
+        label: 'Monthly Income',
+        type: 'currency',
+        prefix: '₹',
+        helper: 'Your total monthly income'
+      },
+      {
         id: 'retirementAge',
         label: 'Desired Retirement Age',
         type: 'number',

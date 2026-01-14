@@ -16,6 +16,7 @@ const DEFAULT_DATA = {
   currentAge: 30,
   moneySaved: 500000,
   monthlyExpenses: 50000,
+  monthlyIncome: 100000,
   retirementAge: 60,
   
   // Step 2: Investment Plan
