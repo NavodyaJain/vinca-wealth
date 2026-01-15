@@ -1,69 +1,71 @@
 // src/app/dashboard/financial-readiness/page.js
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCalculator } from '@/context/CalculatorContext';
 import FinancialReadinessResultsDashboard from '@/components/financialReadiness/FinancialReadinessResultsDashboard';
 import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
 import FinancialEssentialsSection from '@/components/financialReadiness/FinancialEssentialsSection';
 import ProfessionalGuidanceSection from '@/components/financialReadiness/ProfessionalGuidanceSection';
+import { useRouter } from 'next/navigation';
 
 export default function FinancialReadinessPage() {
-  const { formData, results } = useCalculator();
+  const router = useRouter();
+  const { formData, results, financialReadinessResults } = useCalculator();
   const [calculatedResults, setCalculatedResults] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [normalizedFormData, setNormalizedFormData] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    // Get form data from localStorage as fallback if context is empty
-    if (!formData || Object.keys(formData).length === 0) {
-      try {
-        const savedFormData = localStorage.getItem('vinca_calculator_formData');
-        if (savedFormData) {
-          const parsed = JSON.parse(savedFormData);
-          setNormalizedFormData(parsed);
-        }
-      } catch (error) {
-        console.error('Error loading form data from localStorage:', error);
-      }
+    const signedIn = localStorage.getItem('vinca_signed_in');
+    if (signedIn === 'true') {
+      setIsAuthorized(true);
+      setAuthChecked(true);
     } else {
-      setNormalizedFormData(formData);
+      router.replace('/signin');
+      setAuthChecked(true);
     }
-  }, [formData]);
+  }, [router]);
+
+  const baseInputs = useMemo(() => {
+    if (financialReadinessResults?.inputs) return financialReadinessResults.inputs;
+    if (results?.financialReadiness?.inputs) return results.financialReadiness.inputs;
+    if (formData && Object.keys(formData).length) return formData;
+    return null;
+  }, [financialReadinessResults, formData, results]);
 
   useEffect(() => {
-    if (normalizedFormData && Object.keys(normalizedFormData).length > 0 && !calculatedResults && !isLoading) {
-      setIsLoading(true);
-      try {
-        // Ensure all required fields have values
-        const safeFormData = {
-          currentAge: parseFloat(normalizedFormData.currentAge) || 30,
-          moneySaved: parseFloat(normalizedFormData.moneySaved) || 500000,
-          monthlyExpenses: parseFloat(normalizedFormData.monthlyExpenses) || 50000,
-          monthlyIncome: parseFloat(normalizedFormData.monthlyIncome) || 150000,
-          retirementAge: parseFloat(normalizedFormData.retirementAge) || 60,
-          monthlySIP: parseFloat(normalizedFormData.monthlySIP) || 30000,
-          investmentYears: parseFloat(normalizedFormData.investmentYears) || 30,
-          expectedReturns: parseFloat(normalizedFormData.expectedReturns) || 12,
-          sipIncreaseRate: parseFloat(normalizedFormData.sipIncreaseRate) || 10,
-          lifespan: parseFloat(normalizedFormData.lifespan) || 85,
-          inflationRate: parseFloat(normalizedFormData.inflationRate) || 6,
-          withdrawalIncrease: parseFloat(normalizedFormData.withdrawalIncrease) || 0,
-          retirementReturns: parseFloat(normalizedFormData.retirementReturns) || 8
-        };
-        
-        const results = calculateFinancialReadinessResults(safeFormData);
-        setCalculatedResults(results);
-      } catch (error) {
-        console.error('Error calculating financial readiness results:', error);
-        setCalculatedResults(null);
-      } finally {
-        setIsLoading(false);
-      }
+    if (!isAuthorized) return;
+    if (financialReadinessResults) {
+      setCalculatedResults(financialReadinessResults);
+      return;
     }
-  }, [normalizedFormData, calculatedResults, isLoading]);
+    if (!baseInputs) return;
+    try {
+      const computed = calculateFinancialReadinessResults(baseInputs);
+      setCalculatedResults(computed);
+    } catch (error) {
+      console.error('Error calculating financial readiness results:', error);
+      setCalculatedResults(null);
+    }
+  }, [baseInputs, isAuthorized]);
 
-  if (!normalizedFormData || Object.keys(normalizedFormData).length === 0) {
+  if (!authChecked) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return null;
+  }
+
+  if (!baseInputs) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
@@ -78,34 +80,6 @@ export default function FinancialReadinessPage() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Calculating your financial readiness results...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Ensure normalized form data has all required fields
-  const safeFormData = {
-    currentAge: parseFloat(normalizedFormData.currentAge) || 30,
-    moneySaved: parseFloat(normalizedFormData.moneySaved) || 500000,
-    monthlyExpenses: parseFloat(normalizedFormData.monthlyExpenses) || 50000,
-    monthlyIncome: parseFloat(normalizedFormData.monthlyIncome) || 150000,
-    retirementAge: parseFloat(normalizedFormData.retirementAge) || 60,
-    monthlySIP: parseFloat(normalizedFormData.monthlySIP) || 30000,
-    investmentYears: parseFloat(normalizedFormData.investmentYears) || 30,
-    expectedReturns: parseFloat(normalizedFormData.expectedReturns) || 12,
-    sipIncreaseRate: parseFloat(normalizedFormData.sipIncreaseRate) || 10,
-    lifespan: parseFloat(normalizedFormData.lifespan) || 85,
-    inflationRate: parseFloat(normalizedFormData.inflationRate) || 6,
-    withdrawalIncrease: parseFloat(normalizedFormData.withdrawalIncrease) || 0,
-    retirementReturns: parseFloat(normalizedFormData.retirementReturns) || 8
-  };
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -119,8 +93,8 @@ export default function FinancialReadinessPage() {
 
       <div className="space-y-8">
         <FinancialReadinessResultsDashboard 
-          formData={safeFormData}
-          results={calculatedResults || results?.financialReadiness}
+          formData={baseInputs}
+          results={calculatedResults}
         />
 
         {/* Financial Essentials Section */}

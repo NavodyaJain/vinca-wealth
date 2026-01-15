@@ -11,20 +11,23 @@ export function PremiumProvider({ children }) {
   
   // Check localStorage on initial load
   useEffect(() => {
-    const saved = localStorage.getItem('vinca_premium_demo');
-    if (saved === 'true') {
-      setIsPremium(true);
-    }
+    const keys = ['vinca_is_pro', 'vinca_premium_demo', 'vinca_pro_unlocked'];
+    const anyTrue = keys.some((k) => localStorage.getItem(k) === 'true');
+    if (anyTrue) setIsPremium(true);
   }, []);
 
   const upgradeToPremium = () => {
     setIsPremium(true);
+    localStorage.setItem('vinca_is_pro', 'true');
     localStorage.setItem('vinca_premium_demo', 'true');
+    localStorage.setItem('vinca_pro_unlocked', 'true');
   };
 
   const downgradeToFree = () => {
     setIsPremium(false);
     localStorage.removeItem('vinca_premium_demo');
+    localStorage.removeItem('vinca_is_pro');
+    localStorage.removeItem('vinca_pro_unlocked');
   };
 
   return (

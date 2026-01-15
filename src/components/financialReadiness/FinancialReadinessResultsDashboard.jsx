@@ -1,20 +1,63 @@
 // src/components/financialReadiness/FinancialReadinessResultsDashboard.jsx
+import { useEffect, useMemo, useState } from 'react';
 import FinancialReadinessStatusBanner from './FinancialReadinessStatusBanner';
 import YearOnYearCorpusChart from './YearOnYearCorpusChart';
 import YearOnYearCorpusTable from './YearOnYearCorpusTable';
 import PremiumFireCalculatorSection from './PremiumFireCalculatorSection';
-
-const formatCurrency = (value) => {
-  if (!value && value !== 0) return '—';
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(value);
-};
+import PremiumHookCard from './PremiumHookCard';
+import ProSubscriptionModal from './ProSubscriptionModal';
+import ActionRequiredCard from '../ActionRequiredCard';
+import { usePremium } from '@/lib/premium';
+import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
 
 const FinancialReadinessResultsDashboard = ({ formData, results }) => {
-  if (!results) {
+  const { isPremium, upgradeToPremium } = usePremium();
+  const [showProModal, setShowProModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('yearly');
+
+  const computedResults = useMemo(() => {
+    if (results) return results;
+    if (formData && Object.keys(formData).length) {
+      return calculateFinancialReadinessResults(formData);
+    }
+    return null;
+  }, [formData, results]);
+
+  const isFeasible = useMemo(() => {
+    if (typeof computedResults?.isDesiredAgeFeasible === 'boolean') return computedResults.isDesiredAgeFeasible;
+    const required = Number(computedResults?.requiredMonthlySIP);
+    const current = Number(computedResults?.currentMonthlySIP) || 0;
+    const investable = Number(computedResults?.investableSurplus) || 0;
+    if (!Number.isFinite(required)) return false;
+    const additional = Math.max(0, required - current);
+    return additional <= investable;
+  }, [computedResults]);
+
+  useEffect(() => {
+    if (!isPremium) return;
+    const timer = setTimeout(() => {
+      const section = document.getElementById('fire-calculator-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isPremium]);
+
+  const handleConfirmPlan = () => {
+    upgradeToPremium();
+    setShowProModal(false);
+  };
+
+  const formatCurrency = (value) => {
+    if (value === undefined || value === null || Number.isNaN(value)) return '—';
+    if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
+    if (value === 0) return '₹0';
+    return `₹${Math.round(value).toLocaleString('en-IN')}`;
+  };
+
+  if (!computedResults) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -23,10 +66,25 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
     );
   }
 
+  const sipDelta = computedResults?.requiredMonthlySIP !== undefined && computedResults?.currentMonthlySIP !== undefined
+    ? computedResults.requiredMonthlySIP - computedResults.currentMonthlySIP
+    : null;
+
+  const actionMessage = sipDelta !== null && sipDelta > 0
+    ? `To retire at ${Math.round(computedResults.retirementAge)} and survive till ${computedResults.lifespan}, increase your SIP by ${formatCurrency(sipDelta)} / month.`
+    : 'You are on track ✅ No SIP increase required.';
+
   return (
     <div className="space-y-6">
       {/* Status Banner */}
-      <FinancialReadinessStatusBanner results={results} />
+      <FinancialReadinessStatusBanner results={computedResults} />
+
+      <ActionRequiredCard
+        title="Action Required"
+        message={actionMessage}
+        ctaHref="/dashboard/financial-readiness"
+        ctaLabel=""
+      />
 
       {/* Chart Section - Full Width */}
       <div className="rounded-2xl shadow-sm p-6 bg-white border border-gray-100">
@@ -35,10 +93,10 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
           <p className="text-sm text-gray-600 mt-1">Year-by-year corpus growth and retirement projection</p>
         </div>
         <YearOnYearCorpusChart 
-          chartData={results.timelineChartData}
-          currentAge={formData.currentAge}
-          retirementAge={formData.retirementAge}
-          lifespan={formData.lifespan}
+          chartData={computedResults.timelineChartData}
+          currentAge={computedResults.currentAge}
+          retirementAge={computedResults.retirementAge}
+          lifespan={computedResults.lifespan}
         />
       </div>
 
@@ -48,14 +106,29 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
           <h3 className="text-lg font-semibold text-gray-900">Year-by-Year Projection</h3>
           <p className="text-sm text-gray-600 mt-1">Detailed breakdown of corpus growth, withdrawals, and corpus balance</p>
         </div>
-        <YearOnYearCorpusTable tableRows={results.tableRows} />
+        <YearOnYearCorpusTable tableRows={computedResults.tableRows} />
       </div>
 
-      {/* Premium FIRE Calculator Section */}
-      <PremiumFireCalculatorSection 
-        formData={formData}
-        results={results}
+      <PremiumHookCard
+        isFeasible={isFeasible}
+        isPremium={isPremium}
+        onUpgradeClick={!isPremium ? () => setShowProModal(true) : undefined}
       />
+
+      {isPremium && (
+        <PremiumFireCalculatorSection 
+          results={computedResults}
+        />
+      )}
+
+      {showProModal && (
+        <ProSubscriptionModal
+          selectedPlan={selectedPlan}
+          onSelectPlan={setSelectedPlan}
+          onConfirm={handleConfirmPlan}
+          onClose={() => setShowProModal(false)}
+        />
+      )}
     </div>
   );
 };

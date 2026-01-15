@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Home() {
   return (
@@ -6,20 +7,30 @@ export default function Home() {
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <h1 className="text-5xl font-semibold tracking-tight text-slate-900 mb-6">
-              Achieve Financial Freedom
-              <span className="block text-green-600 mt-2">On Your Terms</span>
-            </h1>
-            <p className="text-xl text-slate-600 mb-10">
-              Calculate, plan, and track your journey to financial independence with our smart, personalized tools.
-            </p>
-            <Link 
-              href="/calculator" 
-              className="btn-cta inline-block"
-            >
-              Start Your Freedom Journey
-            </Link>
+          <div className="flex flex-col lg:flex-row items-center gap-12 mb-16">
+            <div className="w-full lg:w-1/2 text-left">
+              <p className="text-sm font-semibold text-green-700 mb-3">Premium tools for modern investors</p>
+              <h1 className="text-5xl font-semibold tracking-tight text-slate-900 mb-6 leading-tight">
+                Achieve Financial Freedom
+                <span className="block text-green-600 mt-2">On Your Terms</span>
+              </h1>
+              <p className="text-xl text-slate-600">
+                Calculate, plan, and track your journey to financial independence with our smart, personalized tools.
+              </p>
+            </div>
+
+            <div className="w-full lg:w-1/2">
+              <div className="relative w-full h-80 lg:h-96 rounded-3xl overflow-hidden shadow-xl ring-1 ring-slate-200">
+                <Image
+                  src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=1200&q=80"
+                  alt="Premium stock market dashboard"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            </div>
           </div>
 
           {/* Features Grid */}

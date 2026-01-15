@@ -1,26 +1,30 @@
 // src/components/financialReadiness/FireCalculatorPremiumUI.jsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, ReferenceLine } from 'recharts';
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 
-const FireCalculatorPremiumUI = ({ fireResults, formData, onResetPro }) => {
+const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
   const [selectedRatio, setSelectedRatio] = useState(0);
+  const [showEmergencyNote, setShowEmergencyNote] = useState(false);
 
-  useEffect(() => {
-    if (fireResults?.recommended) {
-      setSelectedRatio(fireResults.recommended.ratio);
-    }
+  const inputs = results?.inputs || {};
+  const retirementAge = Number(results?.retirementAge ?? inputs.retirementAge ?? 60);
+  const lifespan = Number(results?.lifespan ?? inputs.lifespan ?? 85);
+  const currentMonthlySIP = Number(fireResults?.currentMonthlySIP ?? results?.currentMonthlySIP ?? inputs.monthlySIP ?? 0);
+  const monthlyIncome = Number(fireResults?.monthlyIncome ?? results?.monthlyIncome ?? inputs.monthlyIncome ?? 0);
+  const monthlyExpenses = Number(fireResults?.monthlyExpenses ?? results?.monthlyExpenses ?? inputs.monthlyExpenses ?? 0);
+
+  const premiumDefaultRatio = useMemo(() => {
+    if (typeof fireResults?.premiumLeverPct === 'number') return fireResults.premiumLeverPct;
+    if (fireResults?.premiumScenario?.ratio !== undefined) return fireResults.premiumScenario.ratio;
+    if (fireResults?.baselineScenario?.ratio !== undefined) return fireResults.baselineScenario.ratio;
+    return 0;
   }, [fireResults]);
 
-  if (!fireResults) {
-    return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Calculating FIRE scenarios...</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    setSelectedRatio(premiumDefaultRatio);
+  }, [premiumDefaultRatio]);
 
   const formatCurrency = (value) => {
     if (value === undefined || value === null) return '₹0';
@@ -38,28 +42,102 @@ const FireCalculatorPremiumUI = ({ fireResults, formData, onResetPro }) => {
     return `${(value * 100).toFixed(0)}%`;
   };
 
-  const selectedScenario = fireResults.scenarios.find(s => s.ratio === selectedRatio) || fireResults.baselineScenario;
-  const financialReadinessAge = fireResults.financialReadinessAge;
+  const scenarioByPercent = useMemo(() => {
+    const map = new Map();
+    (fireResults?.scenarios || []).forEach((s) => {
+      const key = Math.round(s.pct ?? s.ratio * 100);
+      map.set(key, s);
+    });
+    return map;
+  }, [fireResults]);
 
-  // Prepare graph data with 0-100% allocations
+  const selectedPercent = Math.round(selectedRatio * 100);
+  const selectedScenario = scenarioByPercent.get(selectedPercent)
+    || fireResults?.premiumScenario
+    || fireResults?.baselineScenario
+    || {
+      fireAge: retirementAge,
+      newMonthlySIP: currentMonthlySIP,
+      additionalSIP: 0,
+      yearsEarlier: 0,
+      projectedCorpusAtFireAge: results?.expectedCorpusAtRetirement || 0,
+      requiredCorpusAtFireAge: results?.requiredCorpusAtRetirement || 0,
+      corpusGap: (results?.expectedCorpusAtRetirement || 0) - (results?.requiredCorpusAtRetirement || 0),
+      ratio: selectedRatio,
+      pct: selectedPercent
+    };
+
+  const targetAge = retirementAge;
+  const fireAge = Number(selectedScenario.fireAge ?? targetAge);
+  const ageGap = fireAge - targetAge; // positive => later than target, negative => earlier
+
+  const gapLabel = ageGap < 0 ? 'Years Earlier' : ageGap > 0 ? 'Waiting Years' : 'On Track';
+  const gapValue = ageGap < 0 ? Math.abs(ageGap).toFixed(1) : ageGap > 0 ? ageGap.toFixed(1) : '0';
+  const gapSubtitle = ageGap < 0
+    ? `Compared to target ${targetAge} → ${fireAge.toFixed(1)}`
+    : ageGap > 0
+    ? `Target ${targetAge} is unrealistic → earliest realistic is ${fireAge.toFixed(1)}`
+    : `You can retire at your target age ${targetAge}`;
+
+  const gapBadgeClass = ageGap < 0
+    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+    : ageGap > 0
+    ? 'bg-amber-100 text-amber-800 border border-amber-200'
+    : 'bg-blue-100 text-blue-800 border border-blue-200';
+
+  const monthlyEmergencyLeft = Math.max(0, (fireResults?.monthlySurplus || 0) * (1 - selectedRatio));
+  const allocationPercent = Math.round(selectedRatio * 100);
+  const hasEmergencyBuffer = monthlyEmergencyLeft > 0;
+
+  let bannerMessage = '';
+  if (selectedRatio === 0) {
+    bannerMessage = 'Retire smartly: increasing your SIP using surplus can reduce your retirement age.';
+  } else if (selectedRatio === 1 && !hasEmergencyBuffer) {
+    bannerMessage = `Why retire at ${fireAge.toFixed(1)} without a buffer, when 75% surplus still lets you retire early with an emergency cushion? Retire smartly.`;
+  } else if (ageGap > 0) {
+    bannerMessage = `Why retire at ${targetAge} which you can’t afford, when ${allocationPercent}% surplus lets you retire at ${fireAge.toFixed(1)}? Retire smartly.`;
+  } else if (ageGap < 0) {
+    bannerMessage = `Why retire at ${targetAge} when ${allocationPercent}% surplus lets you retire at ${fireAge.toFixed(1)}? Retire smartly.`;
+  } else {
+    bannerMessage = `You can retire at your target age ${targetAge}. Retire smartly.`;
+  }
+
+  // Prepare graph data with 0-100% allocations (5% step)
   const graphData = [];
-  for (let percent = 0; percent <= 100; percent += 10) {
-    const ratio = percent / 100;
-    const scenario = fireResults.scenarios.find(s => Math.abs(s.ratio - ratio) < 0.01);
-    if (scenario) {
-      graphData.push({
-        percent,
-        ratio,
-        fireAge: scenario.fireAge || financialReadinessAge,
-        yearsEarlier: scenario.yearsEarlier,
-        additionalSIP: scenario.additionalSIP,
-        newMonthlySIP: scenario.newMonthlySIP,
-        projectedCorpus: scenario.projectedCorpusAtFireAge || 0,
-        requiredCorpus: scenario.requiredCorpusAtFireAge || 0,
-        corpusGap: scenario.corpusGap || 0,
-        isRecommended: scenario.ratio === fireResults.recommended.ratio
-      });
+  if (fireResults?.scenarios) {
+    for (let percent = 0; percent <= 100; percent += 5) {
+      const scenario = scenarioByPercent.get(percent);
+      if (scenario) {
+        graphData.push({
+          percent,
+          ratio: scenario.ratio,
+          fireAge: scenario.fireAge || retirementAge,
+          yearsEarlier: scenario.yearsEarlier,
+          additionalSIP: scenario.additionalSIP,
+          newMonthlySIP: scenario.newMonthlySIP,
+          projectedCorpus: scenario.projectedCorpusAtFireAge || 0,
+          requiredCorpus: scenario.requiredCorpusAtFireAge || 0,
+          corpusGap: scenario.corpusGap || 0,
+          isRecommended: Math.abs(scenario.ratio - (fireResults.premiumLeverPct ?? 0)) < 0.0001
+        });
+      }
     }
+  }
+
+  const getAllocationGradient = (ratio) => {
+    const pct = ratio * 100;
+    if (pct <= 25) return 'linear-gradient(90deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)'; // blue/cyan
+    if (pct < 75) return 'linear-gradient(90deg, #dcfce7 0%, #a7f3d0 50%, #34d399 100%)'; // green
+    return 'linear-gradient(90deg, #fed7aa 0%, #fb923c 50%, #f97316 75%, #ef4444 100%)'; // orange/red
+  };
+
+  if (!fireResults) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Calculating FIRE scenarios...</p>
+      </div>
+    );
   }
 
   const GraphTooltip = ({ active, payload, label }) => {
@@ -68,7 +146,7 @@ const FireCalculatorPremiumUI = ({ fireResults, formData, onResetPro }) => {
       return (
         <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg max-w-xs">
           <p className="font-semibold text-gray-900 mb-2">
-            {data.percent}% of Investable Surplus
+            {data.percent}% of Monthly Surplus
           </p>
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
@@ -143,129 +221,80 @@ const FireCalculatorPremiumUI = ({ fireResults, formData, onResetPro }) => {
 
   return (
     <div className="space-y-8">
-      {/* Top Row - 4 Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-blue-800 mb-1">FIRE Age</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {formatAge(selectedScenario.fireAge)} years
-          </div>
-          <div className="text-xs text-gray-600">
-            Earliest age to retire before {formData.retirementAge || 60}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-emerald-800 mb-1">Recommended SIP Increase</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            +{formatCurrency(selectedScenario.additionalSIP)}/month
-          </div>
-          <div className="text-xs text-gray-600">
-            New SIP: {formatCurrency(selectedScenario.newMonthlySIP)}/month
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-purple-800 mb-1">Corpus at FIRE Age</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {formatCurrency(selectedScenario.projectedCorpusAtFireAge)}
-          </div>
-          <div className="text-xs text-gray-600">
-            Required: {formatCurrency(selectedScenario.requiredCorpusAtFireAge)}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-amber-800 mb-1">Years Earlier</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {selectedScenario.yearsEarlier > 0 ? `${selectedScenario.yearsEarlier.toFixed(1)}` : '0'} years
-          </div>
-          <div className="text-xs text-gray-600">
-            Compared to {formData.retirementAge || 60} → {selectedScenario.fireAge || formData.retirementAge || 60}
-          </div>
-        </div>
-      </div>
-
-      <div className="text-center text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
-        If your plan retires at {formData.retirementAge || 60}, FIRE means retiring at {selectedScenario.fireAge || formData.retirementAge || 60} with enough corpus to last till {formData.lifespan || 85}.
-      </div>
-
-      {/* Surplus Breakdown */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Surplus Breakdown (Realistic)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {/* Surplus Breakdown at top */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Monthly Income Breakdown</h3>
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center p-3 bg-white border border-gray-300 rounded-lg">
             <div className="text-xs text-gray-500 mb-1">Monthly Income</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(fireResults.monthlyIncome)}</div>
+            <div className="font-semibold text-gray-900">{formatCurrency(monthlyIncome)}</div>
           </div>
           <div className="text-center p-3 bg-white border border-gray-300 rounded-lg">
             <div className="text-xs text-gray-500 mb-1">Monthly Expenses</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(fireResults.monthlyExpenses)}</div>
+            <div className="font-semibold text-gray-900">{formatCurrency(monthlyExpenses)}</div>
           </div>
           <div className="text-center p-3 bg-white border border-blue-300 rounded-lg">
             <div className="text-xs text-gray-500 mb-1">Current SIP</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(fireResults.currentMonthlySIP)}</div>
+            <div className="font-semibold text-gray-900">{formatCurrency(currentMonthlySIP)}</div>
           </div>
           <div className="text-center p-3 bg-white border border-green-300 rounded-lg">
             <div className="text-xs text-gray-500 mb-1">Monthly Surplus</div>
             <div className="font-semibold text-gray-900">{formatCurrency(fireResults.monthlySurplus)}</div>
           </div>
-          <div className="text-center p-3 bg-white border border-yellow-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Emergency Reserve</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(fireResults.emergencyReserveMonthly)}</div>
-          </div>
-          <div className="text-center p-3 bg-white border border-purple-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Investable Surplus</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(fireResults.investableSurplus)}</div>
-          </div>
         </div>
-        <p className="text-sm text-gray-600 mt-4">
-          Monthly surplus is calculated after subtracting expenses AND your current SIP. We keep {formatCurrency(fireResults.emergencyReserveMonthly)} (20% of expenses) as a safety buffer. The remaining {formatCurrency(fireResults.investableSurplus)} is available for additional SIP.
-        </p>
       </div>
 
       {/* Interactive Allocation Selector */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Try Different Surplus Allocations</h3>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-              <button
-                key={ratio}
-                onClick={() => setSelectedRatio(ratio)}
-                disabled={fireResults.investableSurplus <= 0 && ratio > 0}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  selectedRatio === ratio
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : fireResults.investableSurplus <= 0 && ratio > 0
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {formatPercentage(ratio)}
-                {ratio === fireResults.recommended?.ratio && ' ★'}
-              </button>
-            ))}
-            <button
-              onClick={() => setSelectedRatio(fireResults.recommended?.ratio || 0)}
-              className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800"
-            >
-              Reset to Recommended
-            </button>
-          </div>
-          
-          {fireResults.investableSurplus <= 0 ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800">
-                Your investable surplus is currently ₹0 after expenses, SIP and emergency reserve. FIRE optimization is limited right now.
-              </p>
-            </div>
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg font-semibold text-gray-900">Smart Surplus Lever</h3>
+          {fireResults.requiredPctToMeetDesiredAge !== null ? (
+            <p className="text-sm text-gray-700">
+              Your desired age is achievable at {Math.round(fireResults.requiredPctToMeetDesiredAge * 100)}% of surplus. We picked {Math.round((fireResults.premiumLeverPct || 0) * 100)}% to unlock an earlier retirement age.
+            </p>
+          ) : fireResults.monthlySurplus <= 0 ? (
+            <p className="text-sm text-gray-700">No monthly surplus available. Increase income or lower expenses to improve retirement age.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <p className="text-sm text-gray-700">Your target age is not feasible with current surplus. Using the maximum affordable SIP to find the earliest realistic age.</p>
+          )}
+        </div>
+
+        {fireResults.monthlySurplus <= 0 ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
+            No monthly surplus available. Your earliest age here is based only on current SIP.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-full">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={selectedPercent}
+                  onChange={(e) => setSelectedRatio(Number(e.target.value) / 100)}
+                  className="w-full accent-emerald-600"
+                  style={{
+                    background: getAllocationGradient(selectedRatio),
+                    height: '6px',
+                    borderRadius: '9999px',
+                    WebkitAppearance: 'none'
+                  }}
+                />
+              </div>
+              <div className="w-20 text-right text-sm font-semibold text-gray-900">{selectedPercent}%</div>
+            </div>
+            {fireResults.premiumLeverPct >= 1 && fireResults.safetyScenario && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg p-3">
+                This is the earliest age possible with 100% surplus. To keep an emergency buffer, a {formatPercentage(fireResults.safetyScenario.ratio)} allocation still retires you at {formatAge(fireResults.safetyScenario.fireAge)}.
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="text-sm text-gray-600 mb-1">Selected Allocation</div>
                 <div className="text-xl font-semibold text-gray-900">{formatPercentage(selectedRatio)}</div>
-                <div className="text-xs text-gray-500">of investable surplus</div>
+                <div className="text-xs text-gray-500">of monthly surplus</div>
               </div>
               <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="text-sm text-gray-600 mb-1">Additional SIP</div>
@@ -277,129 +306,87 @@ const FireCalculatorPremiumUI = ({ fireResults, formData, onResetPro }) => {
                 <div className="text-xl font-semibold text-gray-900">{formatCurrency(selectedScenario.newMonthlySIP)}/month</div>
                 <div className="text-xs text-gray-500">including current SIP</div>
               </div>
+              <div className="p-4 border border-gray-200 rounded-lg">
+                <div className="text-sm text-gray-600 mb-1">Monthly emergency fund left</div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xl font-semibold text-gray-900">{formatCurrency(monthlyEmergencyLeft)}/month</div>
+                  {selectedRatio === 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEmergencyNote((prev) => !prev)}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                      aria-label="Reminder about keeping emergency fund"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 19a7 7 0 110-14 7 7 0 010 14z" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {selectedRatio === 1 && showEmergencyNote && (
+                  <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Allocating 100% removes monthly buffer. Consider keeping some surplus aside.
+                  </div>
+                )}
+                <div className="text-xs text-gray-500">after chosen allocation</div>
+              </div>
             </div>
-          )}
+          </div>
+        )}
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
+          <div className="text-sm font-medium text-blue-800 mb-1">FIRE Age</div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">
+            {formatAge(selectedScenario.fireAge)} years
+          </div>
+          <div className="text-xs text-gray-600">
+            Earlier than your target of {retirementAge} years
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
+          <div className="text-sm font-medium text-purple-800 mb-1">Projected Corpus at FIRE Age</div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">
+            {formatCurrency(selectedScenario.projectedCorpusAtFireAge)}
+          </div>
+          <div className="text-xs text-gray-600">
+            Minimum corpus needed at age {formatAge(selectedScenario.fireAge)} to last till {lifespan}: {formatCurrency(selectedScenario.requiredCorpusAtFireAge)}
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-5">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="text-sm font-medium text-amber-800">{gapLabel}</div>
+            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${gapBadgeClass}`}>
+              {ageGap < 0 ? 'Ahead' : ageGap > 0 ? 'Later' : 'On track'}
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900 mb-1">{gapValue} years</div>
+          <div className="text-xs text-gray-600">{gapSubtitle}</div>
         </div>
       </div>
 
-      {/* Graph 1: FIRE Age Improvement */}
-      <div className="border border-gray-200 rounded-xl p-6">
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Early Retirement Improvement by Using Investable Surplus
-          </h3>
-          <p className="text-gray-600">
-            See how allocating 0%–100% of your investable surplus into SIP changes your FIRE age
-          </p>
-        </div>
-
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={graphData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="percent" 
-                label={{ value: '% of Investable Surplus Allocated to Additional SIP', position: 'insideBottom', offset: -10 }}
-                tickFormatter={(value) => `${value}%`}
-              />
-              <YAxis 
-                yAxisId="left"
-                label={{ value: 'FIRE Age (years)', angle: -90, position: 'insideLeft' }}
-              />
-              <YAxis 
-                yAxisId="right"
-                orientation="right"
-                label={{ value: 'Years Earlier', angle: 90, position: 'insideRight' }}
-              />
-              <Tooltip content={<GraphTooltip />} />
-              <Legend />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="fireAge"
-                name="FIRE Age"
-                stroke="#4f46e5"
-                strokeWidth={3}
-                dot={{ r: 4 }}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="yearsEarlier"
-                name="Years Earlier"
-                stroke="#10b981"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-              {graphData.filter(d => d.isRecommended).map((point, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={point.percent}
-                  stroke="#f59e0b"
-                  strokeDasharray="3 3"
-                  strokeWidth={2}
-                />
-              ))}
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="text-center text-sm font-semibold text-emerald-900 bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-4 rounded-xl border border-emerald-200 shadow-sm">
+        {bannerMessage}
       </div>
 
-      {/* Graph 2: Corpus Analysis */}
-      <div className="border border-gray-200 rounded-xl p-6">
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Corpus at FIRE Age vs Required Corpus
-          </h3>
-          <p className="text-gray-600">
-            Shows whether your corpus is enough at the FIRE age for each surplus allocation scenario
-          </p>
-        </div>
-
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={graphData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="percent" 
-                label={{ value: '% of Investable Surplus Allocated', position: 'insideBottom', offset: -10 }}
-                tickFormatter={(value) => `${value}%`}
-              />
-              <YAxis 
-                label={{ value: 'Corpus Amount', angle: -90, position: 'insideLeft' }}
-                tickFormatter={formatCurrency}
-              />
-              <Tooltip content={<CorpusTooltip />} />
-              <Legend />
-              <Bar
-                dataKey="projectedCorpus"
-                name="Projected Corpus at FIRE Age"
-                fill="#3b82f6"
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                dataKey="requiredCorpus"
-                name="Required Corpus at FIRE Age"
-                fill="#10b981"
-                radius={[2, 2, 0, 0]}
-              />
-              {graphData.filter(d => d.isRecommended).map((point, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={point.percent}
-                  stroke="#f59e0b"
-                  strokeDasharray="3 3"
-                  strokeWidth={2}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="space-y-1">
+            <h4 className="text-base font-semibold text-emerald-900">Solid corpus plan. Are you covered for health shocks?</h4>
+            <p className="text-sm text-emerald-800">
+              Unexpected medical events can derail early retirement. Run Vinca&apos;s Health Stress Test to see how your plan holds up against unpredictable healthcare costs.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/health-stress"
+            className="inline-flex items-center justify-center px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700"
+          >
+            Go to Health Stress Test
+          </Link>
         </div>
       </div>
 

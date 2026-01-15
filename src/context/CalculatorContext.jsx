@@ -49,6 +49,7 @@ export function CalculatorProvider({ children }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [results, setResults] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
+  const [financialReadinessResults, setFinancialReadinessResults] = useState(null);
 
   // Load saved data from localStorage
   useEffect(() => {
@@ -152,11 +153,14 @@ export function CalculatorProvider({ children }) {
 
   const value = {
     formData,
+    setFormData,
     updateFormData,
     currentStep,
     setCurrentStep,
     calculateResults,
     results,
+    financialReadinessResults,
+    setFinancialReadinessResults,
     dashboardData,
     setDashboardData
   };

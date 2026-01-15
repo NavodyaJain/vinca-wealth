@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { usePremium } from '@/lib/premium';
-import HealthImpactCharts from '@/components/HealthImpactCharts';
 import ProSubscriptionModal from '@/components/financialReadiness/ProSubscriptionModal';
-import { Shield, AlertCircle, HeartPulse, Activity, Stethoscope, TrendingUp, Lock, Info } from 'lucide-react';
+import { Shield, HeartPulse, Activity, Stethoscope, Lock, Info } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,6 +13,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  BarChart,
+  Bar,
   ReferenceLine
 } from 'recharts';
 
@@ -163,10 +164,14 @@ export default function HealthStressPage() {
 
   const missingDataTooltip = 'Complete Financial Readiness inputs to unlock full premium simulation.';
 
-  const renderINR = (value, opts) => {
+  const renderINR = (value, opts = {}) => {
+    const { allowZero = false } = opts;
     const num = Number(value);
     const finite = Number.isFinite(num);
-    return <span title={finite ? '' : missingDataTooltip}>{formatINR(value, opts)}</span>;
+    if (!finite || (!allowZero && num <= 0)) {
+      return <span title={missingDataTooltip}>—</span>;
+    }
+    return <span title="">{formatINR(value, opts)}</span>;
   };
 
   const buildPremiumModel = () => {
@@ -209,6 +214,7 @@ export default function HealthStressPage() {
 
     const withdrawals = [];
     const corpusSeries = [];
+    let totalShockOOP = 0;
 
     const initialCorpus = safeNumber(userInputs.moneySaved, 1500000);
     let baselineCorpus = initialCorpus > 0 ? initialCorpus : 0;
@@ -225,6 +231,7 @@ export default function HealthStressPage() {
       const shockFull = behavior.eventYear !== null && year === behavior.eventYear ? behavior.shock : 0;
       const shockOOP = shockFull * oopRate;
       const stressedAnnual = baselineAnnual + healthAnnualOOP + shockOOP;
+      totalShockOOP += shockOOP;
 
       withdrawals.push({
         year,
@@ -267,7 +274,9 @@ export default function HealthStressPage() {
       ? Math.max(0, baselineDepletionAge - healthDepletionAge)
       : null;
 
-    const extraCorpusRequired = Number.isFinite(annualOOP) && annualOOP > 0 ? Math.round(annualOOP / 0.04) : null;
+    const bufferForRecurring = Number.isFinite(annualOOP) ? annualOOP : 0;
+    const bufferForShocks = Number.isFinite(totalShockOOP) ? totalShockOOP : 0;
+    const extraCorpusRequired = bufferForRecurring + bufferForShocks > 0 ? Math.round(bufferForRecurring + bufferForShocks) : null;
 
     const getCorpusAtAge = (age, key) => {
       const exact = corpusSeries.find((point) => Number(point.age) === age);
@@ -293,6 +302,7 @@ export default function HealthStressPage() {
       annualHealthCost,
       monthlyOOP,
       annualOOP,
+      shockOOP: Math.round(totalShockOOP),
       extraCorpusRequired,
       emergencyDaysWithBuffer: monthlyHealthLoad > 0 ? Math.round((emergencyFund / monthlyHealthLoad) * 30) : null,
       emergencyDaysWithoutBuffer: monthlyHealthLoad > 0 ? Math.round((emergencyFund / monthlyHealthLoad) * 25) : null,
@@ -310,7 +320,7 @@ export default function HealthStressPage() {
     };
 
     const recommendations = {
-      healthBuffer: Number.isFinite(monthlyOOP) ? Math.round(monthlyOOP * 12 * 2) : null,
+      healthBuffer: Number.isFinite(monthlyOOP) ? Math.round(monthlyOOP * 12 + bufferForShocks) : null,
       insuranceGap: Math.max(0, (behavior.shock * oopRate || 0) - emergencyFund),
       withdrawalCushion: Math.round(monthlyHealthLoad * 0.6)
     };
@@ -321,11 +331,68 @@ export default function HealthStressPage() {
       baselineFailureAge,
       stressedFailureAge,
       recommendations,
-      premiumComputed
+      premiumComputed,
+      medicalVsWithdrawalSeries: []
     };
   };
 
   const premiumModel = useMemo(() => buildPremiumModel(), [userInputs, selectedHealthCategory]);
+
+  const hospitalDays = useMemo(() => {
+    if (!premiumModel?.premiumComputed) return null;
+    const dailyCost = 20000; // midpoint of ₹15k–₹25k
+    const coverage = 0.8;
+    const oopDailyWithCover = dailyCost * (1 - coverage);
+    const oopDailyNoCover = dailyCost;
+    const emergencyFund = safeNumber(userInputs?.emergencyFund, 0);
+    const buffer = Number.isFinite(premiumModel.recommendations.healthBuffer) ? premiumModel.recommendations.healthBuffer : 0;
+
+    const daysCalc = (pool, oop) => (oop > 0 ? Math.floor(pool / oop) : null);
+
+    const emergencyWith = daysCalc(emergencyFund, oopDailyWithCover);
+    const bufferWith = daysCalc(buffer, oopDailyWithCover);
+    const totalWith = daysCalc(emergencyFund + buffer, oopDailyWithCover);
+
+    const emergencyWithout = daysCalc(emergencyFund, oopDailyNoCover);
+    const bufferWithout = daysCalc(buffer, oopDailyNoCover);
+    const totalWithout = daysCalc(emergencyFund + buffer, oopDailyNoCover);
+
+    return {
+      dailyCost,
+      coverage,
+      withCover: {
+        emergency: Number.isFinite(emergencyWith) && emergencyWith > 0 ? emergencyWith : null,
+        buffer: Number.isFinite(bufferWith) && bufferWith > 0 ? bufferWith : null,
+        total: Number.isFinite(totalWith) && totalWith > 0 ? totalWith : null
+      },
+      withoutCover: {
+        emergency: Number.isFinite(emergencyWithout) && emergencyWithout > 0 ? emergencyWithout : null,
+        buffer: Number.isFinite(bufferWithout) && bufferWithout > 0 ? bufferWithout : null,
+        total: Number.isFinite(totalWithout) && totalWithout > 0 ? totalWithout : null
+      }
+    };
+  }, [premiumModel, userInputs]);
+
+  const premiumSummaryBox = useMemo(() => {
+    if (!premiumModel?.premiumComputed) return null;
+    const { yearsLost, monthlyOOP, extraCorpusRequired } = premiumModel.premiumComputed;
+
+    const biggestRisk = yearsLost >= 3
+      ? 'Runway shortens sharply; health costs can break the plan early.'
+      : yearsLost >= 1
+        ? 'Retirement lasts fewer years once OOP health costs hit.'
+        : 'Health costs nibble at corpus; buffer keeps you stable.';
+
+    const whatBreaks = monthlyOOP > 0
+      ? 'Cash-flow strain and higher withdrawals are the first pressure point.'
+      : 'Corpus erosion is the first risk if cash flow is steady.';
+
+    const nextStep = extraCorpusRequired
+      ? 'Set aside a dedicated health buffer for your 20% share and shock events.'
+      : 'Fill missing inputs and size a buffer for health shocks.';
+
+    return { biggestRisk, whatBreaks, nextStep };
+  }, [premiumModel]);
 
   const premiumSummary = useMemo(() => {
     if (!premiumModel?.premiumComputed) return null;
@@ -344,20 +411,59 @@ export default function HealthStressPage() {
     return { tone: 'mild', message: ' Plan stable under 20% out-of-pocket; keep tracking costs yearly.' };
   }, [premiumModel]);
 
-  const depletionDisplay = useMemo(() => {
-    const baseline = premiumModel?.premiumComputed?.baselineDepletionAge;
-    const health = premiumModel?.premiumComputed?.healthDepletionAge;
+  const generalInflationData = useMemo(() => {
+    const baseCost = 100000;
+    return Array.from({ length: 21 }, (_, year) => ({
+      year,
+      medical: Math.round(baseCost * Math.pow(1.09, year)),
+      normal: Math.round(baseCost * Math.pow(1.06, year))
+    }));
+  }, []);
 
-    const hasBaseline = Number.isFinite(baseline);
-    const hasHealth = Number.isFinite(health);
+  const healthEventConversionData = useMemo(() => {
+    const typicalMonthlySpend = 50000;
+    const categories = [
+      { label: 'Everyday care (₹5k/mo)', annualCost: 5000 * 12 },
+      { label: 'Planned event (₹3L one-time)', annualCost: 300000 },
+      { label: 'High impact event (₹12L one-time)', annualCost: 1200000 }
+    ];
+    return categories.map((item) => ({
+      label: item.label,
+      months: Number(((item.annualCost / typicalMonthlySpend)).toFixed(1))
+    }));
+  }, []);
 
-    if (!hasBaseline && !hasHealth) return '—';
-    if (hasBaseline && hasHealth) {
-      return baseline === health ? `${baseline}` : `${baseline}  ${health}`;
-    }
-    if (hasHealth) return `${health}`;
-    return `${baseline}`;
-  }, [premiumModel]);
+  const insuranceRealityData = useMemo(
+    () => [
+      {
+        label: '₹10L hospital bill',
+        insurance: 800000,
+        oop: 200000
+      }
+    ],
+    []
+  );
+
+  const readinessData = useMemo(() => {
+    const hospitalPerDay = 20000;
+    const emergencyFund = 300000;
+    const healthBuffer = 200000;
+    const total = emergencyFund + healthBuffer;
+    return [
+      {
+        label: 'Emergency fund only',
+        days: Math.round(emergencyFund / hospitalPerDay)
+      },
+      {
+        label: 'Emergency + health buffer',
+        days: Math.round(total / hospitalPerDay)
+      },
+      {
+        label: 'Insurance + buffer',
+        days: Math.round(total / (hospitalPerDay * 0.2))
+      }
+    ];
+  }, []);
 
   if (loading) {
     return (
@@ -462,83 +568,155 @@ export default function HealthStressPage() {
           </div>
         </div>
 
-        {userInputs && (
+        {!loading && (
           <div className="mb-8 bg-gradient-to-br from-blue-50 via-cyan-50 to-slate-50 rounded-2xl border border-blue-200 shadow-md p-6 sm:p-8">
-            <div className="mb-8">
-              <span className="inline-block px-3 py-1 bg-blue-700 text-white text-xs font-semibold rounded-full mb-4">Free Educational Preview</span>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{getCategoryConfig(selectedHealthCategory).freeTitle}</h2>
-              <p className="text-slate-600 text-base mb-6">{getCategoryConfig(selectedHealthCategory).freeSubtitle}</p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white/70 rounded-lg p-4 border border-blue-100">
-                  <div className="text-sm font-semibold text-blue-900 mb-1">Retirement Risk</div>
-                  <div className="text-lg font-bold text-blue-700">Withdrawal Pressure</div>
-                  <div className="text-xs text-slate-600 mt-2">Higher health expenses require higher annual withdrawals from your corpus</div>
-                </div>
-                <div className="bg-white/70 rounded-lg p-4 border border-blue-100">
-                  <div className="text-sm font-semibold text-blue-900 mb-1">Savings Impact</div>
-                  <div className="text-lg font-bold text-blue-700">Corpus Drain</div>
-                  <div className="text-xs text-slate-600 mt-2">Unexpected costs reduce long-term compounding and shorten survival</div>
-                </div>
-                <div className="bg-white/70 rounded-lg p-4 border border-blue-100">
-                  <div className="text-sm font-semibold text-blue-900 mb-1">Reality Check</div>
-                  <div className="text-lg font-bold text-blue-700">Inflation Shock</div>
-                  <div className="text-xs text-slate-600 mt-2">Medical inflation is usually 8–10% yearly, outpacing general inflation</div>
-                </div>
-              </div>
+            <div className="mb-8 flex flex-col gap-3">
+              <span className="inline-block px-3 py-1 bg-blue-700 text-white text-xs font-semibold rounded-full w-fit">Free Educational Preview</span>
+              <h2 className="text-2xl font-bold text-slate-900">General India healthcare trend education</h2>
+              <p className="text-slate-600 text-base max-w-3xl">
+                These visuals use broad Indian assumptions (medical inflation 9%, general inflation 6%, sample hospital costs) so you can see directionally why healthcare needs a dedicated plan. Premium applies this to your exact retirement numbers.
+              </p>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <HealthImpactCharts scenario={getCategoryConfig(selectedHealthCategory)} userInputs={userInputs} isPremium={false} />
-              </div>
-            </div>
-
-            <div className="mt-8 bg-white rounded-xl border border-slate-200 p-6">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="text-blue-600" size={24} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-4">How health stress can change retirement outcomes</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex gap-3">
-                      <span className="text-green-600 text-lg font-bold"></span>
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">Higher yearly withdrawals</div>
-                        <div className="text-xs text-slate-600">Corpus may last fewer years without planning</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="text-green-600 text-lg font-bold"></span>
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">Unexpected early costs</div>
-                        <div className="text-xs text-slate-600">Sequence risk becomes worse during downturns</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="text-green-600 text-lg font-bold"></span>
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">Without a buffer</div>
-                        <div className="text-xs text-slate-600">Lifestyle cuts become unavoidable</div>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="text-green-600 text-lg font-bold"></span>
-                      <div>
-                        <div className="text-sm font-medium text-slate-800">With insurance + buffer</div>
-                        <div className="text-xs text-slate-600">Retirement confidence improves significantly</div>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-xs font-semibold text-blue-700">General Trend</div>
+                    <h3 className="text-lg font-semibold text-slate-900">Medical Inflation vs Normal Inflation (India Trend)</h3>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-slate-200">
-                    <p className="text-sm text-slate-600 italic">
-                      <strong>Key insight:</strong> Health planning isn't about being fearful—it's about being prepared. A small buffer + proper insurance can make the difference between a stable and stressful retirement.
-                    </p>
-                  </div>
+                  <span className="text-[11px] px-2 py-1 bg-blue-50 text-blue-700 rounded">₹1,00,000 today</span>
                 </div>
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <LineChart data={generalInflationData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="year" tick={{ fontSize: 12 }} label={{ value: 'Years', position: 'insideBottom', offset: -5 }} />
+                      <YAxis tickFormatter={(v) => formatAxisINR(v)} tick={{ fontSize: 12 }} />
+                      <Tooltip content={({ payload, label }) => {
+                        if (!payload || !payload.length) return null;
+                        const medical = payload.find((p) => p.dataKey === 'medical')?.value;
+                        const normal = payload.find((p) => p.dataKey === 'normal')?.value;
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                            <div className="font-semibold text-slate-800 mb-1">Year {label}</div>
+                            <div>Medical: {formatINR(medical)}</div>
+                            <div>Normal: {formatINR(normal)}</div>
+                          </div>
+                        );
+                      }} />
+                      <Legend />
+                      <Line type="monotone" dataKey="medical" name="Medical (9%)" stroke="#ef4444" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="normal" name="Normal (6%)" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-slate-600 mt-3">Medical costs typically outpace general inflation, widening the gap every year.</p>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-xs font-semibold text-amber-700">Impact Snapshot</div>
+                    <h3 className="text-lg font-semibold text-slate-900">How One Health Event Converts to Months of Retirement Spending</h3>
+                  </div>
+                  <span className="text-[11px] px-2 py-1 bg-amber-50 text-amber-700 rounded">Typical spend ₹50k/mo</span>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <BarChart data={healthEventConversionData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-8} textAnchor="end" height={70} />
+                      <YAxis tickFormatter={(v) => `${v}m`} tick={{ fontSize: 12 }} label={{ value: 'Months of expenses', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip content={({ payload }) => {
+                        if (!payload || !payload.length) return null;
+                        const months = payload[0].value;
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                            <div className="font-semibold text-slate-800 mb-1">Equivalent months</div>
+                            <div>{months} months of retirement spending</div>
+                          </div>
+                        );
+                      }} />
+                      <Bar dataKey="months" name="Months of retirement spend" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-slate-600 mt-3">Large one-time events can equal many months of regular retirement expenses.</p>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-700">Coverage Reality</div>
+                    <h3 className="text-lg font-semibold text-slate-900">Insurance vs Out-of-Pocket Reality (80/20 example)</h3>
+                  </div>
+                  <span className="text-[11px] px-2 py-1 bg-emerald-50 text-emerald-700 rounded">₹10L bill</span>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <BarChart data={insuranceRealityData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                      <YAxis tickFormatter={(v) => formatAxisINR(v)} tick={{ fontSize: 12 }} />
+                      <Tooltip content={({ payload }) => {
+                        if (!payload || !payload.length) return null;
+                        const ins = payload.find((p) => p.dataKey === 'insurance')?.value;
+                        const oop = payload.find((p) => p.dataKey === 'oop')?.value;
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                            <div className="font-semibold text-slate-800 mb-1">Example ₹10L bill</div>
+                            <div>Insurance covers: {formatINR(ins)}</div>
+                            <div>Out-of-pocket: {formatINR(oop)}</div>
+                          </div>
+                        );
+                      }} />
+                      <Legend />
+                      <Bar dataKey="insurance" stackId="a" name="Insurance (80%)" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="oop" stackId="a" name="Out-of-pocket (20%)" fill="#ef4444" radius={[0, 0, 6, 6]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-slate-600 mt-3">Even with insurance, a 20% share can create a sudden withdrawal shock.</p>
+              </div>
+
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-xs font-semibold text-purple-700">Readiness Check</div>
+                    <h3 className="text-lg font-semibold text-slate-900">Emergency Readiness: Buffer vs No Buffer (General Example)</h3>
+                  </div>
+                  <span className="text-[11px] px-2 py-1 bg-purple-50 text-purple-700 rounded">₹20k/day hospital</span>
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer>
+                    <BarChart data={readinessData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={0} angle={-8} textAnchor="end" height={70} />
+                      <YAxis tick={{ fontSize: 12 }} label={{ value: 'Days covered', angle: -90, position: 'insideLeft' }} />
+                      <Tooltip content={({ payload }) => {
+                        if (!payload || !payload.length) return null;
+                        const days = payload[0].value;
+                        return (
+                          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                            <div className="font-semibold text-slate-800 mb-1">Days protected</div>
+                            <div>{days} days of hospitalization covered</div>
+                          </div>
+                        );
+                      }} />
+                      <Bar dataKey="days" name="Days of coverage" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-xs text-slate-600 mt-3">Buffers dramatically extend how long you can stay cashless during a hospitalisation.</p>
+              </div>
+            </div>
+
+            <p className="mt-6 text-sm text-slate-600 italic">
+              These are general Indian healthcare trends. Premium shows impact on your exact retirement plan.
+            </p>
           </div>
         )}
 
@@ -617,57 +795,112 @@ export default function HealthStressPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-purple-50 to-white">
-                    <div className="text-xs font-semibold text-purple-700 mb-2 flex items-center justify-between">
-                      Out-of-Pocket Health Cost (20%)
-                      <span className="px-2 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">80% insured</span>
-                    </div>
-                    <div className="text-2xl font-bold text-slate-900">{renderINR(premiumModel.premiumComputed.monthlyOOP, { compact: true, suffix: '/mo' })}</div>
-                    <div className="text-xs text-slate-600 mt-1">Insurance covers 80%. You pay 20%.</div>
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-white">
                     <div className="text-xs font-semibold text-emerald-700 mb-2">Extra Corpus Required</div>
                     <div className="text-2xl font-bold text-slate-900">{renderINR(premiumModel.premiumComputed.extraCorpusRequired, { compact: true })}</div>
-                    <div className="text-xs text-slate-600 mt-1">To absorb this health stress without lifestyle cuts.</div>
+                    <div className="text-xs text-slate-600 mt-1">One-year OOP + shock exposure (20% of bills).</div>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-purple-50 to-white">
+                    <div className="text-xs font-semibold text-purple-700 mb-2 flex items-center justify-between">
+                      Monthly Out-of-Pocket Health Cost
+                      <span className="px-2 py-0.5 text-[10px] rounded bg-purple-100 text-purple-700">80% insured</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900">{renderINR(premiumModel.premiumComputed.monthlyOOP, { compact: true, suffix: '/mo' })}</div>
+                    <div className="text-xs text-slate-600 mt-1">Only your 20% share shown here.</div>
                   </div>
 
                   <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-rose-50 to-white">
                     <div className="text-xs font-semibold text-rose-700 mb-2">Depletion Age Impact</div>
-                    <div className="text-lg font-bold text-slate-900">{depletionDisplay}</div>
-                    <div className="text-xs text-slate-600 mt-1">Breaks earlier by {Number.isFinite(premiumModel.premiumComputed.yearsLost) ? `${premiumModel.premiumComputed.yearsLost} yrs` : '—'}</div>
+                    <div className="text-lg font-bold text-slate-900">{Number.isFinite(premiumModel.premiumComputed.baselineDepletionAge) && Number.isFinite(premiumModel.premiumComputed.healthDepletionAge)
+                      ? `${premiumModel.premiumComputed.baselineDepletionAge} → ${premiumModel.premiumComputed.healthDepletionAge}`
+                      : '—'}</div>
+                    <div className="text-xs text-slate-600 mt-1">
+                      {Number.isFinite(premiumModel.premiumComputed.yearsLost)
+                        ? premiumModel.premiumComputed.yearsLost > 0
+                          ? `Breaks earlier by ${premiumModel.premiumComputed.yearsLost} yrs`
+                          : 'No change vs baseline'
+                        : '—'}
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-blue-50 to-white">
-                    <div className="text-xs font-semibold text-blue-700 mb-2">Corpus Drop at Retirement</div>
-                    <div className="text-2xl font-bold text-slate-900">{renderINR(premiumModel.premiumComputed.corpusDropAtRetirement, { compact: true })}</div>
-                    <div className="text-xs text-slate-600 mt-1">
-                      Baseline {renderINR(premiumModel.premiumComputed.baselineAtRetirement, { compact: true })} vs With Health {renderINR(premiumModel.premiumComputed.healthAtRetirement, { compact: true })}
-                    </div>
+                    <div className="text-xs font-semibold text-blue-700 mb-2">Buffer Needed to Stay Safe</div>
+                    <div className="text-2xl font-bold text-slate-900">{renderINR(premiumModel.recommendations.healthBuffer, { compact: true })}</div>
+                    <div className="text-xs text-slate-600 mt-1">Covers a year of OOP plus shock share.</div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="p-4 border border-slate-200 rounded-xl bg-white">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">Hospitalisation Days You Can Afford</div>
+                        <div className="text-xs text-slate-500">Based on ₹20,000/day and 80% insurance coverage (you pay 20%)</div>
+                      </div>
+                      <div className="px-2 py-1 text-xs rounded bg-orange-100 text-orange-700">Protection</div>
+                    </div>
+                    <div className="h-72 mt-3">
+                      <ResponsiveContainer>
+                        <LineChart
+                          data={hospitalDays ? [
+                            { label: 'Emergency fund', withCover: hospitalDays.withCover.emergency, withoutCover: hospitalDays.withoutCover.emergency },
+                            { label: 'Health buffer', withCover: hospitalDays.withCover.buffer, withoutCover: hospitalDays.withoutCover.buffer },
+                            { label: 'Total protection', withCover: hospitalDays.withCover.total, withoutCover: hospitalDays.withoutCover.total }
+                          ].filter((row) => Number.isFinite(row.withCover) || Number.isFinite(row.withoutCover)) : []}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v} d`} />
+                          <Tooltip content={({ payload, label }) => {
+                            if (!payload || !payload.length) return null;
+                            const withCov = payload.find((p) => p.dataKey === 'withCover')?.value;
+                            const withoutCov = payload.find((p) => p.dataKey === 'withoutCover')?.value;
+                            return (
+                              <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                                <div className="font-semibold text-slate-800 mb-1">{label}</div>
+                                <div>With insurance: {Number.isFinite(withCov) ? `${withCov} days` : '—'}</div>
+                                <div>Without insurance: {Number.isFinite(withoutCov) ? `${withoutCov} days` : '—'}</div>
+                              </div>
+                            );
+                          }} />
+                          <Legend />
+                          <Line type="monotone" dataKey="withCover" name="With insurance (80%)" stroke="#22c55e" strokeWidth={2} dot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="withoutCover" name="Without insurance" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} strokeDasharray="5 4" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px] text-slate-700">
+                      <div className="p-2 rounded-lg bg-orange-50 border border-orange-100">
+                        <div className="text-[11px] uppercase text-orange-600 tracking-wide">Emergency</div>
+                        <div className="font-semibold text-slate-900">{hospitalDays?.withCover?.emergency ? `${hospitalDays.withCover.emergency} days` : '—'}</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-orange-50 border border-orange-100">
+                        <div className="text-[11px] uppercase text-orange-600 tracking-wide">Health buffer</div>
+                        <div className="font-semibold text-slate-900">{hospitalDays?.withCover?.buffer ? `${hospitalDays.withCover.buffer} days` : '—'}</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-orange-50 border border-orange-100">
+                        <div className="text-[11px] uppercase text-orange-600 tracking-wide">Total protection</div>
+                        <div className="font-semibold text-slate-900">{hospitalDays?.withCover?.total ? `${hospitalDays.withCover.total} days` : '—'}</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[11px] text-slate-600">Without insurance, days drop sharply — keep cover active and buffer liquid.</div>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 rounded-xl bg-white">
+                    <div className="flex items-center justify-between mb-1">
                       <div>
                         <div className="text-sm font-semibold text-slate-800">Corpus Over Time (Baseline vs With Disease)</div>
-                        <div className="text-xs text-slate-500">Monthly out-of-pocket included</div>
+                        <div className="text-xs text-slate-500">With break-age markers; health costs include 20% OOP.</div>
                       </div>
-                      <div className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-700">Runway</div>
+                      <div className="px-2 py-1 text-xs rounded bg-indigo-100 text-indigo-700">Runway</div>
                     </div>
-                    <p className="text-xs text-slate-500 mb-3">Read: Compare how fast your corpus falls with and without health costs. Dotted lines mark the break age.</p>
-                    <div className="h-64">
+                    <div className="h-72 mt-3">
                       <ResponsiveContainer>
                         <LineChart data={premiumModel.corpusSeries}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                          <XAxis
-                            dataKey="yearIndex"
-                            tickFormatter={(v) => v}
-                            tick={{ fontSize: 12 }}
-                            label={{ value: 'Years after retirement', position: 'insideBottom', offset: -5 }}
-                          />
+                          <XAxis dataKey="yearIndex" tickFormatter={(v) => v} tick={{ fontSize: 12 }} label={{ value: 'Years after retirement', position: 'insideBottom', offset: -5 }} />
                           <YAxis tickFormatter={(v) => formatAxisINR(v)} tick={{ fontSize: 12 }} domain={[0, (dataMax) => (dataMax || 1) * 1.2]} />
                           <Tooltip content={({ payload, label }) => {
                             if (!payload || !payload.length) return null;
@@ -687,7 +920,7 @@ export default function HealthStressPage() {
                               x={Number(premiumModel.stressedFailureAge) - premiumModel.premiumComputed.retirementAge}
                               stroke="#ef4444"
                               strokeDasharray="4 4"
-                              label={{ value: 'Breaks here', position: 'top', fill: '#b91c1c', fontSize: 10 }}
+                              label={{ value: 'Break age', position: 'top', fill: '#b91c1c', fontSize: 10 }}
                             />
                           )}
                           {premiumModel.baselineFailureAge && (
@@ -703,18 +936,21 @@ export default function HealthStressPage() {
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
+                    <div className="mt-3 text-[11px] text-slate-700 space-y-1">
+                      <div><strong>What this shows:</strong> Health costs pull corpus down faster; dotted lines mark break ages.</div>
+                      <div><strong>What it means:</strong> Advance funding helps push break age back.</div>
+                    </div>
                   </div>
 
-                  <div className="p-4 border border-slate-200 rounded-xl bg-slate-50">
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="p-4 border border-slate-200 rounded-xl bg-white">
+                    <div className="flex items-center justify-between mb-1">
                       <div>
-                        <div className="text-sm font-semibold text-slate-800">Monthly Withdrawal Pressure</div>
-                        <div className="text-xs text-slate-500">Includes 20% out-of-pocket health costs</div>
+                        <div className="text-sm font-semibold text-slate-800">Monthly Withdrawal Pressure (Baseline vs With Disease)</div>
+                        <div className="text-xs text-slate-500">Shows 20% out-of-pocket layer on top of baseline spending.</div>
                       </div>
-                      <div className="px-2 py-1 text-xs rounded bg-emerald-100 text-emerald-700">Flows</div>
+                      <div className="px-2 py-1 text-xs rounded bg-emerald-100 text-emerald-700">Cash flow</div>
                     </div>
-                    <p className="text-xs text-slate-500 mb-3">Read: See how monthly withdrawals rise once health expenses are added. Gap shows extra cash strain each year.</p>
-                    <div className="h-64">
+                    <div className="h-64 mt-3">
                       <ResponsiveContainer>
                         <LineChart data={premiumModel.withdrawals}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -740,39 +976,74 @@ export default function HealthStressPage() {
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
+                    <div className="mt-3 text-[11px] text-slate-700 space-y-1">
+                      <div><strong>What this shows:</strong> Monthly withdrawals rise due to health OOP.</div>
+                      <div><strong>What it means:</strong> Plan for the extra cash strain to avoid forced selling.</div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-slate-200 rounded-xl bg-white">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <div className="text-sm font-semibold text-slate-800">Medical Inflation Trend vs Out-of-Pocket Growth</div>
+                        <div className="text-xs text-slate-500">Shows how OOP still grows even with 80% insurance.</div>
+                      </div>
+                      <div className="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700">Trend</div>
+                    </div>
+                    <div className="h-64 mt-3">
+                      <ResponsiveContainer>
+                        <LineChart data={generalInflationData.map((d) => ({ ...d, oop: d.medical * 0.2 }))}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="year" tick={{ fontSize: 12 }} label={{ value: 'Years', position: 'insideBottom', offset: -5 }} />
+                          <YAxis tickFormatter={(v) => formatAxisINR(v)} tick={{ fontSize: 12 }} />
+                          <Tooltip content={({ payload, label }) => {
+                            if (!payload || !payload.length) return null;
+                            const medical = payload.find((p) => p.dataKey === 'medical')?.value;
+                            const normal = payload.find((p) => p.dataKey === 'normal')?.value;
+                            const oop = payload.find((p) => p.dataKey === 'oop')?.value;
+                            return (
+                              <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm text-xs text-slate-700">
+                                <div className="font-semibold text-slate-800 mb-1">Year {label}</div>
+                                <div>Medical cost: {formatINR(medical)}</div>
+                                <div>Out-of-pocket (20%): {formatINR(oop)}</div>
+                                <div>Normal inflation cost: {formatINR(normal)}</div>
+                              </div>
+                            );
+                          }} />
+                          <Legend />
+                          <Line type="monotone" dataKey="medical" name="Medical (9%)" stroke="#ef4444" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="normal" name="Normal (6%)" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="oop" name="OOP (20% of medical)" stroke="#f59e0b" strokeWidth={2} dot={false} strokeDasharray="5 4" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="mt-3 text-[11px] text-slate-700 space-y-1">
+                      <div><strong>What this shows:</strong> Even with insurance, OOP grows alongside medical inflation.</div>
+                      <div><strong>What it means:</strong> Plan for rising OOP each year; adjust buffer/SIP accordingly.</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="p-5 border border-slate-200 rounded-xl bg-white">
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp size={16} className="text-purple-600" />
-                    <div className="text-sm font-semibold text-slate-800">Recommended Fix Plan</div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-700">
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-xs text-slate-500 mb-1">Health buffer (2 years)</div>
-                      <div className="text-lg font-semibold text-slate-900">{renderINR(premiumModel.premiumComputed.monthlyOOP * 12 * 2, { compact: true })}</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-xs text-slate-500 mb-1">Insurance gap (if any)</div>
-                      <div className="text-lg font-semibold text-slate-900">{renderINR(premiumModel.recommendations.insuranceGap, { compact: true })}</div>
-                      <div className="text-[11px] text-slate-500 mt-1">Assumes 80% cover on shocks.</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                      <div className="text-xs text-slate-500 mb-1">Extra SIP needed</div>
-                      <div className="text-lg font-semibold text-slate-900">
-                        {(() => {
-                          const monthsToRetirement = Math.max(1, (safeNumber(userInputs?.retirementAge, 60) - safeNumber(userInputs?.currentAge, 35)) * 12);
-                          const sip = premiumModel.premiumComputed.extraCorpusRequired
-                            ? Math.round(premiumModel.premiumComputed.extraCorpusRequired / monthsToRetirement)
-                            : null;
-                          return renderINR(sip, { compact: true, suffix: '/mo' });
-                        })()}
+                {premiumSummaryBox && (
+                  <div className="p-4 border border-slate-200 rounded-xl bg-white">
+                    <div className="text-sm font-semibold text-slate-800 mb-2">What this means</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[13px] text-slate-700">
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">Biggest risk</div>
+                        <div className="font-medium text-slate-900 mt-1">{premiumSummaryBox.biggestRisk}</div>
                       </div>
-                      <div className="text-[11px] text-slate-500 mt-1">Simple straight-line catch-up.</div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">What breaks first</div>
+                        <div className="font-medium text-slate-900 mt-1">{premiumSummaryBox.whatBreaks}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wide text-slate-500">Best next step</div>
+                        <div className="font-medium text-slate-900 mt-1">{premiumSummaryBox.nextStep}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+
               </div>
             )}
           </div>
