@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { formatCurrency } from '../lib/formatters';
+import { calculateFirePremiumResults } from '../lib/financialReadiness/firePremiumEngine';
 
 // Custom Tooltip for improvement chart
 const ImprovementTooltip = ({ active, payload, label }) => {
@@ -55,8 +56,50 @@ const ScenarioTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function PremiumRetirementImpact({ fireData }) {
+export default function PremiumRetirementImpact({ fireData: propFireData, formData, results }) {
   const [selectedScenario, setSelectedScenario] = useState(null);
+  const [computedFireData, setComputedFireData] = useState(null);
+
+  // Compute fireData if not provided but formData and results are
+  useEffect(() => {
+    if (!propFireData && formData && results) {
+      // Check if formData has required fields for FIRE calculation
+      if (formData.monthlyIncome && formData.monthlySIP && formData.currentAge) {
+        try {
+          const calculated = calculateFirePremiumResults(formData, results);
+          
+          // Transform the data to match expected structure
+          const transformedData = {
+            currentMonthlySIP: calculated.currentMonthlySIP || 0,
+            availableAdditionalSIP: calculated.investableSurplus || 0,
+            maxPossibleSIP: (calculated.currentMonthlySIP || 0) + (calculated.investableSurplus || 0),
+            safeFireAge: calculated.recommended?.fireAge || formData.retirementAge,
+            recommendedAdditionalSIP: calculated.recommended?.additionalSIP || 0,
+            improvementData: calculated.scenarios?.map((s, idx) => ({
+              label: s.ratio === 0 ? 'Current' : `+${formatCurrency(s.additionalSIP)}`,
+              additionalSIP: s.additionalSIP,
+              safeFireAge: s.fireAge || formData.retirementAge,
+              improvement: s.yearsEarlier || 0,
+              isFeasible: s.additionalSIP <= calculated.investableSurplus
+            })) || [],
+            retirementScenarios: calculated.scenarios?.map(s => ({
+              age: s.fireAge || formData.retirementAge,
+              projectedCorpus: s.projectedCorpusAtFireAge,
+              requiredCorpus: s.requiredCorpusAtFireAge,
+              surplus: s.corpusGap,
+              sustainability: s.corpusGap >= 0 ? 'SAFE' : 'AT_RISK'
+            })) || []
+          };
+          
+          setComputedFireData(transformedData);
+        } catch (error) {
+          console.error('Error calculating FIRE data:', error);
+        }
+      }
+    }
+  }, [propFireData, formData, results]);
+
+  const fireData = propFireData || computedFireData;
 
   useEffect(() => {
     if (fireData?.retirementScenarios?.[0]) {
@@ -72,7 +115,11 @@ export default function PremiumRetirementImpact({ fireData }) {
             <span className="text-gray-400 text-2xl">📊</span>
           </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">FIRE Impact Analysis</h3>
-          <p className="text-gray-600">Calculating your retirement optimization impact...</p>
+          <p className="text-gray-600">
+            {formData && !formData.monthlyIncome 
+              ? 'Please provide complete financial information to see your FIRE analysis'
+              : 'Calculating your retirement optimization impact...'}
+          </p>
         </div>
       </div>
     );
