@@ -27,7 +27,7 @@ const PremiumHookCard = ({ isFeasible, isPremium = false, onUpgradeClick }) => {
     ? 'You can hit your target age. Unlock the optimized plan and early retirement age with an optimised monthly SIP (subscription required).'
     : 'Your target age is not feasible with current income. Unlock your realistic earliest retirement age with an optimised monthly SIP (subscription required).';
 
-  const basePadding = isPremium ? 'px-5 py-4 md:px-6 md:py-5' : 'px-6 py-6 md:px-7 md:py-7';
+  const basePadding = isPremium ? 'px-5 py-4 md:px-6 md:py-5' : 'px-4 py-5 sm:px-6 sm:py-6 md:px-7 md:py-7';
 
   return (
     <div className={`border rounded-2xl shadow-sm ${basePadding} ${toneStyles[tone].container}`}>
@@ -38,7 +38,7 @@ const PremiumHookCard = ({ isFeasible, isPremium = false, onUpgradeClick }) => {
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold text-gray-900">Premium insight</p>
-            <p className="text-sm text-gray-700 leading-relaxed max-w-2xl">{message}</p>
+            <p className="text-sm sm:text-base text-gray-700 leading-relaxed max-w-2xl">{message}</p>
           </div>
         </div>
         {isPremium ? (
@@ -48,7 +48,7 @@ const PremiumHookCard = ({ isFeasible, isPremium = false, onUpgradeClick }) => {
         ) : (
           <button
             onClick={onUpgradeClick}
-            className={`md:ml-auto w-full md:w-auto px-5 py-3 text-sm font-semibold rounded-xl shadow-sm transition-colors ${toneStyles[tone].button}`}
+            className={`md:ml-auto w-full md:w-auto px-5 py-3 text-sm font-semibold rounded-xl shadow-sm transition-colors h-11 ${toneStyles[tone].button}`}
           >
             Upgrade to Pro
           </button>

@@ -19,12 +19,11 @@ export default function PremiumOptimizationInsight({ formData, results, onUpgrad
     const retirementAge = formData?.retirementAge || results?.retirementAge || 60;
     const lifespan = formData?.lifespan || results?.lifespan || 85;
 
-    const monthlySurplus = monthlyIncome - monthlyExpenses - currentSIP;
-    const emergencyReserve = Math.max(0, monthlyExpenses * 0.2);
-    const investableSurplus = Math.max(0, monthlySurplus - emergencyReserve);
+    const monthlySurplus = monthlyIncome - monthlyExpenses;
+    const investableSurplus = Math.max(0, monthlySurplus - currentSIP);
     const sipIncreaseRequired = Math.max(0, (Number.isFinite(requiredSIP) ? requiredSIP : 0) - currentSIP);
 
-    const canAfford = (Number.isFinite(requiredSIP) && (requiredSIP <= currentSIP || sipIncreaseRequired <= investableSurplus)) && investableSurplus > 0;
+    const canAfford = Number.isFinite(requiredSIP) && (requiredSIP <= currentSIP || sipIncreaseRequired <= investableSurplus);
     const case1 = canAfford || requiredSIP <= currentSIP;
 
     if (!Number.isFinite(requiredSIP)) {

@@ -14,69 +14,62 @@ const YearOnYearCorpusTable = ({ tableRows }) => {
 
   if (!tableRows || tableRows.length === 0) {
     return (
-      <div className="h-80 flex items-center justify-center border border-gray-200 rounded-lg">
+      <div className="h-64 sm:h-72 flex items-center justify-center border border-gray-200 rounded-xl">
         <p className="text-gray-500">No table data available</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">Detailed Table</h3>
-        <p className="text-gray-600 text-sm">
-          Year-by-year breakdown of your financial journey
-        </p>
-      </div>
-
-      <div className="overflow-hidden border border-gray-200 rounded-lg">
+    <div className="space-y-4">
+      <div className="overflow-hidden border border-gray-200 rounded-2xl">
         <div className="overflow-x-auto">
-          <div className="min-w-full">
-            <div className="bg-gray-50 border-b border-gray-200">
-              <div className="grid grid-cols-7 gap-4 p-4 text-xs font-medium text-gray-700 uppercase tracking-wider">
-                <div>Age</div>
-                <div>Phase</div>
-                <div>Starting Amount</div>
-                <div>Monthly SIP</div>
-                <div>Monthly SWP</div>
-                <div>Return %</div>
-                <div>Ending Corpus</div>
-              </div>
-            </div>
-            
-            <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
-              {tableRows.map((row, index) => (
-                <div 
-                  key={index} 
-                  className={`grid grid-cols-7 gap-4 p-4 text-sm hover:bg-gray-50 ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">{row.age}</div>
-                  <div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      row.phase === 'SIP Phase' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {row.phase}
-                    </span>
-                  </div>
-                  <div className="text-gray-900">{formatCurrency(row.startingAmount)}</div>
-                  <div className="text-gray-900">{formatCurrency(row.monthlySIP)}</div>
-                  <div className="text-gray-900">{formatCurrency(row.monthlySWP)}</div>
-                  <div className="text-gray-900">{formatPercentage(row.returnRate)}</div>
-                  <div className="font-semibold text-gray-900">{formatCurrency(row.endingCorpus)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <table className="min-w-[820px] sm:min-w-[960px] w-full text-left">
+            <thead className="bg-gray-50 text-[11px] sm:text-xs uppercase text-gray-600">
+              <tr>
+                <th scope="col" className="sticky left-0 z-10 px-4 py-3 bg-gray-50 font-semibold">Age</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Phase</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Starting Amount</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Monthly SIP</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Monthly SWP</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Return %</th>
+                <th scope="col" className="px-4 py-3 font-semibold">Ending Corpus</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 text-sm">
+              {tableRows.map((row, index) => {
+                const baseBg = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                return (
+                  <tr key={index} className={`${baseBg} hover:bg-gray-50`}>
+                    <td className={`sticky left-0 z-10 px-4 py-3 font-semibold text-gray-900 ${baseBg}`}>{row.age}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        row.phase === 'SIP Phase' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {row.phase}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 text-xs sm:text-sm">{formatCurrency(row.startingAmount)}</td>
+                    <td className="px-4 py-3 text-gray-900 text-xs sm:text-sm">{formatCurrency(row.monthlySIP)}</td>
+                    <td className="px-4 py-3 text-gray-900 text-xs sm:text-sm">{formatCurrency(row.monthlySWP)}</td>
+                    <td className="px-4 py-3 text-gray-900 text-xs sm:text-sm">{formatPercentage(row.returnRate)}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900 text-xs sm:text-sm">{formatCurrency(row.endingCorpus)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="mt-4 text-xs text-gray-500 flex justify-between">
+      <div className="text-xs text-gray-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
         <div>Showing {tableRows.length} years of data</div>
-        <div>Scroll to see more →</div>
+        <div className="flex items-center gap-1">
+          <span>Swipe horizontally to view all columns</span>
+          <span aria-hidden>→</span>
+        </div>
       </div>
     </div>
   );

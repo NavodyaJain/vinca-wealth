@@ -20,9 +20,11 @@ const FinancialReadinessStatusBanner = ({ results }) => {
     return `₹${Math.round(value).toLocaleString('en-IN')}`;
   };
 
-  const gap = requiredCorpusAtRetirement !== undefined && expectedCorpusAtRetirement !== undefined
+  const gapRaw = requiredCorpusAtRetirement !== undefined && expectedCorpusAtRetirement !== undefined
     ? requiredCorpusAtRetirement - expectedCorpusAtRetirement
     : null;
+  const gapLabel = gapRaw !== null && gapRaw > 0 ? 'Gap' : 'Surplus';
+  const gap = gapRaw !== null ? Math.abs(gapRaw) : null;
 
   const depletionCopy = depletionAge
     ? `Your expected corpus may deplete around age ${depletionAge.toFixed(1)}`
@@ -42,18 +44,18 @@ const FinancialReadinessStatusBanner = ({ results }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
-      <div className="flex flex-wrap gap-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
+      <div className="grid grid-cols-2 max-[420px]:grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <KpiCard title="Expected Retirement Age" value={retirementAge ? `${Math.round(retirementAge)} yrs` : '—'} helper="Your selected retirement age" />
         <KpiCard title="Expected Corpus by that Age" value={formatCurrency(expectedCorpusAtRetirement)} helper="Projected with current SIP" />
         <KpiCard title="Required Corpus" value={formatCurrency(requiredCorpusAtRetirement)} helper="Needed to sustain till lifespan" />
-        <KpiCard title="Gap in Corpus" value={gap !== null ? formatCurrency(gap) : '—'} helper="Required minus expected corpus" />
+        <KpiCard title={`${gapLabel} in Corpus`} value={gap !== null ? formatCurrency(gap) : '—'} helper="Required minus expected corpus" />
       </div>
 
-      <div className={`text-sm font-medium rounded-xl border px-4 py-3 ${toneClasses[tone]}`}>{depletionCopy}</div>
+      <div className={`text-sm sm:text-base font-medium rounded-xl border px-4 py-3 ${toneClasses[tone]}`}>{depletionCopy}</div>
 
-      <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="border border-slate-200 rounded-2xl p-3 sm:p-4 bg-slate-50 space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="border border-slate-200 rounded-xl p-4 bg-white">
             <p className="text-sm text-slate-600 mb-1">Current SIP</p>
             <div className="text-2xl font-semibold text-slate-900">{formatCurrency(currentMonthlySIP)}</div>

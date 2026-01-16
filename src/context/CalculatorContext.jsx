@@ -1,13 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { 
-  calculateSipGrowth, 
-  calculateCorpusAtRetirement, 
-  calculateWithdrawalPhase,
-  calculateDepletionAge,
-  calculateSipGap 
-} from '../lib/calculations';
+// Legacy imports retained elsewhere removed; calculations now done inline with monthly compounding.
 
 const CalculatorContext = createContext();
 
@@ -75,7 +69,6 @@ export function CalculatorProvider({ children }) {
       monthlyExpenses,
       retirementAge,
       monthlySIP,
-      investmentYears,
       expectedReturns,
       sipIncreaseRate,
       lifespan,
@@ -84,71 +77,100 @@ export function CalculatorProvider({ children }) {
       retirementReturns
     } = formData;
 
-    // Calculate SIP growth and accumulation phase
-    const sipData = calculateSipGrowth({
-      initialInvestment: moneySaved,
-      monthlySIP,
-      years: investmentYears,
-      annualReturn: expectedReturns,
-      sipIncreaseRate
-    });
+    // Use monthly compounding; convert annual % to monthly via (1+r)^(1/12)-1
+    const monthlyAccumRate = Math.pow(1 + expectedReturns / 100, 1 / 12) - 1;
+    const monthlyRetRate = Math.pow(1 + retirementReturns / 100, 1 / 12) - 1;
 
-    const corpusAtRetirement = calculateCorpusAtRetirement(sipData);
-    
-    // Calculate withdrawal phase
-    const withdrawalData = calculateWithdrawalPhase({
-      initialCorpus: corpusAtRetirement,
-      currentAge: retirementAge,
-      lifespan,
-      monthlyExpenses,
-      inflationRate,
-      withdrawalIncrease,
-      annualReturn: retirementReturns
-    });
+    const monthsToRetire = Math.max(0, Math.round((retirementAge - currentAge) * 12));
 
-    const depletionAge = calculateDepletionAge(withdrawalData);
-    const sipGap = calculateSipGap(monthlySIP, monthlyExpenses, expectedReturns, retirementAge - currentAge);
-    
-    // Combine yearly data
-    const yearlyData = [
-      ...sipData.map(item => ({ ...item, phase: 'Accumulation' })),
-      ...withdrawalData.map(item => ({ ...item, phase: 'Withdrawal' }))
-    ];
+    // Accumulation simulation with annual SIP step-up
+    let corpus = moneySaved;
+    const accumulation = [];
+    for (let m = 0; m < monthsToRetire; m++) {
+      const yearsElapsed = Math.floor(m / 12);
+      const sipThisMonth = monthlySIP * Math.pow(1 + sipIncreaseRate / 100, yearsElapsed);
+      corpus += sipThisMonth;
+      corpus *= 1 + monthlyAccumRate;
+      if ((m + 1) % 12 === 0) {
+        accumulation.push({
+          age: currentAge + (m + 1) / 12,
+          corpus,
+          phase: 'Accumulation'
+        });
+      }
+    }
+
+    const expectedCorpus = corpus;
+
+    // Retirement simulation to find depletion age
+    let withdrawal = monthlyExpenses * Math.pow(1 + inflationRate / 100, Math.max(0, retirementAge - currentAge));
+    let depletionAge = null;
+    const monthsRetirement = Math.max(0, Math.round((lifespan - retirementAge) * 12));
+    const withdrawalData = [];
+    for (let m = 0; m < monthsRetirement; m++) {
+      corpus *= 1 + monthlyRetRate;
+      corpus -= withdrawal;
+      if (corpus <= 0 && depletionAge === null) {
+        depletionAge = retirementAge + (m + 1) / 12;
+        corpus = 0;
+      }
+      if ((m + 1) % 12 === 0) {
+        withdrawalData.push({
+          age: retirementAge + (m + 1) / 12,
+          corpus,
+          phase: 'Withdrawal'
+        });
+        withdrawal *= 1 + withdrawalIncrease / 100;
+      }
+      if (corpus <= 0) break;
+    }
+
+    const yearlyData = [...accumulation, ...withdrawalData];
 
     const calculatedResults = {
-      freedomAge: depletionAge > lifespan ? 'Achieved' : depletionAge,
-      expectedCorpus: corpusAtRetirement,
+      freedomAge: depletionAge || lifespan,
+      expectedCorpus,
       requiredCorpus: calculateRequiredCorpus(monthlyExpenses, inflationRate, retirementAge, lifespan, retirementReturns),
-      sipGap,
+      sipGap: 0,
       depletionAge,
       yearlyData
     };
 
     setResults(calculatedResults);
     setDashboardData(yearlyData);
-    
-    // Update form data with results
-    setFormData(prev => ({
-      ...prev,
-      ...calculatedResults,
-      yearlyData
-    }));
+    setFormData((prev) => ({ ...prev, ...calculatedResults, yearlyData }));
 
     return calculatedResults;
   }, [formData]);
 
   const calculateRequiredCorpus = (monthlyExpenses, inflationRate, retirementAge, lifespan, returns) => {
-    const yearsInRetirement = lifespan - retirementAge;
-    const monthlyWithdrawal = monthlyExpenses * Math.pow(1 + inflationRate/100, retirementAge - formData.currentAge);
-    
-    // Simplified required corpus calculation
-    let corpus = 0;
-    for (let i = 0; i < yearsInRetirement; i++) {
-      const withdrawal = monthlyWithdrawal * 12 * Math.pow(1 + inflationRate/100, i);
-      corpus += withdrawal / Math.pow(1 + returns/100, i + 1);
+    const monthlyRate = Math.pow(1 + returns / 100, 1 / 12) - 1;
+    const startWithdrawal = monthlyExpenses * Math.pow(1 + inflationRate / 100, retirementAge - formData.currentAge);
+    const months = Math.max(1, Math.round((lifespan - retirementAge) * 12));
+
+    const survives = (startCorpus) => {
+      let corpus = startCorpus;
+      let withdrawal = startWithdrawal;
+      for (let m = 0; m < months; m++) {
+        corpus *= 1 + monthlyRate;
+        corpus -= withdrawal;
+        if (corpus <= 0) return false;
+        if ((m + 1) % 12 === 0) withdrawal *= 1 + inflationRate / 100;
+      }
+      return corpus > 0;
+    };
+
+    let low = 0;
+    let high = startWithdrawal * months * 2;
+    for (let i = 0; i < 40; i++) {
+      const mid = (low + high) / 2;
+      if (survives(mid)) {
+        high = mid;
+      } else {
+        low = mid;
+      }
     }
-    
-    return corpus;
+    return (low + high) / 2;
   };
 
   const value = {

@@ -28,52 +28,37 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
 
   if (!chartData || chartData.length === 0) {
     return (
-      <div className="h-80 flex items-center justify-center border border-gray-200 rounded-lg">
+      <div className="h-64 sm:h-72 flex items-center justify-center border border-gray-200 rounded-xl">
         <p className="text-gray-500">No chart data available</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-1">
-          Year-on-Year Corpus Analysis
-        </h3>
-        <p className="text-gray-600 text-sm">
-          Detailed projection of your wealth growth through retirement
-        </p>
-      </div>
-
-      <div className="mb-4">
-        <h4 className="text-lg font-medium text-gray-800">Visual Chart</h4>
-      </div>
-
-      <div className="h-80">
+    <div className="space-y-4">
+      <div className="h-64 sm:h-72 lg:h-96">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
-            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="age" 
-              label={{ value: 'Age', position: 'insideBottom', offset: -10 }}
-              tick={{ fill: '#6b7280' }}
+              tick={{ fill: '#6b7280', fontSize: 12 }}
             />
             <YAxis 
               tickFormatter={formatCurrency}
-              label={{ value: 'Corpus', angle: -90, position: 'insideLeft' }}
-              tick={{ fill: '#6b7280' }}
+              tick={{ fill: '#6b7280', fontSize: 12 }}
+              width={70}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
             <Area
               type="monotone"
               dataKey="corpus"
               name="Total Wealth"
               fill="#4f46e5"
-              fillOpacity={0.1}
+              fillOpacity={0.12}
               stroke="#4f46e5"
               strokeWidth={2}
             />
@@ -89,19 +74,19 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <div className="w-3 h-3 rounded-full bg-blue-500" />
             <span>Total Wealth (Corpus)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="w-3 h-3 rounded-full bg-green-500" />
             <span>Total Invested</span>
           </div>
         </div>
-        <div className="text-gray-500">
-          {currentAge} - {lifespan} years
+        <div className="text-gray-500 text-xs sm:text-sm">
+          Ages {currentAge} - {lifespan}
         </div>
       </div>
     </div>

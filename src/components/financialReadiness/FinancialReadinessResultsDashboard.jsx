@@ -75,9 +75,11 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
     : 'You are on track ✅ No SIP increase required.';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Status Banner */}
-      <FinancialReadinessStatusBanner results={computedResults} />
+      <div id="status-banner">
+        <FinancialReadinessStatusBanner results={computedResults} />
+      </div>
 
       <ActionRequiredCard
         title="Action Required"
@@ -87,9 +89,9 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
       />
 
       {/* Chart Section - Full Width */}
-      <div className="rounded-2xl shadow-sm p-6 bg-white border border-gray-100">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Financial Journey Visualization</h3>
+      <div className="rounded-2xl shadow-sm p-4 sm:p-6 bg-white border border-slate-200" id="projection-chart">
+        <div className="mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Financial Journey Visualization</h3>
           <p className="text-sm text-gray-600 mt-1">Year-by-year corpus growth and retirement projection</p>
         </div>
         <YearOnYearCorpusChart 
@@ -101,9 +103,9 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
       </div>
 
       {/* Detailed Table Section - Full Width Below Chart */}
-      <div className="rounded-2xl shadow-sm p-6 bg-white border border-gray-100">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Year-by-Year Projection</h3>
+      <div className="rounded-2xl shadow-sm p-4 sm:p-6 bg-white border border-slate-200" id="projection-table">
+        <div className="mb-3 sm:mb-4">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Year-by-Year Projection</h3>
           <p className="text-sm text-gray-600 mt-1">Detailed breakdown of corpus growth, withdrawals, and corpus balance</p>
         </div>
         <YearOnYearCorpusTable tableRows={computedResults.tableRows} />

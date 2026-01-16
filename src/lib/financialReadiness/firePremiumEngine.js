@@ -18,10 +18,10 @@ export function calculateFirePremiumResults(formData, financialReadinessResults)
   const requiredMonthlySIP = parseValue(financialReadinessResults?.requiredMonthlySIP, 0);
 
   // Surplus math for lever (no reserve deduction for allocation UI)
-  const monthlySurplus = Math.max(0, monthlyIncome - monthlyExpenses - currentMonthlySIP);
-  const emergencyReserveMonthly = Math.max(0, monthlyExpenses * 0.2);
-  const investableSurplus = monthlySurplus; // lever base equals monthly surplus
-  const maxAffordableSIP = currentMonthlySIP + monthlySurplus;
+  const monthlySurplus = monthlyIncome - monthlyExpenses;
+  const emergencyReserveMonthly = 0;
+  const investableSurplus = Math.max(0, monthlySurplus - currentMonthlySIP);
+  const maxAffordableSIP = currentMonthlySIP + investableSurplus;
 
   const requiredCorpusByAgeMap = financialReadinessResults?.requiredCorpusByAgeMap || {};
   const requiredCorpusAtRetirement = financialReadinessResults?.requiredCorpusAtRetirement;
@@ -31,7 +31,9 @@ export function calculateFirePremiumResults(formData, financialReadinessResults)
   const sliderRatios = Array.from({ length: 21 }, (_, idx) => idx * 0.05); // 0..1 step 5%
 
   const planForRatio = (ratio) => {
-    const additionalSIP = monthlySurplus * ratio;
+    const additionalSIP = investableSurplus > 0
+      ? Math.min(investableSurplus, Math.round(investableSurplus * ratio))
+      : 0;
     const newMonthlySIP = currentMonthlySIP + additionalSIP;
     const earliest = findEarliestSustainableAge({
       retireSearchEndAge: lifespan,
@@ -98,7 +100,7 @@ export function calculateFirePremiumResults(formData, financialReadinessResults)
   const baselineScenario = findScenarioForRatio(0);
 
   const safetyScenario = premiumLeverPct >= 1
-    ? findScenarioForRatio(monthlySurplus > 0 ? 0.75 : 0)
+    ? findScenarioForRatio(investableSurplus > 0 ? 0.75 : 0)
     : null;
 
   const optimizedMonthlySIP = premiumScenario?.newMonthlySIP ?? maxAffordableSIP;

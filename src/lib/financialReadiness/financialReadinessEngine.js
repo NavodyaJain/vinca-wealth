@@ -1,4 +1,6 @@
 // src/lib/financialReadiness/financialReadinessEngine.js
+// Helper builds required corpus for each age assuming monthly withdrawals and monthly compounding.
+// All cash flows are monthly. Annual percentages are converted to monthly using (1 + r)^(1/12) - 1.
 const buildRequiredCorpusByAge = ({ currentAge, lifespan, monthlyExpenses, inflationRate, retirementMonthlyRate, withdrawalIncreaseRate }) => {
   const result = [];
 
@@ -64,27 +66,29 @@ export function calculateFinancialReadinessResults(formData) {
   const inflationRate = parseValue(formData.inflationRate, 6);
   const withdrawalIncrease = parseValue(formData.withdrawalIncrease, 7);
   const retirementReturns = parseValue(formData.retirementReturns, 9);
-  const investmentYears = Math.max(1, parseValue(formData.investmentYears, retirementAge - currentAge));
+  const yearsToRetirement = Math.max(0, retirementAge - currentAge);
+  const monthsToRetirement = Math.round(yearsToRetirement * 12);
 
-  const accumulationMonthlyRate = expectedReturns / 100 / 12;
-  const retirementMonthlyRate = retirementReturns / 100 / 12;
+  // Monthly rates derived from annual percentages (never divide by 12 directly)
+  const accumulationMonthlyRate = Math.pow(1 + expectedReturns / 100, 1 / 12) - 1;
+  const retirementMonthlyRate = Math.pow(1 + retirementReturns / 100, 1 / 12) - 1;
 
+  // Accumulation simulation: monthly SIP with annual step-up, monthly compounding.
   const simulateAccumulation = (sipAmount) => {
     let corpus = moneySaved;
-    let sip = sipAmount;
-    const totalMonths = Math.max(1, Math.round(investmentYears * 12));
+    const baseSip = sipAmount;
 
-    for (let m = 0; m < totalMonths; m++) {
-      corpus += sip;
+    for (let m = 0; m < monthsToRetirement; m++) {
+      const yearsElapsed = Math.floor(m / 12);
+      const sipThisMonth = baseSip * Math.pow(1 + sipIncreaseRate / 100, yearsElapsed);
+      corpus += sipThisMonth;
       corpus *= 1 + accumulationMonthlyRate;
-      if ((m + 1) % 12 === 0) {
-        sip *= 1 + sipIncreaseRate / 100;
-      }
     }
 
-    return { corpus, finalSip: sip };
+    return { corpus };
   };
 
+  // Retirement simulation: monthly withdrawal with annual escalation, monthly compounding.
   const simulateRetirement = (startCorpus, startAge = retirementAge) => {
     let corpus = startCorpus;
     let monthlyWithdrawal = monthlyExpenses * Math.pow(1 + inflationRate / 100, Math.max(0, startAge - currentAge));
@@ -111,7 +115,8 @@ export function calculateFinancialReadinessResults(formData) {
 
   const findRequiredCorpus = () => {
     let low = 0;
-    let high = Math.max(expectedCorpusAtRetirement * 3, monthlyExpenses * 12 * (lifespan - retirementAge) * 2, 1_000_000);
+    // Upper bound: generous multiple of expenses and expected corpus
+    let high = Math.max(expectedCorpusAtRetirement * 2, monthlyExpenses * 24 * (lifespan - retirementAge + 1), 1_000_000);
     for (let i = 0; i < 40; i++) {
       const mid = (low + high) / 2;
       const { finalCorpus } = simulateRetirement(mid);
@@ -141,7 +146,7 @@ export function calculateFinancialReadinessResults(formData) {
 
   const findRequiredSIP = () => {
     let low = 0;
-    let high = monthlySIP + 200000;
+    let high = Math.max(monthlySIP * 3 + 50000, monthlySIP + 200000);
     for (let i = 0; i < 40; i++) {
       const mid = (low + high) / 2;
       const { corpus } = simulateAccumulation(mid);
@@ -159,7 +164,7 @@ export function calculateFinancialReadinessResults(formData) {
 
   const { depletionAge } = simulateRetirement(expectedCorpusAtRetirement);
 
-  const financialReadinessAge = sipGap <= 0 ? retirementAge : null;
+  const financialReadinessAge = sipGap <= 0 && expectedCorpusAtRetirement >= requiredCorpusAtRetirement ? retirementAge : null;
 
   const monthlySurplus = monthlyIncome - monthlyExpenses - monthlySIP;
   const emergencyReserveMonthly = Math.max(0, monthlyExpenses * 0.2);
@@ -170,7 +175,6 @@ export function calculateFinancialReadinessResults(formData) {
   const generateTimelineChartData = () => {
     const data = [];
     let corpus = moneySaved;
-    let sip = monthlySIP;
     let monthlyWithdrawal = monthlyExpenses * Math.pow(1 + inflationRate / 100, Math.max(0, retirementAge - currentAge));
 
     for (let year = 0; year <= Math.round(lifespan - currentAge); year++) {
@@ -179,10 +183,11 @@ export function calculateFinancialReadinessResults(formData) {
 
       if (age < retirementAge) {
         for (let m = 0; m < 12; m++) {
-          corpus += sip;
+          const yearsElapsed = Math.floor((year * 12 + m) / 12);
+          const sipThisMonth = monthlySIP * Math.pow(1 + sipIncreaseRate / 100, yearsElapsed);
+          corpus += sipThisMonth;
           corpus *= 1 + accumulationMonthlyRate;
         }
-        sip *= 1 + sipIncreaseRate / 100;
       } else {
         for (let m = 0; m < 12 && corpus > 0; m++) {
           corpus *= 1 + retirementMonthlyRate;
@@ -198,7 +203,6 @@ export function calculateFinancialReadinessResults(formData) {
   const generateTableRows = () => {
     const rows = [];
     let corpus = moneySaved;
-    let sip = monthlySIP;
     let monthlyWithdrawal = monthlyExpenses * Math.pow(1 + inflationRate / 100, Math.max(0, retirementAge - currentAge));
 
     const annualAccumReturn = (Math.pow(1 + accumulationMonthlyRate, 12) - 1) * 100;
@@ -207,21 +211,21 @@ export function calculateFinancialReadinessResults(formData) {
     // Accumulation phase
     for (let age = Math.round(currentAge); age < Math.round(retirementAge); age++) {
       const startingCorpus = corpus;
-      const startingSip = sip;
+      const yearsElapsed = age - Math.round(currentAge);
+      const sipThisYear = monthlySIP * Math.pow(1 + sipIncreaseRate / 100, yearsElapsed);
       for (let m = 0; m < 12; m++) {
-        corpus += sip;
+        corpus += sipThisYear;
         corpus *= 1 + accumulationMonthlyRate;
       }
       rows.push({
         age,
         phase: 'SIP Phase',
         startingAmount: startingCorpus,
-        monthlySIP: startingSip,
+        monthlySIP: sipThisYear,
         monthlySWP: 0,
         returnRate: annualAccumReturn,
         endingCorpus: Math.max(0, corpus)
       });
-      sip *= 1 + sipIncreaseRate / 100;
     }
 
     // Retirement phase
@@ -265,7 +269,7 @@ export function calculateFinancialReadinessResults(formData) {
     inflationRate,
     sipIncreaseRate,
     withdrawalIncrease,
-    investmentYears
+    investmentYears: yearsToRetirement
   };
 
   return {
@@ -311,7 +315,7 @@ export function computeRequiredCorpusByAge(formData) {
   const withdrawalIncreaseRate = parseValue(formData.withdrawalIncrease, 7);
   const retirementReturns = parseValue(formData.retirementReturns, 9);
 
-  const retirementMonthlyRate = retirementReturns / 100 / 12;
+  const retirementMonthlyRate = Math.pow(1 + retirementReturns / 100, 1 / 12) - 1;
 
   return buildRequiredCorpusByAge({
     currentAge,
