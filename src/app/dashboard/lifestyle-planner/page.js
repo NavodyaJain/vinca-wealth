@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import LifestyleCharts from "@/components/LifestylePlanner/LifestyleCharts";
 import LifestyleSummaryMetrics from "@/components/LifestylePlanner/LifestyleSummaryMetrics";
 import AffordedLifestyleCard from "@/components/LifestylePlanner/AffordedLifestyleCard";
+import HealthStressCTA from "@/components/LifestylePlanner/HealthStressCTA";
+import ProfessionalGuidanceSection from "@/components/financialReadiness/ProfessionalGuidanceSection";
 import { deriveAffordabilityStatus, discountToToday, estimateCorpusAtRetirement, simulateRetirementTimeline } from "@/lib/lifestylePlanner";
 
 export default function LifestylePlannerPage() {
@@ -94,7 +96,6 @@ export default function LifestylePlannerPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
         <p className="text-lg font-semibold text-slate-900 mb-2">Lifestyle your plan can afford.</p>
-        <p className="text-slate-600">Inputs come from your Financial Readiness plan.</p>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
@@ -159,6 +160,12 @@ export default function LifestylePlannerPage() {
       <div className="mb-10">
         <LifestyleCharts paycheckTimelineData={paycheckTimelineData} />
       </div>
+
+      <div className="mb-10">
+        <HealthStressCTA />
+      </div>
+
+      <ProfessionalGuidanceSection />
     </div>
   );
 }
