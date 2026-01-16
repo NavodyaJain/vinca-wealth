@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import FireProjectionTable from './FireProjectionTable';
 
 const runFireSimulation = ({
   totalMonthlySIP,
@@ -236,76 +235,12 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
     withdrawalIncrease
   ]);
 
-  const scenarioByPercent = useMemo(() => {
-    const map = new Map();
-    (fireResults?.scenarios || []).forEach((s) => {
-      const key = Math.round(s.pct ?? s.ratio * 100);
-      map.set(key, s);
-    });
-    return map;
-  }, [fireResults]);
-
   const fireAge = fireSimulation.fireAge;
   const targetAge = retirementAge;
   const ageGap = fireAge !== null ? fireAge - targetAge : null;
 
-  const gapLabel = ageGap === null ? 'Years Earlier' : ageGap < 0 ? 'Years Earlier' : ageGap > 0 ? 'Waiting Years' : 'On Track';
-  const gapValue = ageGap === null ? '—' : ageGap < 0 ? Math.abs(ageGap).toFixed(1) : ageGap > 0 ? ageGap.toFixed(1) : '0';
-  const gapSubtitle = fireAge === null
-    ? 'Not achievable with current surplus — increase income or reduce expenses.'
-    : ageGap < 0
-    ? `Compared to target ${targetAge} → ${fireAge.toFixed(1)}`
-    : ageGap > 0
-    ? `Target ${targetAge} is unrealistic → earliest realistic is ${fireAge.toFixed(1)}`
-    : `You can retire at your target age ${targetAge}`;
-
-  const gapBadgeClass = fireAge === null
-    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-    : ageGap < 0
-    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-    : ageGap > 0
-    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-    : 'bg-blue-100 text-blue-800 border border-blue-200';
-
-  const allocationPercent = Math.round(selectedRatio * 100);
-  const hasEmergencyBuffer = surplusCalc.emergencyLeft > 0;
-
-  let bannerMessage = '';
-  if (fireAge === null) {
-    bannerMessage = `Not achievable at ${allocationPercent}% allocation. Increase income or reduce expenses to unlock an achievable FIRE age.`;
-  } else if (selectedRatio === 0) {
-    bannerMessage = 'Retire smartly: increasing your SIP using surplus can reduce your retirement age.';
-  } else if (selectedRatio === 1 && !hasEmergencyBuffer) {
-    bannerMessage = `Why retire at ${fireAge.toFixed(1)} without a buffer, when 75% surplus still lets you retire early with an emergency cushion? Retire smartly.`;
-  } else if (ageGap > 0) {
-    bannerMessage = `Why retire at ${targetAge} which you can’t afford, when ${allocationPercent}% surplus lets you retire at ${fireAge.toFixed(1)}? Retire smartly.`;
-  } else if (ageGap < 0) {
-    bannerMessage = `Why retire at ${targetAge} when ${allocationPercent}% surplus lets you retire at ${fireAge.toFixed(1)}? Retire smartly.`;
-  } else {
-    bannerMessage = `You can retire at your target age ${targetAge}. Retire smartly.`;
-  }
-
-  // Prepare graph data with 0-100% allocations (5% step)
-  const graphData = [];
-  if (fireResults?.scenarios) {
-    for (let percent = 0; percent <= 100; percent += 5) {
-      const scenario = scenarioByPercent.get(percent);
-      if (scenario) {
-        graphData.push({
-          percent,
-          ratio: scenario.ratio,
-          fireAge: scenario.fireAge || retirementAge,
-          yearsEarlier: scenario.yearsEarlier,
-          additionalSIP: scenario.additionalSIP,
-          newMonthlySIP: scenario.newMonthlySIP,
-          projectedCorpus: scenario.projectedCorpusAtFireAge || 0,
-          requiredCorpus: scenario.requiredCorpusAtFireAge || 0,
-          corpusGap: scenario.corpusGap || 0,
-          isRecommended: Math.abs(scenario.ratio - (fireResults.premiumLeverPct ?? 0)) < 0.0001
-        });
-      }
-    }
-  }
+  const yearsEarly = ageGap === null ? null : ageGap < 0 ? Math.abs(ageGap) : 0;
+  const yearsEarlyText = yearsEarly === null ? '—' : yearsEarly.toFixed(1);
 
   const getAllocationGradient = (ratio) => {
     const pct = ratio * 100;
@@ -313,8 +248,6 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
     if (pct < 75) return 'linear-gradient(90deg, #dcfce7 0%, #a7f3d0 50%, #34d399 100%)'; // green
     return 'linear-gradient(90deg, #fed7aa 0%, #fb923c 50%, #f97316 75%, #ef4444 100%)'; // orange/red
   };
-
-  const projectionTableData = fireSimulation.timeline;
 
   if (!fireResults) {
     return (
@@ -325,123 +258,12 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
     );
   }
 
-  const GraphTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg max-w-xs">
-          <p className="font-semibold text-gray-900 mb-2">
-            {data.percent}% of Monthly Surplus
-          </p>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Additional SIP:</span>
-              <span className="font-medium">{formatCurrency(data.additionalSIP)}/month</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total SIP:</span>
-              <span className="font-medium">{formatCurrency(data.newMonthlySIP)}/month</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">FIRE Age:</span>
-              <span className="font-medium">{data.fireAge ? `${data.fireAge} years` : '--'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Years Earlier:</span>
-              <span className="font-medium">{data.yearsEarlier > 0 ? `${data.yearsEarlier.toFixed(1)} years` : '0 years'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Projected Corpus:</span>
-              <span className="font-medium">{formatCurrency(data.projectedCorpus)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Required Corpus:</span>
-              <span className="font-medium">{formatCurrency(data.requiredCorpus)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Corpus Gap:</span>
-              <span className={`font-medium ${data.corpusGap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(Math.abs(data.corpusGap))} {data.corpusGap >= 0 ? '(Surplus)' : '(Deficit)'}
-              </span>
-            </div>
-            {data.isRecommended && (
-              <p className="text-green-600 font-medium text-xs mt-2 border-t pt-2">
-                ★ Recommended allocation
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CorpusTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
-          <p className="font-semibold text-gray-900 mb-1 text-sm">{data.percent}% Allocation</p>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span className="text-blue-600">Projected:</span>
-              <span className="font-medium">{formatCurrency(data.projectedCorpus)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-emerald-600">Required:</span>
-              <span className="font-medium">{formatCurrency(data.requiredCorpus)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Gap:</span>
-              <span className={`font-medium ${data.corpusGap >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(Math.abs(data.corpusGap))} {data.corpusGap >= 0 ? 'surplus' : 'deficit'}
-              </span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Surplus Breakdown at top */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Monthly Income Breakdown</h3>
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-white border border-gray-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Monthly Income</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(monthlyIncome)}</div>
-          </div>
-          <div className="text-center p-3 bg-white border border-gray-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Monthly Expenses</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(monthlyExpenses)}</div>
-          </div>
-          <div className="text-center p-3 bg-white border border-blue-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Current SIP</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(currentMonthlySIP)}</div>
-          </div>
-          <div className="text-center p-3 bg-white border border-green-300 rounded-lg">
-            <div className="text-xs text-gray-500 mb-1">Monthly Surplus</div>
-            <div className="font-semibold text-gray-900">{formatCurrency(surplusCalc.monthlySurplus)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Interactive Allocation Selector */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-lg font-semibold text-gray-900">Smart Surplus Lever</h3>
-          {fireResults.requiredPctToMeetDesiredAge !== null ? (
-            <p className="text-sm text-gray-700">
-              Your desired age is achievable at {Math.round(fireResults.requiredPctToMeetDesiredAge * 100)}% of investable surplus. We picked {Math.round((fireResults.premiumLeverPct || 0) * 100)}% to unlock an earlier retirement age.
-            </p>
-          ) : surplusCalc.investableSurplus <= 0 ? (
-            <p className="text-sm text-gray-700">No investable surplus after your current SIP. Increase income or lower expenses to improve retirement age.</p>
-          ) : (
-            <p className="text-sm text-gray-700">Your target age is not feasible with current investable surplus. Using the maximum affordable SIP to find the earliest realistic age.</p>
-          )}
+    <div className="space-y-6">
+      {/* Smart Surplus Lever */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-slate-900">Adjust the smart surplus lever to know your early retirement age.</p>
         </div>
 
         <div className="space-y-4">
@@ -476,133 +298,53 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
               This is the earliest age possible with 100% surplus. To keep an emergency buffer, a {formatPercentage(fireResults.safetyScenario.ratio)} allocation still retires you at {formatAge(fireResults.safetyScenario.fireAge)}.
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 border border-gray-200 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Selected Allocation</div>
-              <div className="text-xl font-semibold text-gray-900">{formatPercentage(selectedRatio)}</div>
-              <div className="text-xs text-gray-500">of investable surplus</div>
+          {/* Allocation summary removed per latest request */}
+        </div>
+
+        {/* Quick KPI strip tied to the lever */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+              <div className="text-sm text-slate-600">Surplus used</div>
+              <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.additionalSIP)}/month</div>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Additional SIP</div>
-              <div className="text-xl font-semibold text-gray-900">{formatCurrency(surplusCalc.additionalSIP)}/month</div>
-              <div className="text-xs text-gray-500">extra monthly investment</div>
+            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+              <div className="text-sm text-slate-600">Total SIP</div>
+              <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.totalMonthlySIP)}/month</div>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Total SIP</div>
-              <div className="text-xl font-semibold text-gray-900">{formatCurrency(surplusCalc.totalMonthlySIP)}/month</div>
-              <div className="text-xs text-gray-500">including current SIP</div>
+            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+              <div className="text-sm text-slate-600">Expected corpus</div>
+              <div className="text-xl font-semibold text-slate-900">{formatCurrency(fireSimulation.projectedAtFire)}</div>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
-              <div className="text-sm text-gray-600 mb-1">Monthly emergency fund left</div>
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-xl font-semibold text-gray-900">{formatCurrency(Math.max(0, surplusCalc.emergencyLeft))}/month</div>
-                {selectedRatio === 1 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowEmergencyNote((prev) => !prev)}
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200"
-                    aria-label="Reminder about keeping emergency fund"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 19a7 7 0 110-14 7 7 0 010 14z" />
-                    </svg>
-                  </button>
-                )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 rounded-2xl p-5 text-center">
+              <div className="text-sm text-emerald-700">Early retirement age</div>
+              <div className="text-2xl font-bold text-emerald-900 mt-1">
+                {fireAge === null ? 'Not achievable yet' : `${fireAge.toFixed(1)} years`}
               </div>
-              {selectedRatio === 1 && showEmergencyNote && (
-                <div className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                  Allocating 100% removes monthly buffer. Consider keeping some surplus aside.
-                </div>
-              )}
-              <div className="text-xs text-gray-500">after chosen allocation</div>
+            </div>
+            <div className="text-sm text-amber-700 text-center border border-amber-200 bg-amber-50 rounded-xl p-3">
+              You can retire {yearsEarlyText === '—' ? '—' : `${yearsEarlyText} years`} early from your expected retirement age
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-blue-800 mb-1">Optimal Retirement Age</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {fireAge === null ? 'Not achievable' : `${fireAge.toFixed(1)} years`}
-          </div>
-          <div className="text-xs text-gray-600">
-            {fireAge === null
-              ? 'Increase income or reduce expenses to make it feasible'
-              : ageGap < 0
-              ? `Earlier than your target of ${retirementAge} years`
-              : ageGap > 0
-              ? `Later than your target of ${retirementAge} years`
-              : `At your target of ${retirementAge} years`}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5">
-          <div className="text-sm font-medium text-purple-800 mb-1">Corpus at Optimal Age</div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">
-            {formatCurrency(fireSimulation.projectedAtFire)}
-          </div>
-          <div className="text-xs text-gray-600">
-            {fireAge === null
-              ? 'Not achievable at this allocation'
-              : `Minimum corpus needed at age ${fireAge.toFixed(1)} to last till ${lifespan}: ${formatCurrency(fireSimulation.requiredAtFire)}`}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-xl p-5">
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="text-sm font-medium text-amber-800">{gapLabel}</div>
-            <span className={`px-2 py-1 rounded-md text-xs font-semibold ${gapBadgeClass}`}>
-              {ageGap === null ? 'Not ready' : ageGap < 0 ? 'Ahead' : ageGap > 0 ? 'Later' : 'On track'}
-            </span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">{gapValue} years</div>
-          <div className="text-xs text-gray-600">{gapSubtitle}</div>
-        </div>
-      </div>
-
-      <div className="text-center text-sm font-semibold text-emerald-900 bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-4 rounded-xl border border-emerald-200 shadow-sm">
-        {bannerMessage}
-      </div>
-
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
-        <div className="mb-3 sm:mb-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Year-by-Year Projection</h3>
-          <p className="text-sm text-gray-600 mt-1">Detailed breakdown of corpus growth, withdrawals, and corpus balance</p>
-        </div>
-        <FireProjectionTable
-          simulationData={projectionTableData}
-          retirementStartAge={fireAge ?? retirementAge}
-          desiredRetirementAge={retirementAge}
-          formatCurrency={formatCurrency}
-        />
-        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <div className="text-sm text-blue-900 font-medium">
-            Save this optimal retirement plan and test it against different scenarios with Vinca&apos;s personalised tools.
-          </div>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-700"
-          >
-            Save Plan
-          </button>
         </div>
       </div>
 
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="space-y-1">
-            <h4 className="text-base font-semibold text-emerald-900">Solid corpus plan. Are you covered for health shocks?</h4>
+            <h4 className="text-base font-semibold text-emerald-900">What lifestyle can you actually afford with your plan?</h4>
             <p className="text-sm text-emerald-800">
-              Unexpected medical events can derail early retirement. Run Vinca&apos;s Health Stress Test to see how your plan holds up against unpredictable healthcare costs.
+              Your retirement corpus isn’t just a number — it decides your real lifestyle. Use Vinca&apos;s Lifestyle Planner to see what monthly spending you can sustain, upgrade, or adjust before retirement.
             </p>
           </div>
           <Link
-            href="/dashboard/health-stress"
+            href="/dashboard/lifestyle-planner"
             className="inline-flex items-center justify-center px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700"
           >
-            Go to Health Stress Test
+            Go to Lifestyle Planner
           </Link>
         </div>
       </div>

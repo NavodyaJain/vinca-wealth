@@ -31,13 +31,6 @@ const PremiumFireCalculatorSection = ({ results }) => {
   return (
     <div id="fire-calculator-section" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="p-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Smart Financial Readiness Calculator</h2>
-          <p className="text-gray-600">
-            Know which age is optimal for you to retire.
-          </p>
-        </div>
-
         <FireCalculatorPremiumUI 
           fireResults={fireResults}
           results={results}
