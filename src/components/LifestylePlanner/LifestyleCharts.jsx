@@ -1,23 +1,26 @@
 "use client";
 
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label } from "recharts";
-import { formatNumberShort } from "@/lib/lifestylePlanner";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-export default function LifestyleCharts({
-  incomeComparisonData,
-  paycheckTimelineData
-}) {
+export default function LifestyleCharts({ paycheckTimelineData }) {
   // Custom tooltip for currency formatting
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const required = payload.find((p) => p.dataKey === 'requiredMonthly')?.value || 0;
+      const supported = payload.find((p) => p.dataKey === 'supportedMonthly')?.value || 0;
+      const gap = Math.max(required - supported, 0);
       return (
         <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
           <p className="font-medium text-slate-900 mb-2">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: <span className="font-semibold">₹{entry.value.toLocaleString('en-IN')}</span>
-            </p>
-          ))}
+          <p className="text-sm" style={{ color: payload[0].color }}>
+            Required: <span className="font-semibold">₹{required.toLocaleString('en-IN')}</span>
+          </p>
+          <p className="text-sm" style={{ color: payload[1]?.color || '#10b981' }}>
+            Supported: <span className="font-semibold">₹{supported.toLocaleString('en-IN')}</span>
+          </p>
+          <p className="text-sm text-rose-600">
+            Gap: <span className="font-semibold">₹{gap.toLocaleString('en-IN')}</span>
+          </p>
         </div>
       );
     }
@@ -33,68 +36,10 @@ export default function LifestyleCharts({
 
   return (
     <div className="space-y-8">
-      {/* Bar Chart: Desired vs Affordable Income */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="mb-6">
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
-            Desired vs Affordable Retirement Income
-          </h3>
-          <p className="text-slate-600">
-            Compare your desired lifestyle with what your current plan can sustainably support
-          </p>
-        </div>
-        
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={incomeComparisonData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fill: '#64748b' }}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <YAxis 
-                tickFormatter={formatYAxis}
-                tick={{ fill: '#64748b' }}
-                axisLine={{ stroke: '#e2e8f0' }}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar 
-                dataKey="desired" 
-                name="Desired Income" 
-                fill="#8b5cf6" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar 
-                dataKey="safe" 
-                name="Supported Safe Income" 
-                fill="#10b981" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar 
-                dataKey="aggressive" 
-                name="Supported Aggressive Income" 
-                fill="#f59e0b" 
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Line Chart: Retirement Paycheck Timeline */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">
-            Retirement Paycheck Timeline
-          </h3>
-          <p className="text-slate-600">
-            Projected monthly income throughout your retirement years
-          </p>
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">Purchasing Power Gap Timeline</h3>
+          <p className="text-slate-600">Required vs. supported monthly income across retirement (inflation-adjusted).</p>
         </div>
         
         <div className="h-80">
@@ -129,24 +74,8 @@ export default function LifestyleCharts({
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="desiredIncome"
-                name="Desired Lifestyle"
-                stroke="#8b5cf6"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="supportedIncome"
-                name="Supported Income (Safe)"
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 6 }}
-              />
+              <Line type="monotone" dataKey="requiredMonthly" name="Required Monthly Income" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="supportedMonthly" name="Supported Monthly Income (Safe)" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -155,9 +84,9 @@ export default function LifestyleCharts({
           <div className="text-sm text-slate-600">
             <p className="font-medium mb-2">How to read this chart:</p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>If the green line stays above purple, your plan supports your desired lifestyle</li>
-              <li>If the green line drops below purple, you may need to adjust your plan</li>
-              <li>Lines account for inflation and safe withdrawal rates</li>
+              <li>If supported income (green) stays above required income (purple), purchasing power is maintained.</li>
+              <li>Where green drops below purple, purchasing power is not fully maintained.</li>
+              <li>Both lines are monthly and inflation-adjusted.</li>
             </ul>
           </div>
         </div>
