@@ -3,6 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { Lock } from 'lucide-react';
+import PremiumBlurGate from '../shared/PremiumBlurGate';
 
 const runFireSimulation = ({
   totalMonthlySIP,
@@ -131,9 +133,8 @@ const runFireSimulation = ({
   };
 };
 
-const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
+const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium = false, onUpgradeClick }) => {
   const [selectedRatio, setSelectedRatio] = useState(0);
-  const [showEmergencyNote, setShowEmergencyNote] = useState(false);
 
   const inputs = results?.inputs || {};
   const retirementAge = Number(results?.retirementAge ?? inputs.retirementAge ?? 60);
@@ -157,6 +158,44 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
     return 0;
   }, [fireResults]);
 
+  const isFeasible = useMemo(() => {
+    if (typeof results?.isDesiredAgeFeasible === 'boolean') return results.isDesiredAgeFeasible;
+    const required = Number(results?.requiredMonthlySIP);
+    const current = Number(results?.currentMonthlySIP) || 0;
+    const investable = Number(results?.investableSurplus) || 0;
+    if (!Number.isFinite(required)) return null;
+    const additional = Math.max(0, required - current);
+    return additional <= investable;
+  }, [results]);
+
+  const overlayCopy = useMemo(() => {
+    if (!results) {
+      return {
+        title: 'Unlock Premium retirement optimization',
+        subtitle: 'Run analysis and unlock the Smart Surplus Lever to explore an early retirement plan.'
+      };
+    }
+
+    if (isFeasible === false) {
+      return {
+        title: 'Your current income doesn’t support this retirement age',
+        subtitle: 'Unlock Smart Surplus Lever to see the exact SIP adjustment needed to make it achievable.'
+      };
+    }
+
+    if (isFeasible === true) {
+      return {
+        title: 'You can retire early — unlock your optimized plan',
+        subtitle: 'Upgrade to Pro to adjust your surplus and instantly see your best early retirement age + required SIP.'
+      };
+    }
+
+    return {
+      title: 'Unlock Premium retirement optimization',
+      subtitle: 'Run analysis and unlock the Smart Surplus Lever to explore an early retirement plan.'
+    };
+  }, [isFeasible, results]);
+
   useEffect(() => {
     setSelectedRatio(premiumDefaultRatio);
   }, [premiumDefaultRatio]);
@@ -175,6 +214,16 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
 
   const formatPercentage = (value) => {
     return `${(value * 100).toFixed(0)}%`;
+  };
+
+  const handleUpgradeClick = () => {
+    if (onUpgradeClick) {
+      onUpgradeClick();
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = '/pricing';
+    }
   };
 
   const selectedPercent = Math.round(selectedRatio * 100);
@@ -249,7 +298,26 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
     return 'linear-gradient(90deg, #fed7aa 0%, #fb923c 50%, #f97316 75%, #ef4444 100%)'; // orange/red
   };
 
-  if (!fireResults) {
+  const renderLifestylePlannerCTA = () => (
+    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="space-y-1">
+          <h4 className="text-base font-semibold text-emerald-900">What lifestyle can you actually afford with your plan?</h4>
+          <p className="text-sm text-emerald-800">
+            Your retirement corpus isn’t just a number — it decides your real lifestyle. Use Vinca&apos;s Lifestyle Planner to see what monthly spending you can sustain, upgrade, or adjust before retirement.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/lifestyle-planner"
+          className="inline-flex items-center justify-center px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700"
+        >
+          Go to Lifestyle Planner
+        </Link>
+      </div>
+    </div>
+  );
+
+  if (!fireResults && isPremium) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -259,9 +327,18 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Smart Surplus Lever */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6 shadow-sm">
+    <>
+      <PremiumBlurGate
+        isLocked={!isPremium}
+        title={overlayCopy.title}
+        subtitle={overlayCopy.subtitle}
+        buttonText="Upgrade to Pro"
+        onUpgradeClick={handleUpgradeClick}
+        className="rounded-2xl"
+      >
+        <div className="space-y-6">
+          {/* Smart Surplus Lever */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6 shadow-sm">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-slate-900">Adjust the smart surplus lever to know your early retirement age.</p>
         </div>
@@ -275,7 +352,7 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
                 max={100}
                 step={5}
                 value={selectedPercent}
-                disabled={surplusCalc.investableSurplus <= 0}
+                disabled={!isPremium || surplusCalc.investableSurplus <= 0}
                 onChange={(e) => setSelectedRatio(Number(e.target.value) / 100)}
                 className="w-full accent-emerald-600"
                 style={{
@@ -293,7 +370,7 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
               No investable surplus after your current SIP. Allocation stays at 0% until your surplus improves.
             </div>
           )}
-          {fireResults.premiumLeverPct >= 1 && fireResults.safetyScenario && (
+          {fireResults?.premiumLeverPct >= 1 && fireResults?.safetyScenario && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg p-3">
               This is the earliest age possible with 100% surplus. To keep an emergency buffer, a {formatPercentage(fireResults.safetyScenario.ratio)} allocation still retires you at {formatAge(fireResults.safetyScenario.fireAge)}.
             </div>
@@ -332,22 +409,9 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
         </div>
       </div>
 
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="space-y-1">
-            <h4 className="text-base font-semibold text-emerald-900">What lifestyle can you actually afford with your plan?</h4>
-            <p className="text-sm text-emerald-800">
-              Your retirement corpus isn’t just a number — it decides your real lifestyle. Use Vinca&apos;s Lifestyle Planner to see what monthly spending you can sustain, upgrade, or adjust before retirement.
-            </p>
-          </div>
-          <Link
-            href="/dashboard/lifestyle-planner"
-            className="inline-flex items-center justify-center px-4 py-3 rounded-lg bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700"
-          >
-            Go to Lifestyle Planner
-          </Link>
+          {renderLifestylePlannerCTA()}
         </div>
-      </div>
+      </PremiumBlurGate>
 
       {/* Reset Pro Link */}
       <div className="text-center pt-6 border-t border-gray-200">
@@ -358,7 +422,7 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro }) => {
           Reset Pro (for testing)
         </button>
       </div>
-    </div>
+    </>
   );
 };
 

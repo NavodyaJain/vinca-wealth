@@ -13,19 +13,25 @@ const SCENARIO_MULTIPLIERS = {
     annualCostMultiplier: 0.04, // 4% of annual expenses
     oneTimeCost: 0,
     recurrence: 'annual',
-    description: 'Ongoing manageable conditions'
+    description: 'Ongoing manageable conditions',
+    hospitalDaily: null,
+    recoveryMonthly: null
   },
   planned: {
     annualCostMultiplier: 0.02,
     oneTimeCost: 300000, // ₹3L event
     recurrence: 'event',
-    description: 'Single planned medical event'
+    description: 'Single planned medical event',
+    hospitalDaily: 20000,
+    recoveryMonthly: 0.05 // as % of monthly expenses
   },
   'high-impact': {
     annualCostMultiplier: 0.06,
     oneTimeCost: 1500000, // ₹15L major event
     recurrence: 'event+ongoing',
-    description: 'Major health event with ongoing care'
+    description: 'Major health event with ongoing care',
+    hospitalDaily: 30000,
+    recoveryMonthly: 0.1 // as % of monthly expenses
   }
 };
 
@@ -74,11 +80,12 @@ export function calculateHealthImpact(userInputs, scenario) {
   );
 
   // Calculate hospitalization affordability
-  const hospitalizationDays = calculateHospitalizationAffordability(
+  const careSupport = calculateCareSupport({
     emergencyFund,
-    healthCosts.annualCost,
-    userInputs.monthlyExpenses
-  );
+    scenarioConfig,
+    monthlyExpenses,
+    userPaysPercent: 1 // legacy engine assumes self-pay; update when coverage available
+  });
 
   return {
     baselineMetrics,
@@ -93,12 +100,15 @@ export function calculateHealthImpact(userInputs, scenario) {
       yearsEarlier: baselineMetrics.depletionAge - healthAdjustedMetrics.depletionAge,
       annualHealthCost: healthCosts.annualCost,
       totalHealthCost: healthCosts.totalCost,
-      hospitalizationDays,
+      hospitalizationDays: careSupport.daysSupported,
+      recoveryMonths: careSupport.monthsSupported,
+      careSupport,
       scenarioImpact: scenarioConfig.description
     },
     assumptions: {
       medicalInflation: MEDICAL_INFLATION_RATE,
-      hospitalDailyCost: 20000, // ₹20,000 per day for private hospital
+      hospitalDailyCost: careSupport.assumptions.hospitalDaily,
+      recoveryMonthlyCost: careSupport.assumptions.recoveryMonthly,
       calculationPeriod: lifespan - retirementAge
     }
   };
@@ -284,6 +294,42 @@ function calculateHospitalizationAffordability(emergencyFund, annualHealthCost, 
   
   // Cap at reasonable maximum
   return Math.min(affordableDays, 60);
+}
+
+function calculateCareSupport({ emergencyFund = 0, scenarioConfig, monthlyExpenses = 0, userPaysPercent = 1 }) {
+  const oopFactor = Number.isFinite(userPaysPercent) ? Math.max(0, userPaysPercent) : 1;
+  if (!scenarioConfig || scenarioConfig === SCENARIO_MULTIPLIERS.everyday || (!scenarioConfig.hospitalDaily && !scenarioConfig.recoveryMonthly)) {
+    return {
+      daysSupported: null,
+      monthsSupported: null,
+      assumptions: {
+        hospitalDaily: null,
+        recoveryMonthly: null
+      }
+    };
+  }
+
+  const hospitalDailyBase = Number.isFinite(scenarioConfig.hospitalDaily)
+    ? scenarioConfig.hospitalDaily
+    : 20000;
+  const recoveryBase = Number.isFinite(scenarioConfig.recoveryMonthly)
+    ? scenarioConfig.recoveryMonthly * monthlyExpenses
+    : (scenarioConfig.recoveryMonthly || 0);
+
+  const hospitalDaily = hospitalDailyBase * oopFactor;
+  const recoveryMonthly = recoveryBase * oopFactor;
+
+  const daysSupported = hospitalDaily > 0 ? Math.floor(emergencyFund / hospitalDaily) : null;
+  const monthsSupported = recoveryMonthly > 0 ? Math.floor(emergencyFund / recoveryMonthly) : null;
+
+  return {
+    daysSupported: Number.isFinite(daysSupported) && daysSupported > 0 ? daysSupported : null,
+    monthsSupported: Number.isFinite(monthsSupported) && monthsSupported > 0 ? monthsSupported : null,
+    assumptions: {
+      hospitalDaily,
+      recoveryMonthly
+    }
+  };
 }
 
 /**

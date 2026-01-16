@@ -19,7 +19,7 @@ export default function HealthStressCTA() {
           </div>
         </div>
         <Link
-          href="/dashboard/health-stress-test"
+          href="/dashboard/health-stress"
           className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-green-600 text-white font-semibold px-4 py-2.5 shadow-sm hover:bg-green-700 transition"
         >
           Go to Health Stress Test

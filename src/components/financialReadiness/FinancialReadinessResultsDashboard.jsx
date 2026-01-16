@@ -4,7 +4,6 @@ import FinancialReadinessStatusBanner from './FinancialReadinessStatusBanner';
 import YearOnYearCorpusChart from './YearOnYearCorpusChart';
 import YearOnYearCorpusTable from './YearOnYearCorpusTable';
 import PremiumFireCalculatorSection from './PremiumFireCalculatorSection';
-import PremiumHookCard from './PremiumHookCard';
 import ProSubscriptionModal from './ProSubscriptionModal';
 import ActionRequiredCard from '../ActionRequiredCard';
 import { usePremium } from '@/lib/premium';
@@ -22,16 +21,6 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
     }
     return null;
   }, [formData, results]);
-
-  const isFeasible = useMemo(() => {
-    if (typeof computedResults?.isDesiredAgeFeasible === 'boolean') return computedResults.isDesiredAgeFeasible;
-    const required = Number(computedResults?.requiredMonthlySIP);
-    const current = Number(computedResults?.currentMonthlySIP) || 0;
-    const investable = Number(computedResults?.investableSurplus) || 0;
-    if (!Number.isFinite(required)) return false;
-    const additional = Math.max(0, required - current);
-    return additional <= investable;
-  }, [computedResults]);
 
   useEffect(() => {
     if (!isPremium) return;
@@ -111,17 +100,10 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
         <YearOnYearCorpusTable tableRows={computedResults.tableRows} />
       </div>
 
-      <PremiumHookCard
-        isFeasible={isFeasible}
-        isPremium={isPremium}
-        onUpgradeClick={!isPremium ? () => setShowProModal(true) : undefined}
+      <PremiumFireCalculatorSection 
+        results={computedResults}
+        onUpgradeClick={() => setShowProModal(true)}
       />
-
-      {isPremium && (
-        <PremiumFireCalculatorSection 
-          results={computedResults}
-        />
-      )}
 
       {showProModal && (
         <ProSubscriptionModal

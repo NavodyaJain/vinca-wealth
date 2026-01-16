@@ -6,7 +6,7 @@ import FireCalculatorPremiumUI from './FireCalculatorPremiumUI';
 import { calculateFirePremiumResults } from '@/lib/financialReadiness/firePremiumEngine';
 import { usePremium } from '@/lib/premium';
 
-const PremiumFireCalculatorSection = ({ results }) => {
+const PremiumFireCalculatorSection = ({ results, onUpgradeClick }) => {
   const { isPremium, downgradeToFree } = usePremium();
   const [fireResults, setFireResults] = useState(null);
 
@@ -26,8 +26,6 @@ const PremiumFireCalculatorSection = ({ results }) => {
     setFireResults(null);
   };
 
-  if (!isPremium) return null;
-
   return (
     <div id="fire-calculator-section" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="p-6">
@@ -35,6 +33,8 @@ const PremiumFireCalculatorSection = ({ results }) => {
           fireResults={fireResults}
           results={results}
           onResetPro={handleResetPro}
+          isPremium={isPremium}
+          onUpgradeClick={onUpgradeClick}
         />
       </div>
     </div>
