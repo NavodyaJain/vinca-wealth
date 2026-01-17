@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ToolWelcomeHeader from '@/components/ToolWelcomeHeader';
 import ToolStepperInputs from '@/components/ToolStepperInputs';
 import FinancialReadinessStatusBanner from '@/components/financialReadiness/FinancialReadinessStatusBanner';
-import ActionRequiredCard from '@/components/ActionRequiredCard';
 import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
 import { defaultToolFormData, toolStepsConfig } from '@/lib/toolSteps';
 import { useCalculator } from '@/context/CalculatorContext';
 
 export default function FinancialReadinessToolPage() {
+  const router = useRouter();
   const { setFormData: setGlobalFormData, setFinancialReadinessResults } = useCalculator();
   const [formData, setFormData] = useState(defaultToolFormData);
   const [results, setResults] = useState(null);
@@ -79,25 +80,17 @@ export default function FinancialReadinessToolPage() {
     }
   };
 
-  const formatCurrency = (value) => {
-    if (value === undefined || value === null || Number.isNaN(value)) return '—';
-    if (value >= 10000000) return `₹${(value / 10000000).toFixed(2)} Cr`;
-    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
-    if (value === 0) return '₹0';
-    return `₹${Math.round(value).toLocaleString('en-IN')}`;
-  };
-
   return (
     <div className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
-        <ToolWelcomeHeader toolName="Financial Readiness" subtitle="Stay consistent across tools with a guided 3-step intake." />
+        <ToolWelcomeHeader toolName="Financial Readiness" />
 
         <ToolStepperInputs
           steps={toolStepsConfig}
           formData={formData}
           onChange={handleChange}
           onSubmit={handleSubmit}
-          ctaLabel="Analyze Your Financial Readiness"
+          ctaLabel="Analyze your Financial Readiness"
         />
 
         <div ref={summaryRef} className="space-y-4 sm:space-y-5">
@@ -116,25 +109,21 @@ export default function FinancialReadinessToolPage() {
           {!isCalculating && results && (
             <>
               <FinancialReadinessStatusBanner results={results} />
-              <ActionRequiredCard
-                title="Action Required"
-                message={(() => {
-                  const sipDelta = results?.requiredMonthlySIP !== undefined && results?.currentMonthlySIP !== undefined
-                    ? results.requiredMonthlySIP - results.currentMonthlySIP
-                    : null;
-                  return sipDelta !== null && sipDelta > 0
-                    ? `To retire at ${Math.round(results.retirementAge)} and survive till ${results.lifespan}, increase your SIP by ${formatCurrency(sipDelta)} / month.`
-                    : 'You are on track ✅ No SIP increase required.';
-                })()}
-                ctaHref="/dashboard/financial-readiness"
-                ctaLabel="Get Detailed Analysis"
-              />
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 text-center space-y-3">
+                <p className="text-sm text-slate-700">Review your status preview, then continue for the full dashboard view.</p>
+                <button
+                  onClick={() => router.push('/signin')}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold"
+                >
+                  <span>✅ Get Detailed Analysis</span>
+                </button>
+              </div>
             </>
           )}
 
           {!isCalculating && !results && (
             <div className="bg-white border border-dashed border-slate-200 rounded-2xl p-5 sm:p-6 text-center text-slate-600">
-              Complete all 3 steps and hit Analyze Your Financial Readiness to see your personalized summary.
+              Complete all 3 steps and hit Analyze your Financial Readiness to see your personalized status preview.
             </div>
           )}
         </div>

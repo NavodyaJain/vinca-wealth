@@ -52,31 +52,6 @@ const HealthFreemiumTrendPreview = ({ userInputs, onUpgrade }) => {
           <div className="text-xs text-slate-600">What may remain after typical healthcare spending — before lifestyle upgrades or emergencies.</div>
         </div>
       </div>
-
-      <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
-        <div className="text-sm font-semibold text-slate-800 mb-2">What this tells you</div>
-        <ul className="text-sm text-slate-700 list-disc pl-5 space-y-1">
-          <li>Routine healthcare costs quietly reduce your retirement spending power</li>
-          <li>These costs compound with inflation and last your entire retirement</li>
-          <li>This preview does not test hospitalizations or major medical events</li>
-        </ul>
-        <div className="text-sm text-slate-700 mt-2">Major health events can change this picture significantly.</div>
-      </div>
-
-      <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="text-sm text-slate-800">Want to see how specific medical scenarios impact your retirement plan?</div>
-        <button
-          type="button"
-          onClick={() => onUpgrade && onUpgrade()}
-          className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
-        >
-          Run Health Stress Test (Premium)
-        </button>
-      </div>
-
-      <div className="text-xs text-slate-500">
-        This section uses general healthcare trends for awareness only. It is not medical or financial advice.
-      </div>
     </div>
   );
 };

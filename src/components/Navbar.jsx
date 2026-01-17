@@ -1,35 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { Menu, X, ChevronDown } from 'lucide-react';
+
+const navItems = [
+  { label: 'Home', path: '/' },
+  {
+    label: 'Tools',
+    type: 'dropdown',
+    items: [
+      { label: 'Financial Readiness Calculator', path: '/tools/financial-readiness' },
+      { label: 'Lifestyle Planner', path: '/tools/lifestyle-planner' },
+      { label: 'Health Stress Test', path: '/tools/health-stress' }
+    ]
+  },
+  { label: 'Services', path: '/services' },
+  { label: 'Sign in', path: '/signin', style: 'primary' }
+];
 
 export default function Navbar() {
+  const router = useRouter();
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const isDashboard = pathname?.startsWith('/dashboard');
 
-  useEffect(() => {
+  const closeAll = () => {
+    setIsMobileMenuOpen(false);
     setIsToolsOpen(false);
-    setIsMobileOpen(false);
-    setIsMobileToolsOpen(false);
-  }, [pathname]);
+  };
+
+  const navigate = (path) => {
+    router.push(path);
+    closeAll();
+  };
 
   useEffect(() => {
-    // Lock body scroll while mobile menu is open
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = isMobileOpen ? 'hidden' : 'auto';
-    }
-
-    return () => {
-      if (typeof document !== 'undefined') {
-        document.body.style.overflow = 'auto';
-      }
-    };
-  }, [isMobileOpen]);
+    closeAll();
+  }, [pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -37,48 +47,116 @@ export default function Navbar() {
         setIsToolsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const closeOnEscape = (event) => {
-      if (event.key === 'Escape') {
-        setIsToolsOpen(false);
-        setIsMobileOpen(false);
-        setIsMobileToolsOpen(false);
-      }
-    };
-    document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
-  }, []);
-
-  const tools = [
-    { label: 'Financial Readiness', href: '/tools/financial-readiness' },
-    { label: 'Lifestyle Planner', href: '/tools/lifestyle-planner' },
-    { label: 'Health Stress Test', href: '/tools/health-stress' },
-    { label: 'Blind Spot Analysis', href: '/tools/blind-spot' },
-    { label: 'Top Assets Analysis', href: '/tools/top-assets' }
-  ];
-
-  const handleDashboardDrawer = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vinca-dashboard-drawer'));
-    }
-    setIsMobileOpen(false);
+  const isActive = (path) => {
+    if (path === '/') return pathname === '/';
+    return pathname?.startsWith(path);
   };
 
-  const closeMobileMenu = () => {
-    setIsMobileOpen(false);
-    setIsMobileToolsOpen(false);
-  };
+  const renderDesktopTools = () => (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsToolsOpen((prev) => !prev)}
+        aria-expanded={isToolsOpen}
+        aria-controls="desktop-tools-menu"
+        className={`text-sm font-medium flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${isToolsOpen ? 'text-green-700' : 'text-slate-600 hover:text-green-600'}`}
+      >
+        Tools
+        <ChevronDown className={`w-4 h-4 transition-transform ${isToolsOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isToolsOpen && (
+        <div
+          id="desktop-tools-menu"
+          className="absolute right-0 mt-2 w-72 rounded-xl border border-slate-200 bg-white shadow-lg py-2"
+        >
+          {navItems[1].items.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`w-full text-left px-4 py-2 text-sm transition-colors ${isActive(item.path) ? 'bg-green-50 text-green-700 font-medium' : 'text-slate-700 hover:bg-slate-50'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderMobileMenu = () => (
+    <div className="lg:hidden mt-3 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden" role="menu" aria-label="Mobile navigation">
+      {navItems.map((item) => {
+        if (item.type === 'dropdown') {
+          return (
+            <div key={item.label} className="border-t border-slate-100">
+              <button
+                onClick={() => setIsToolsOpen((prev) => !prev)}
+                aria-expanded={isToolsOpen}
+                aria-controls="mobile-tools-panel"
+                className={`w-full flex items-center justify-between px-4 py-3 text-slate-700 hover:bg-slate-50 ${isToolsOpen ? 'bg-slate-50' : ''}`}
+              >
+                <span className="font-medium">{item.label}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${isToolsOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isToolsOpen && (
+                <div id="mobile-tools-panel" className="border-t border-slate-100">
+                  {item.items.map((child) => (
+                    <button
+                      key={child.path}
+                      onClick={() => navigate(child.path)}
+                      className={`w-full text-left pl-8 pr-4 py-2 text-sm text-slate-600 hover:text-green-700 hover:bg-slate-50 ${isActive(child.path) ? 'bg-green-50 text-green-700 font-medium border-l-4 border-green-600' : ''}`}
+                    >
+                      {child.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        if (item.style === 'primary') {
+          return (
+            <div key={item.path} className="border-t border-slate-100 px-4 py-3">
+              <button
+                onClick={() => navigate(item.path)}
+                className="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium"
+              >
+                {item.label}
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            className={`w-full flex items-center justify-between px-4 py-3 text-slate-700 hover:bg-slate-50 ${isActive(item.path) ? 'bg-green-50 text-green-700 font-medium border-l-4 border-green-600' : ''}`}
+          >
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14 sm:h-16">
-          <div className="flex items-center">
+    <nav className="w-full bg-white border-b border-slate-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-14 sm:h-16">
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-700"
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold">V</span>
@@ -87,172 +165,38 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-            <Link 
-              href="/" 
-              className={`text-sm font-medium ${pathname === '/' ? 'text-green-600' : 'text-slate-600 hover:text-green-600'}`}
+          <div className="hidden lg:flex items-center gap-6">
+            <button
+              onClick={() => navigate('/')}
+              className={`text-sm font-medium px-2 py-1 rounded-lg ${isActive('/') ? 'text-green-700 bg-green-50' : 'text-slate-600 hover:text-green-600'}`}
             >
               Home
-            </Link>
-            
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsToolsOpen((prev) => !prev)}
-                className="text-sm font-medium text-slate-600 hover:text-green-600 flex items-center"
-              >
-                Tools
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {isToolsOpen && (
-                <div className="absolute right-0 bg-white rounded-2xl shadow-lg border border-slate-200 mt-2 py-2 min-w-[220px]">
-                  {tools.map((tool) => (
-                    <Link
-                      key={tool.href}
-                      href={tool.href}
-                      className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                    >
-                      {tool.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Link 
-              href="/services"
-              className={`text-sm font-medium ${pathname === '/services' ? 'text-green-600' : 'text-slate-600 hover:text-green-600'}`}
+            </button>
+            {renderDesktopTools()}
+            <button
+              onClick={() => navigate('/services')}
+              className={`text-sm font-medium px-2 py-1 rounded-lg ${isActive('/services') ? 'text-green-700 bg-green-50' : 'text-slate-600 hover:text-green-600'}`}
             >
               Services
-            </Link>
-
-            <Link 
-              href="/signin" 
-              className="btn-primary h-11 px-5"
-            >
-              Sign In
-            </Link>
-          </div>
-
-          <div className="md:hidden flex items-center gap-2">
-            {isDashboard && (
-              <button
-                onClick={handleDashboardDrawer}
-                aria-label="Open dashboard menu"
-                className="p-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 12h18M3 18h18" />
-                </svg>
-              </button>
-            )}
+            </button>
             <button
-              onClick={() => setIsMobileOpen((prev) => !prev)}
-              aria-label="Toggle navigation menu"
-              className="p-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+              onClick={() => navigate('/signin')}
+              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium"
             >
-              {isMobileOpen ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
+              Sign in
             </button>
           </div>
         </div>
 
-        {isMobileOpen && (
-          <div
-            className="fixed inset-0 z-[9999] md:hidden"
-            onClick={closeMobileMenu}
-          >
-            <div className="absolute inset-0 bg-black/40" aria-hidden="true"></div>
-            <div
-              className="relative ml-auto h-full w-[85%] max-w-sm bg-white shadow-2xl border-l border-slate-200 overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-sm font-semibold text-slate-900">Menu</div>
-                  <button
-                    onClick={closeMobileMenu}
-                    className="p-2 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
-                    aria-label="Close menu"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                {isDashboard && (
-                  <button
-                    onClick={handleDashboardDrawer}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-slate-200 text-slate-800 font-medium hover:bg-slate-50"
-                  >
-                    Dashboard Menu
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-
-                <Link 
-                  href="/" 
-                  className="block px-3 py-3 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                  onClick={closeMobileMenu}
-                >
-                  Home
-                </Link>
-
-                <div className="border border-slate-100 rounded-xl">
-                  <button
-                    onClick={() => setIsMobileToolsOpen((prev) => !prev)}
-                    className="w-full flex items-center justify-between px-3 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Tools
-                    <svg className={`w-4 h-4 transition-transform ${isMobileToolsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {isMobileToolsOpen && (
-                    <div className="border-t border-slate-100 divide-y divide-slate-100">
-                      {tools.map((tool) => (
-                        <Link
-                          key={tool.href}
-                          href={tool.href}
-                          className="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50"
-                          onClick={closeMobileMenu}
-                        >
-                          {tool.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Link 
-                  href="/services"
-                  className="block px-3 py-3 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                  onClick={closeMobileMenu}
-                >
-                  Services
-                </Link>
-
-                <Link 
-                  href="/signin" 
-                  className="block w-full text-center h-11 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors"
-                  onClick={closeMobileMenu}
-                >
-                  Sign In
-                </Link>
-              </div>
-            </div>
-          </div>
+        {isMobileMenuOpen && (
+          <>
+            <button
+              className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+              aria-label="Close menu overlay"
+              onClick={closeAll}
+            />
+            <div className="relative z-50">{renderMobileMenu()}</div>
+          </>
         )}
       </div>
     </nav>

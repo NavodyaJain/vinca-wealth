@@ -51,7 +51,6 @@ const HealthPremiumImpactAnalysis = ({ analysis, isLocked, selectedCategory, onS
   return (
     <div className={`rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 ${isLocked ? 'select-none' : ''}`}>
       <div className="flex flex-col gap-2 mb-6">
-        <div className="text-sm font-semibold text-indigo-700">Premium Analysis</div>
         <h3 className="text-2xl font-bold text-slate-900">Personalized Impact on Your Retirement Plan</h3>
         <p className="text-sm text-slate-600">Simulates how this health category affects your retirement sustainability using your Financial Readiness inputs.</p>
         <p className="text-xs text-slate-500">Assumes 80% insurance coverage (20% out-of-pocket). Educational only.</p>

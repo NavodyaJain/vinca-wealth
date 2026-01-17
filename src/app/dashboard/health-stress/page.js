@@ -5,7 +5,6 @@ import { usePremium } from '@/lib/premium';
 import ProSubscriptionModal from '@/components/financialReadiness/ProSubscriptionModal';
 import PremiumBlurGate from '@/components/shared/PremiumBlurGate';
 import HealthPremiumImpactAnalysis from '@/components/healthStress/HealthPremiumImpactAnalysis';
-import HealthFreemiumTrendPreview from '@/components/healthStress/HealthFreemiumTrendPreview';
 import PremiumHealthCategoryPreview from '@/components/healthStress/PremiumHealthCategoryPreview';
 import { formatCurrency } from '@/lib/formatter';
 import { computeHealthPremiumImpact } from '@/lib/healthStressPremium';
@@ -163,12 +162,6 @@ export default function HealthStressPage() {
           </div>
         )}
 
-        <div className="mb-10">
-          <HealthFreemiumTrendPreview
-            userInputs={userInputs || getMockInputs()}
-            onUpgrade={() => setIsPremiumModalOpen(true)}
-          />
-        </div>
         <div className="mb-10">
           <PremiumBlurGate
             isLocked={!isProUser}
