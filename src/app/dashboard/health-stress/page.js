@@ -122,10 +122,7 @@ export default function HealthStressPage() {
         <div className="mb-10">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Will your retirement plan support your health?</h1>
-              <p className="mt-3 text-lg text-slate-600 max-w-3xl">
-                We simulate common health scenarios to understand how medical expenses may affect long-term financial independence.
-              </p>
+              <h1 className="text-3xl font-bold text-slate-900">Analyze how different health scenarios affect your retirement</h1>
             </div>
           </div>
         </div>
