@@ -2,18 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import LifestyleCharts from "@/components/LifestylePlanner/LifestyleCharts";
-import LifestyleSummaryMetrics from "@/components/LifestylePlanner/LifestyleSummaryMetrics";
-import AffordedLifestyleCard from "@/components/LifestylePlanner/AffordedLifestyleCard";
 import HealthStressCTA from "@/components/LifestylePlanner/HealthStressCTA";
 import ProfessionalGuidanceSection from "@/components/financialReadiness/ProfessionalGuidanceSection";
-import PremiumBlurGate from "@/components/shared/PremiumBlurGate";
-import ProSubscriptionModal from "@/components/financialReadiness/ProSubscriptionModal";
-import { usePremium } from "@/lib/premium";
 import { formatCurrency } from "@/lib/formatter";
-import { deriveAffordabilityStatus, discountToToday, estimateCorpusAtRetirement, simulateRetirementTimeline } from "@/lib/lifestylePlanner";
+import { estimateCorpusAtRetirement, simulateRetirementTimeline } from "@/lib/lifestylePlanner";
 
 export default function LifestylePlannerPage() {
-  const { isPremium, upgradeToPremium } = usePremium();
   const mockInputs = {
     currentAge: 30,
     retirementAge: 60,
@@ -28,21 +22,8 @@ export default function LifestylePlannerPage() {
   };
 
   const [inputs, setInputs] = useState(mockInputs);
-  const [requiredMonthlyIncomeAtRetirement, setRequiredMonthlyIncomeAtRetirement] = useState(0);
   const [supportedMonthlyIncomeAtRetirement, setSupportedMonthlyIncomeAtRetirement] = useState(0);
-  const [supportedMonthlyIncomeToday, setSupportedMonthlyIncomeToday] = useState(0);
   const [paycheckTimelineData, setPaycheckTimelineData] = useState([]);
-  const [affordability, setAffordability] = useState({ status: 'Maintained', color: 'text-emerald-700', bg: 'bg-emerald-50' });
-  const [sustainableTillAge, setSustainableTillAge] = useState(mockInputs.retirementAge);
-  const [yearsSupported, setYearsSupported] = useState(0);
-  const [totalYears, setTotalYears] = useState(Math.max(mockInputs.lifespan - mockInputs.retirementAge, 0));
-  const [gapMonthlyAtFailure, setGapMonthlyAtFailure] = useState(0);
-  const [failureAge, setFailureAge] = useState(null);
-  const [recommendedTier, setRecommendedTier] = useState('Comfortable');
-  const [hasAnalysis, setHasAnalysis] = useState(false);
-  const [isProUser, setIsProUser] = useState(isPremium);
-  const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('yearly');
   const [lifestyleShift, setLifestyleShift] = useState(0); // percent delta relative to base expenses
 
   useEffect(() => {
@@ -58,12 +39,7 @@ export default function LifestylePlannerPage() {
   }, []);
 
   useEffect(() => {
-    setIsProUser(isPremium);
-  }, [isPremium]);
-
-  useEffect(() => {
     const startingCorpus = estimateCorpusAtRetirement(inputs);
-    const requiredIncome = inputs.monthlyExpenses * Math.pow(1 + inputs.inflationRate / 100, Math.max(inputs.retirementAge - inputs.currentAge, 0));
 
     const simulation = simulateRetirementTimeline({
       currentAge: inputs.currentAge,
@@ -74,11 +50,6 @@ export default function LifestylePlannerPage() {
       inflationRate: inputs.inflationRate,
       postRetirementReturnRate: inputs.retirementReturns
     });
-
-    const status = deriveAffordabilityStatus(simulation);
-
-    setAffordability(status);
-    setRequiredMonthlyIncomeAtRetirement(requiredIncome);
     setPaycheckTimelineData(
       simulation.timeline.map((row) => ({
         age: row.age,
@@ -87,24 +58,9 @@ export default function LifestylePlannerPage() {
         gapMonthly: Math.max(row.desiredMonthly - row.supportedMonthly, 0)
       }))
     );
-    setHasAnalysis(simulation.timeline.length > 0);
-    setSustainableTillAge(simulation.sustainableTillAge);
-    setYearsSupported(simulation.yearsSupported);
-    setTotalYears(simulation.totalYears);
-    setGapMonthlyAtFailure(simulation.gapMonthlyAtFailure);
-    setFailureAge(simulation.failureAge);
 
     const firstSupported = simulation.timeline[0]?.supportedMonthly || 0;
     setSupportedMonthlyIncomeAtRetirement(firstSupported);
-
-    const yearsToRetirement = Math.max(inputs.retirementAge - inputs.currentAge, 0);
-    const supportedToday = discountToToday(firstSupported, inputs.inflationRate, yearsToRetirement);
-    setSupportedMonthlyIncomeToday(supportedToday);
-
-    const ratio = inputs.monthlyExpenses > 0 ? firstSupported / inputs.monthlyExpenses : 0;
-    if (ratio < 1.2) setRecommendedTier('Basic');
-    else if (ratio < 1.6) setRecommendedTier('Comfortable');
-    else setRecommendedTier('Premium');
   }, [inputs]);
 
   const safeNumber = (value, fallback = 0) => {
@@ -271,12 +227,6 @@ export default function LifestylePlannerPage() {
     };
   }, [hasValidPremiumInputs, inputs, lifestyleShift, supportedMonthlyIncomeAtRetirement]);
 
-  const handleConfirmSubscription = () => {
-    upgradeToPremium();
-    setIsProUser(true);
-    setIsPremiumModalOpen(false);
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
@@ -313,38 +263,7 @@ export default function LifestylePlannerPage() {
         </div>
       </div>
 
-      <div className="mb-10">
-        <p className="text-slate-600 mb-6">This is the monthly income your current corpus can safely support after retirement, while accounting for inflation and post-retirement returns.</p>
-        <LifestyleSummaryMetrics
-          requiredMonthlyIncomeAtRetirement={requiredMonthlyIncomeAtRetirement}
-          supportedMonthlyIncomeAtRetirement={supportedMonthlyIncomeAtRetirement}
-          retirementAge={inputs.retirementAge}
-          lifespan={inputs.lifespan}
-          affordability={affordability}
-          sustainableTillAge={sustainableTillAge}
-          yearsSupported={yearsSupported}
-          totalYears={totalYears}
-          gapMonthlyAtFailure={gapMonthlyAtFailure}
-          failureAge={failureAge}
-        />
-      </div>
-
-      <div className="bg-white rounded-xl border border-slate-200 p-6 mb-10">
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold text-slate-900">Lifestyle you can afford</h3>
-          <p className="text-slate-600 text-sm">Based on your supported monthly income at retirement.</p>
-        </div>
-
-        <AffordedLifestyleCard
-          tier={recommendedTier}
-          supportedMonthlyIncomeAtRetirement={supportedMonthlyIncomeAtRetirement}
-          supportedMonthlyIncomeToday={supportedMonthlyIncomeToday}
-        />
-      </div>
-
-      <div className="mb-10">
-        <LifestyleCharts paycheckTimelineData={paycheckTimelineData} />
-      </div>
+      {/* Summary and affordability card removed per request; calculations remain for downstream sections. */}
 
       <div className="mb-10">
         <div className="bg-white rounded-2xl border border-purple-200 shadow-lg p-6 sm:p-8">
@@ -353,119 +272,116 @@ export default function LifestylePlannerPage() {
             <p className="text-slate-600 text-sm">Choose a spending level at retirement and see the corpus, income, and fixes needed to sustain it.</p>
           </div>
 
-          <PremiumBlurGate
-            isLocked={!isProUser}
-            onUpgradeClick={() => setIsPremiumModalOpen(true)}
-            title="Plan your retirement for your desired lifestyle"
-            subtitle="Adjust your retirement spending and instantly see required corpus + SIP needed to sustain it for life."
-          >
-            {!hasValidPremiumInputs ? (
-              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 text-slate-700 text-sm">
-                <div className="font-semibold text-slate-900 mb-1">Complete your Financial Readiness plan first</div>
-                <div>We need your retirement age, expenses, SIP, and corpus estimate to run Lifestyle Planning.</div>
+          {!hasValidPremiumInputs ? (
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 text-slate-700 text-sm">
+              <div className="font-semibold text-slate-900 mb-1">Complete your Financial Readiness plan first</div>
+              <div>We need your retirement age, expenses, SIP, and corpus estimate to run Lifestyle Planning.</div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                  <div className="text-sm font-semibold text-slate-800">Selected lifestyle: {lifestyleShift >= 0 ? `+${lifestyleShift}%` : `${lifestyleShift}%`}</div>
+                  <div className="text-sm text-slate-700">Selected Monthly Expense: {formatINR(premiumData.targetMonthlyToday)} / month</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-500">-50%</span>
+                  <div className="flex-1">
+                    <div className="relative w-full h-2 rounded-full overflow-hidden" style={{ background: 'linear-gradient(90deg, #bbf7d0 0%, #e2e8f0 50%, #fecdd3 100%)' }}>
+                      <input
+                        type="range"
+                        min={-50}
+                        max={100}
+                        step={5}
+                        value={lifestyleShift}
+                        onChange={(e) => setLifestyleShift(Number(e.target.value))}
+                        disabled={!hasValidPremiumInputs}
+                        className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
+                      />
+                      <div
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full border border-white shadow flex items-center justify-center"
+                        style={{ left: `${((lifestyleShift + 50) / 150) * 100}%`, background: '#10b981' }}
+                      >
+                        <span className="text-[9px] text-white leading-none">⇆</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-500">+100%</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-2">Adjust spending relative to your current expenses.</div>
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-emerald-50 via-slate-50 to-amber-50 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-                    <div className="text-sm font-semibold text-slate-800">Selected lifestyle: {lifestyleShift >= 0 ? `+${lifestyleShift}%` : `${lifestyleShift}%`}</div>
-                    <div className="text-sm text-slate-700">Selected Monthly Expense: {formatINR(premiumData.targetMonthlyToday)} / month</div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-500">-50%</span>
-                    <div className="flex-1">
-                      <div className="relative w-full h-2 rounded-full overflow-hidden" style={{ background: 'linear-gradient(90deg, #bbf7d0 0%, #e2e8f0 50%, #fecdd3 100%)' }}>
-                        <input
-                          type="range"
-                          min={-50}
-                          max={100}
-                          step={5}
-                          value={lifestyleShift}
-                          onChange={(e) => setLifestyleShift(Number(e.target.value))}
-                          disabled={!isProUser || !hasValidPremiumInputs}
-                          className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
-                        />
-                        <div
-                          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 rounded-full border border-white shadow flex items-center justify-center"
-                          style={{ left: `${((lifestyleShift + 50) / 150) * 100}%`, background: '#10b981' }}
-                        >
-                          <span className="text-[9px] text-white leading-none">⇆</span>
-                        </div>
-                      </div>
+
+              <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">{premiumData.tier === 'Essentials' ? '📊' : premiumData.tier === 'Comfortable' ? '✨' : '🌟'}</div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">{premiumData.tier} Lifestyle</div>
+                    <div className="text-xs text-slate-600 mb-1">
+                      {premiumData.tier === 'Essentials' && 'Calm, needs-focused living with lean buffer.'}
+                      {premiumData.tier === 'Comfortable' && 'Comfort upgrades and hobbies with flexibility.'}
+                      {premiumData.tier === 'Premium' && 'Experiences, travel, and higher flexibility.'}
                     </div>
-                    <span className="text-xs text-slate-500">+100%</span>
-                  </div>
-                  <div className="text-xs text-slate-500 mt-2">Adjust spending relative to your current expenses.</div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl">{premiumData.tier === 'Essentials' ? '📊' : premiumData.tier === 'Comfortable' ? '✨' : '🌟'}</div>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">{premiumData.tier} Lifestyle</div>
-                      <div className="text-xs text-slate-600 mb-1">
-                        {premiumData.tier === 'Essentials' && 'Calm, needs-focused living with lean buffer.'}
-                        {premiumData.tier === 'Comfortable' && 'Comfort upgrades and hobbies with flexibility.'}
-                        {premiumData.tier === 'Premium' && 'Experiences, travel, and higher flexibility.'}
-                      </div>
-                      <div className="text-sm text-slate-700">Selected Monthly Expense: <span className="font-semibold text-slate-900">{formatINR(premiumData.targetMonthlyToday)}</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white">
-                    <div className="text-xs font-semibold text-slate-700 mb-1">Required Monthly Income at Retirement</div>
-                    <div className="text-2xl font-bold text-slate-900">{formatINR(premiumData.requiredMonthlyAtRetirement)} / month</div>
-                    <div className="text-xs text-slate-600">Inflation-adjusted to your retirement age.</div>
-                  </div>
-                  <div className="p-4 rounded-xl border border-slate-200 bg-linear-to-br from-purple-50 to-white">
-                    <div className="text-xs font-semibold text-purple-700 mb-1">Required Corpus for this Lifestyle</div>
-                    <div className="text-2xl font-bold text-slate-900">{formatINR(premiumData.requiredCorpus)}</div>
-                    <div className="text-xs text-slate-600">Based on 4% safe withdrawal.</div>
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex flex-wrap items-center gap-2 text-sm text-slate-800">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${premiumData.monthlyGap <= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                    {premiumData.monthlyGap <= 0 ? 'No gap' : `Gap ${formatINR(premiumData.monthlyGap)} / month`}
-                  </span>
-                  <span>Your current plan supports {formatINR(premiumData.supportedMonthlyPlan)} / month, but this lifestyle needs {formatINR(premiumData.requiredMonthlyAtRetirement)} / month.</span>
-                </div>
-
-                <div className={`p-4 rounded-xl border ${premiumData.sustainabilityTone.bg} ${premiumData.sustainabilityTone.text} border-current/20`}>
-                  <div className="text-sm font-semibold">{premiumData.sustainabilityLevel === 'Affordable' ? `Sustainable till age ${inputs.lifespan}` : premiumData.sustainabilityLevel === 'Tight' ? `Sustainable till age ${inputs.retirementAge + premiumData.yearsSupportedLifestyle} (tight)` : `Runs out around age ${premiumData.failureAgeLifestyle || inputs.retirementAge + premiumData.yearsSupportedLifestyle}`}</div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="text-sm font-semibold text-slate-900">To afford this lifestyle you can either</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-                      {premiumData.retireLaterSolution.found ? (
-                        <>
-                          <div className="text-sm text-slate-700">{premiumData.retireLaterSolution.label}</div>
-                          <div className="text-xs text-slate-600 mt-1">New retirement age: {premiumData.retireLaterSolution.newRetirementAge}</div>
-                        </>
-                      ) : (
-                        <div className="text-sm text-rose-700">This lifestyle may be unrealistic under current constraints.</div>
-                      )}
-                    </div>
-                    <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-                      {premiumData.sipIncreaseSolution.found ? (
-                        <>
-                          <div className="text-sm text-slate-700">{premiumData.sipIncreaseSolution.label}</div>
-                          <div className="text-xs text-slate-600 mt-1">Total SIP becomes {formatINR(premiumData.sipIncreaseSolution.newSip)} / month</div>
-                        </>
-                      ) : (
-                        <div className="text-sm text-rose-700">This lifestyle may be unrealistic under current constraints.</div>
-                      )}
-                    </div>
+                    <div className="text-sm text-slate-700">Selected Monthly Expense: <span className="font-semibold text-slate-900">{formatINR(premiumData.targetMonthlyToday)}</span></div>
                   </div>
                 </div>
               </div>
-            )}
-          </PremiumBlurGate>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl border border-slate-200 bg-linear-to-br from-slate-50 to-white">
+                  <div className="text-xs font-semibold text-slate-700 mb-1">Required Monthly Income at Retirement</div>
+                  <div className="text-2xl font-bold text-slate-900">{formatINR(premiumData.requiredMonthlyAtRetirement)} / month</div>
+                  <div className="text-xs text-slate-600">Inflation-adjusted to your retirement age.</div>
+                </div>
+                <div className="p-4 rounded-xl border border-slate-200 bg-linear-to-br from-purple-50 to-white">
+                  <div className="text-xs font-semibold text-purple-700 mb-1">Required Corpus for this Lifestyle</div>
+                  <div className="text-2xl font-bold text-slate-900">{formatINR(premiumData.requiredCorpus)}</div>
+                  <div className="text-xs text-slate-600">Based on 4% safe withdrawal.</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex flex-wrap items-center gap-2 text-sm text-slate-800">
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${premiumData.monthlyGap <= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {premiumData.monthlyGap <= 0 ? 'No gap' : `Gap ${formatINR(premiumData.monthlyGap)} / month`}
+                </span>
+                <span>Your current plan supports {formatINR(premiumData.supportedMonthlyPlan)} / month, but this lifestyle needs {formatINR(premiumData.requiredMonthlyAtRetirement)} / month.</span>
+              </div>
+
+              <div className={`p-4 rounded-xl border ${premiumData.sustainabilityTone.bg} ${premiumData.sustainabilityTone.text} border-current/20`}>
+                <div className="text-sm font-semibold">{premiumData.sustainabilityLevel === 'Affordable' ? `Sustainable till age ${inputs.lifespan}` : premiumData.sustainabilityLevel === 'Tight' ? `Sustainable till age ${inputs.retirementAge + premiumData.yearsSupportedLifestyle} (tight)` : `Runs out around age ${premiumData.failureAgeLifestyle || inputs.retirementAge + premiumData.yearsSupportedLifestyle}`}</div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-slate-900">To afford this lifestyle you can either</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
+                    {premiumData.retireLaterSolution.found ? (
+                      <>
+                        <div className="text-sm text-slate-700">{premiumData.retireLaterSolution.label}</div>
+                        <div className="text-xs text-slate-600 mt-1">New retirement age: {premiumData.retireLaterSolution.newRetirementAge}</div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-rose-700">This lifestyle may be unrealistic under current constraints.</div>
+                    )}
+                  </div>
+                  <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
+                    {premiumData.sipIncreaseSolution.found ? (
+                      <>
+                        <div className="text-sm text-slate-700">{premiumData.sipIncreaseSolution.label}</div>
+                        <div className="text-xs text-slate-600 mt-1">Total SIP becomes {formatINR(premiumData.sipIncreaseSolution.newSip)} / month</div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-rose-700">This lifestyle may be unrealistic under current constraints.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="mb-10">
+        <LifestyleCharts paycheckTimelineData={paycheckTimelineData} />
       </div>
 
       <div className="mb-10">
@@ -473,15 +389,6 @@ export default function LifestylePlannerPage() {
       </div>
 
       <ProfessionalGuidanceSection />
-
-      {isPremiumModalOpen && (
-        <ProSubscriptionModal
-          selectedPlan={selectedPlan}
-          onSelectPlan={setSelectedPlan}
-          onConfirm={handleConfirmSubscription}
-          onClose={() => setIsPremiumModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

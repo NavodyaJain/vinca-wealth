@@ -38,7 +38,7 @@ export default function LifestyleCharts({ paycheckTimelineData }) {
     <div className="space-y-8">
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="mb-6">
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">Purchasing Power Gap Timeline</h3>
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">Gap between required and expected monthly income for your desired lifestyle</h3>
           <p className="text-slate-600">Required vs. supported monthly income across retirement (inflation-adjusted).</p>
         </div>
         
