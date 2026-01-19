@@ -294,13 +294,23 @@ export default function CommunityDashboardPage() {
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
               <h3 className="font-semibold text-slate-900 mb-4">Resources</h3>
               <div className="space-y-3">
+                {/* Getting Started Guide */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
                   <BookOpen className="w-5 h-5 text-indigo-600" />
                   <div>
-                    <div className="text-sm font-medium text-slate-900">Getting Started Guide</div>
-                    <div className="text-xs text-slate-500">Learn community basics</div>
+                    <div className="text-sm font-medium text-slate-900">Community Library</div>
+                    <div className="text-xs text-slate-500">Explore guides & resources</div>
                   </div>
                 </div>
+                {/* Community Events */}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <Calendar className="w-5 h-5 text-indigo-600" />
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Community Events</div>
+                    <div className="text-xs text-slate-500">See upcoming events</div>
+                  </div>
+                </div>
+                {/* Goal Templates */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
                   <Target className="w-5 h-5 text-emerald-600" />
                   <div>
@@ -308,6 +318,7 @@ export default function CommunityDashboardPage() {
                     <div className="text-xs text-slate-500">Plan your journey</div>
                   </div>
                 </div>
+                {/* Member Stories */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
                   <Sparkles className="w-5 h-5 text-amber-600" />
                   <div>
