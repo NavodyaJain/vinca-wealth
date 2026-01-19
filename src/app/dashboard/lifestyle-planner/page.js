@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import LifestyleCharts from "@/components/LifestylePlanner/LifestyleCharts";
 import HealthStressCTA from "@/components/LifestylePlanner/HealthStressCTA";
 import ProfessionalGuidanceSection from "@/components/financialReadiness/ProfessionalGuidanceSection";
+import SaveReadingCTA from "@/components/shared/SaveReadingCTA";
 import { formatCurrency } from "@/lib/formatter";
 import { estimateCorpusAtRetirement, simulateRetirementTimeline } from "@/lib/lifestylePlanner";
+import { saveUserReading, isToolCompleted } from "@/lib/userJourneyStorage";
 
 export default function LifestylePlannerPage() {
   const mockInputs = {
@@ -25,6 +27,13 @@ export default function LifestylePlannerPage() {
   const [supportedMonthlyIncomeAtRetirement, setSupportedMonthlyIncomeAtRetirement] = useState(0);
   const [paycheckTimelineData, setPaycheckTimelineData] = useState([]);
   const [lifestyleShift, setLifestyleShift] = useState(0); // percent delta relative to base expenses
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    // Check if already saved on mount
+    const alreadySaved = isToolCompleted('lifestylePlanner');
+    setIsSaved(alreadySaved);
+  }, []);
 
   useEffect(() => {
     try {
@@ -227,6 +236,27 @@ export default function LifestylePlannerPage() {
     };
   }, [hasValidPremiumInputs, inputs, lifestyleShift, supportedMonthlyIncomeAtRetirement]);
 
+  // Handler for explicit save
+  const handleSaveReading = useCallback(() => {
+    if (!premiumData?.valid) return;
+    
+    // Map tier to the expected format
+    let chosenTier = 'Comfortable';
+    if (premiumData.tier === 'Essentials' || premiumData.multiplier <= 1.0) {
+      chosenTier = 'Basic';
+    } else if (premiumData.tier === 'Premium' || premiumData.multiplier > 1.5) {
+      chosenTier = 'Premium';
+    }
+    
+    saveUserReading('lifestylePlanner', {
+      chosenTier,
+      targetMonthlyExpenseAtRetirement: premiumData.requiredMonthlyAtRetirement,
+      requiredCorpusForLifestyle: premiumData.requiredCorpus
+    });
+    
+    setIsSaved(true);
+  }, [premiumData]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
@@ -383,6 +413,16 @@ export default function LifestylePlannerPage() {
       <div className="mb-10">
         <LifestyleCharts paycheckTimelineData={paycheckTimelineData} />
       </div>
+
+      {/* Save Reading Button - After charts, before Health Stress CTA */}
+      {hasValidPremiumInputs && premiumData?.valid && (
+        <div className="mb-10 flex justify-end">
+          <SaveReadingCTA
+            onSave={handleSaveReading}
+            isSaved={isSaved}
+          />
+        </div>
+      )}
 
       <div className="mb-10">
         <HealthStressCTA />

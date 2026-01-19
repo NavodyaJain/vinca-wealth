@@ -1,13 +1,23 @@
 ﻿'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePremium } from '@/lib/premium';
 import ProSubscriptionModal from '@/components/financialReadiness/ProSubscriptionModal';
 import PremiumBlurGate from '@/components/shared/PremiumBlurGate';
 import HealthPremiumImpactAnalysis from '@/components/healthStress/HealthPremiumImpactAnalysis';
 import PremiumHealthCategoryPreview from '@/components/healthStress/PremiumHealthCategoryPreview';
+import JourneyUnlockBanner from '@/components/profile/JourneyUnlockBanner';
+import SaveReadingCTA from '@/components/shared/SaveReadingCTA';
 import { formatCurrency } from '@/lib/formatter';
 import { computeHealthPremiumImpact } from '@/lib/healthStressPremium';
+import { 
+  saveUserReading, 
+  getToolsCompletionStatus, 
+  areAllToolsCompleted,
+  unlockPersonalityIfEligible,
+  isToolCompleted
+} from '@/lib/userJourneyStorage';
 
 const safeNumber = (value, fallback = 0) => {
   const num = Number(value);
@@ -61,6 +71,7 @@ const getMockInputs = () => ({
 });
 
 export default function HealthStressPage() {
+  const router = useRouter();
   const { isPremium, upgradeToPremium } = usePremium();
   const [userInputs, setUserInputs] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +79,10 @@ export default function HealthStressPage() {
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('yearly');
   const [isProUser, setIsProUser] = useState(isPremium);
+  const [completionStatus, setCompletionStatus] = useState(null);
+  const [showUnlockBanner, setShowUnlockBanner] = useState(false);
+  const [personalityUnlocked, setPersonalityUnlocked] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const handleConfirmSubscription = () => {
     upgradeToPremium();
@@ -101,9 +116,61 @@ export default function HealthStressPage() {
     };
 
     loadUserInputs();
+    
+    // Check completion status on load
+    const status = getToolsCompletionStatus();
+    setCompletionStatus(status);
+    
+    // Check if already saved
+    const alreadySaved = isToolCompleted('healthStress');
+    setIsSaved(alreadySaved);
+    
+    // Show unlock banner only if already saved and all tools complete
+    if (alreadySaved && areAllToolsCompleted()) {
+      setShowUnlockBanner(true);
+    }
   }, []);
 
   const premiumAnalysis = useMemo(() => computeHealthPremiumImpact(userInputs, selectedHealthCategory), [userInputs, selectedHealthCategory]);
+
+  // Handler for explicit save
+  const handleSaveReading = useCallback(() => {
+    if (!userInputs || !isProUser) return;
+    
+    // Map category to expected format
+    const categoryMap = {
+      'everyday': 'Everyday',
+      'planned': 'Planned',
+      'hospitalization': 'Hospitalization'
+    };
+    
+    const chosenCategory = categoryMap[selectedHealthCategory] || 'Everyday';
+    const analysis = computeHealthPremiumImpact(userInputs, selectedHealthCategory);
+    
+    // Save the reading
+    saveUserReading('healthStress', {
+      chosenCategory,
+      healthAdjustedCorpus: analysis?.adjustedCorpus || 0,
+      sustainabilityTillAge: analysis?.sustainableTillAge || 85
+    });
+    
+    setIsSaved(true);
+    
+    // Update completion status
+    const status = getToolsCompletionStatus();
+    setCompletionStatus(status);
+    
+    // Show unlock banner after saving
+    setShowUnlockBanner(true);
+    
+    // Try to unlock personality if all tools completed
+    if (areAllToolsCompleted()) {
+      const personality = unlockPersonalityIfEligible();
+      if (personality) {
+        setPersonalityUnlocked(true);
+      }
+    }
+  }, [userInputs, selectedHealthCategory, isProUser]);
 
   if (loading) {
     return (
@@ -181,6 +248,27 @@ export default function HealthStressPage() {
             />
           </PremiumBlurGate>
         </div>
+
+        {/* Save Reading Button - After health analysis */}
+        {isProUser && userInputs && (
+          <div className="mb-6 flex justify-end">
+            <SaveReadingCTA
+              onSave={handleSaveReading}
+              isSaved={isSaved}
+            />
+          </div>
+        )}
+
+        {/* Journey Unlock Banner - Only show after explicit save */}
+        {showUnlockBanner && isProUser && isSaved && (
+          <div className="mb-6">
+            <JourneyUnlockBanner
+              isVisible={true}
+              completionStatus={completionStatus}
+              onViewProfile={() => router.push('/dashboard/profile')}
+            />
+          </div>
+        )}
       </div>
 
       {isPremiumModalOpen && (

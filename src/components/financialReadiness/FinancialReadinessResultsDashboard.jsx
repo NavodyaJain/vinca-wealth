@@ -1,18 +1,21 @@
 // src/components/financialReadiness/FinancialReadinessResultsDashboard.jsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import FinancialReadinessStatusBanner from './FinancialReadinessStatusBanner';
 import YearOnYearCorpusChart from './YearOnYearCorpusChart';
 import YearOnYearCorpusTable from './YearOnYearCorpusTable';
 import PremiumFireCalculatorSection from './PremiumFireCalculatorSection';
 import ProSubscriptionModal from './ProSubscriptionModal';
 import ActionRequiredCard from '../ActionRequiredCard';
+import SaveReadingCTA from '../shared/SaveReadingCTA';
 import { usePremium } from '@/lib/premium';
 import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
+import { saveUserReading, saveUserInputs, isToolCompleted } from '@/lib/userJourneyStorage';
 
 const FinancialReadinessResultsDashboard = ({ formData, results }) => {
   const { isPremium, upgradeToPremium } = usePremium();
   const [showProModal, setShowProModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('yearly');
+  const [isSaved, setIsSaved] = useState(false);
 
   const computedResults = useMemo(() => {
     if (results) return results;
@@ -21,6 +24,54 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
     }
     return null;
   }, [formData, results]);
+
+  // Check if already saved on mount
+  useEffect(() => {
+    const alreadySaved = isToolCompleted('financialReadiness');
+    setIsSaved(alreadySaved);
+  }, []);
+
+  // Handler for explicit save
+  const handleSaveReading = useCallback(() => {
+    if (!computedResults || !formData) return;
+    
+    // Calculate surplus investment style
+    const monthlyIncome = Number(formData.monthlyIncome) || 0;
+    const monthlyExpenses = Number(formData.monthlyExpenses) || 0;
+    const monthlySIP = Number(formData.monthlySIP) || 0;
+    const surplus = monthlyIncome - monthlyExpenses;
+    const sipRatio = surplus > 0 ? monthlySIP / surplus : 0;
+    
+    let surplusInvestmentStyle = 'Balanced';
+    if (sipRatio >= 1.0) {
+      surplusInvestmentStyle = 'Aggressive';
+    } else if (sipRatio < 0.5) {
+      surplusInvestmentStyle = 'Conservative';
+    }
+    
+    // Save the reading
+    saveUserReading('financialReadiness', {
+      surplusInvestmentStyle,
+      sipCommitmentRatio: sipRatio,
+      notes: computedResults.isReadyForRetirement ? 'On track for retirement' : 'Needs optimization'
+    });
+    
+    // Save user inputs
+    saveUserInputs({
+      currentAge: formData.currentAge,
+      retirementAge: formData.retirementAge,
+      monthlyIncome: formData.monthlyIncome,
+      monthlyExpenses: formData.monthlyExpenses,
+      surplus: surplus,
+      currentSavings: formData.moneySaved,
+      monthlySIP: formData.monthlySIP,
+      expectedReturns: formData.expectedReturns,
+      inflation: formData.inflationRate,
+      lifeExpectancy: formData.lifespan
+    });
+    
+    setIsSaved(true);
+  }, [computedResults, formData]);
 
   useEffect(() => {
     if (!isPremium) return;
@@ -98,6 +149,14 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
           <p className="text-sm text-gray-600 mt-1">Detailed breakdown of corpus growth, withdrawals, and corpus balance</p>
         </div>
         <YearOnYearCorpusTable tableRows={computedResults.tableRows} />
+      </div>
+
+      {/* Save Reading Button - After outputs, before Lifestyle CTA */}
+      <div className="flex justify-end">
+        <SaveReadingCTA
+          onSave={handleSaveReading}
+          isSaved={isSaved}
+        />
       </div>
 
       <PremiumFireCalculatorSection 
