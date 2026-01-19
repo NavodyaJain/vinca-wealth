@@ -17,8 +17,24 @@ import {
   Target,
   Clock
 } from 'lucide-react';
+
 import { getClubById } from '@/lib/retirementPersonalityEngine';
 import { hasJoinedClub, joinClub } from '@/lib/userJourneyStorage';
+import UpcomingEventsSection from '@/components/clubs/UpcomingEventsSection';
+import clubEvents from '@/utils/clubEvents';
+// Registration persistence helpers
+const REG_KEY = 'vinca.clubEventRegistrations';
+function getRegistrations() {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(REG_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+function setRegistrations(obj) {
+  localStorage.setItem(REG_KEY, JSON.stringify(obj));
+}
 
 export default function CommunityDashboardPage() {
   const router = useRouter();
@@ -27,6 +43,10 @@ export default function CommunityDashboardPage() {
   
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Event registration state
+  const [registeredMap, setRegisteredMap] = useState({});
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
     const loadClub = () => {
@@ -49,6 +69,39 @@ export default function CommunityDashboardPage() {
       loadClub();
     }
   }, [clubId]);
+
+  // Hydrate registrations from localStorage
+  useEffect(() => {
+    setEventsLoading(true);
+    if (typeof window !== 'undefined') {
+      setRegisteredMap(getRegistrations());
+      setTimeout(() => setEventsLoading(false), 300); // Simulate loading
+    }
+  }, [clubId]);
+
+  function handleRegister(eventId) {
+    const updated = { ...registeredMap, [eventId]: true };
+    setRegisteredMap(updated);
+    setRegistrations(updated);
+    if (typeof window !== 'undefined' && window?.toast) {
+      window.toast("You're registered! 🎉");
+    } else {
+      // fallback
+      alert("You're registered! 🎉");
+    }
+  }
+
+  function handleCancel(eventId) {
+    const updated = { ...registeredMap };
+    delete updated[eventId];
+    setRegisteredMap(updated);
+    setRegistrations(updated);
+    if (typeof window !== 'undefined' && window?.toast) {
+      window.toast('Registration cancelled');
+    } else {
+      alert('Registration cancelled');
+    }
+  }
 
   if (loading) {
     return (
@@ -113,7 +166,7 @@ export default function CommunityDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <div className={`bg-gradient-to-r ${club.gradient} text-white`}>
+      <div className={`bg-linear-to-r ${club.gradient} text-white`}>
         <div className="max-w-6xl mx-auto px-4 py-6">
           {/* Back button */}
           <button
@@ -147,7 +200,7 @@ export default function CommunityDashboardPage() {
       <div className="bg-amber-50 border-b border-amber-200">
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-amber-800">
-            <Shield className="w-4 h-4 flex-shrink-0" />
+            <Shield className="w-4 h-4 shrink-0" />
             <span>
               <strong>Educational Community:</strong> This is a peer learning space. Vinca does not provide investment advice or recommendations.
             </span>
@@ -160,6 +213,18 @@ export default function CommunityDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Column */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Upcoming Events Section */}
+            <div className="max-w-6xl mx-auto px-4 pt-8">
+              <UpcomingEventsSection
+                clubId={clubId}
+                events={clubEvents}
+                registeredMap={registeredMap}
+                onRegister={handleRegister}
+                onCancel={handleCancel}
+                loading={eventsLoading}
+              />
+            </div>
+
             {/* Trending Discussions - Coming Soon */}
             <div className="bg-white rounded-2xl border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -302,16 +367,10 @@ export default function CommunityDashboardPage() {
                     <div className="text-xs text-slate-500">Explore guides & resources</div>
                   </div>
                 </div>
-                {/* Community Events */}
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                  <div>
-                    <div className="text-sm font-medium text-slate-900">Community Events</div>
-                    <div className="text-xs text-slate-500">See upcoming events</div>
-                  </div>
-                </div>
+                {/* Community Events card removed as requested */}
                 {/* Goal Templates */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
+                {/* Removed accidental UpcomingEventsSection from sidebar */}
                   <Target className="w-5 h-5 text-emerald-600" />
                   <div>
                     <div className="text-sm font-medium text-slate-900">Goal Templates</div>
