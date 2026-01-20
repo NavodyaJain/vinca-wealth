@@ -65,18 +65,16 @@ export default function DashboardSidebar() {
       label: 'Health Stress Test',
       path: '/dashboard/health-stress',
       icon: <HeartPulse size={20} />
-    },
+    }
+  ];
+
+  // Community section
+  const communityItems = [
     {
-      id: 'blind-spot',
-      label: 'Blind Spot Analysis',
-      path: '/dashboard/blind-spot',
-      icon: <EyeOff size={20} />
-    },
-    {
-      id: 'top-deals',
-      label: 'Top Assets Analysis',
-      path: '/dashboard/top-deals',
-      icon: <BarChart3 size={20} />
+      id: 'investor-hub',
+      label: 'Investor Hub',
+      path: '/dashboard/investor-hub/overview',
+      icon: <Users size={20} />
     }
   ];
 
@@ -201,52 +199,13 @@ export default function DashboardSidebar() {
               {tools.map((tool) => renderNavItem(tool))}
             </nav>
 
-            {/* CLUBS SECTION */}
+
+            {/* COMMUNITY SECTION */}
             <div className="px-4 pt-6">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Clubs</h3>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Community</h3>
             </div>
             <nav className="space-y-1 px-3 pt-2">
-              {joinedClubs.length > 0 ? (
-                <>
-                  {joinedClubs.map((club) => (
-                    <button
-                      key={club.id}
-                      onClick={() => handleNavigation(`/dashboard/community/${club.id}/dashboard`)}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center space-x-3 ${
-                        isActive(`/dashboard/community/${club.id}`) 
-                          ? 'bg-green-50 text-green-700 border border-green-200' 
-                          : 'text-slate-700 hover:bg-slate-50 hover:text-green-600'
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${club.gradient} flex items-center justify-center`}>
-                        <span className="text-base">{club.icon}</span>
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-medium truncate">{club.name}</div>
-                      </div>
-                      <ChevronRight size={16} className="text-slate-300" />
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => handleNavigation('/dashboard/profile')}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-2"
-                  >
-                    <Compass size={14} />
-                    <span>Explore more clubs</span>
-                  </button>
-                </>
-              ) : (
-                <div className="px-3 py-3 text-sm text-slate-500">
-                  <p className="mb-2">No clubs joined yet</p>
-                  <button
-                    onClick={() => handleNavigation('/dashboard/profile')}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                  >
-                    <Users size={14} />
-                    <span>Discover clubs in Profile</span>
-                  </button>
-                </div>
-              )}
+              {communityItems.map((item) => renderNavItem(item))}
             </nav>
 
             {/* SUPPORT SECTION */}

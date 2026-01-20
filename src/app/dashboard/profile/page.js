@@ -1,5 +1,7 @@
-// src/app/dashboard/profile/page.js
+
 'use client';
+import { Edit2, Sparkles, User, Check } from 'lucide-react';
+// src/app/dashboard/profile/page.js
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,19 +11,16 @@ import CompactFinancialProfileCard from '@/components/profile/CompactFinancialPr
 import PersonalityCard from '@/components/profile/PersonalityCard';
 import PersonalityUnlockCard from '@/components/profile/PersonalityUnlockCard';
 import ToolReadingCard from '@/components/profile/ToolReadingCard';
-import ClubRecommendationCard from '@/components/profile/ClubRecommendationCard';
-import ProfileEditModal from '@/components/profile/ProfileEditModal';
+import personalityToGroup from '@/lib/personalityToGroup';
+import investorHubGroups from '@/lib/investorHubGroups';
+
 import {
   getUserJourney,
   getToolsCompletionStatus,
-  unlockPersonalityIfEligible,
-  hasJoinedClub,
-  getJoinedClubIds,
   getUserProfile,
-  saveUserProfile
+  unlockPersonalityIfEligible
 } from '@/lib/userJourneyStorage';
-import { getRecommendedClub, CLUBS } from '@/lib/retirementPersonalityEngine';
-import { User, Edit2, Check, Sparkles, Users } from 'lucide-react';
+
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -29,8 +28,7 @@ export default function ProfilePage() {
   const [journey, setJourney] = useState(null);
   const [completionStatus, setCompletionStatus] = useState(null);
   const [personality, setPersonality] = useState(null);
-  const [recommendedClub, setRecommendedClub] = useState(null);
-  const [joinedClubs, setJoinedClubs] = useState([]);
+  const [investorHubGroup, setInvestorHubGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // User profile state
@@ -44,32 +42,38 @@ export default function ProfilePage() {
       try {
         const journeyData = getUserJourney();
         setJourney(journeyData);
-        
+
         const status = getToolsCompletionStatus();
         setCompletionStatus(status);
-        
+
         // Load user profile
         const profile = getUserProfile();
         setUserName(profile.name || '');
-        
-        // Load joined clubs
-        const joinedIds = getJoinedClubIds();
-        const joinedClubsList = joinedIds
-          .map(id => Object.values(CLUBS).find(c => c.id === id))
-          .filter(Boolean);
-        setJoinedClubs(joinedClubsList);
-        
-        // Try to unlock personality if eligible
-        const unlockedPersonality = unlockPersonalityIfEligible();
-        
+
+        // Try to unlock personality if eligible (declare before use)
+        let unlockedPersonality;
+        try {
+          unlockedPersonality = unlockPersonalityIfEligible();
+        } catch {
+          unlockedPersonality = undefined;
+        }
+
+        // Set personality state
         if (unlockedPersonality) {
           setPersonality(unlockedPersonality);
-          const club = getRecommendedClub(unlockedPersonality.key);
-          setRecommendedClub(club);
         } else if (journeyData.personalityUnlocked && journeyData.personality) {
           setPersonality(journeyData.personality);
-          const club = getRecommendedClub(journeyData.personality.key);
-          setRecommendedClub(club);
+        }
+
+        // Map personality to Investor Hub group
+        let groupId = null;
+        if (unlockedPersonality) {
+          groupId = personalityToGroup(unlockedPersonality.name);
+        } else if (journeyData?.personality) {
+          groupId = personalityToGroup(journeyData.personality.name);
+        }
+        if (groupId) {
+          setInvestorHubGroup(investorHubGroups.find(g => g.id === groupId));
         }
       } catch (error) {
         console.error('Error loading journey data:', error);
@@ -105,10 +109,7 @@ export default function ProfilePage() {
     setEditingName(false);
   };
   
-  // Get clubs user hasn't joined yet for "Explore Other Clubs"
-  const otherClubs = Object.values(CLUBS).filter(
-    club => !joinedClubs.some(jc => jc.id === club.id)
-  );
+
 
   if (loading) {
     return (
@@ -250,87 +251,29 @@ export default function ProfilePage() {
         )}
       </section>
 
-      {/* Joined Clubs Section */}
-      {joinedClubs.length > 0 && (
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">Your Communities</h2>
-            <p className="text-sm text-slate-500">
-              Clubs you've joined to connect with like-minded investors
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {joinedClubs.map((club) => (
-              <div 
-                key={club.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 hover:border-slate-300 transition-colors cursor-pointer"
-                onClick={() => router.push(`/dashboard/community/${club.id}/dashboard`)}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${club.gradient} flex items-center justify-center shrink-0`}>
-                    <span className="text-2xl">{club.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900">{club.name}</h3>
-                    <p className="text-sm text-slate-600 line-clamp-2">{club.tagline}</p>
-                    <div className="flex items-center gap-2 mt-2 text-xs text-emerald-600">
-                      <Users className="w-3 h-3" />
-                      <span>Member</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
-      {/* Recommended Club (only if has personality but hasn't joined recommended) */}
-      {personality && recommendedClub && !joinedClubs.some(c => c.id === recommendedClub.id) && (
+      {/* Investor Hub Match Section */}
+      {personality && investorHubGroup && (
         <section>
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">Recommended For You</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Your Investor Hub Match</h2>
             <p className="text-sm text-slate-500">
-              Based on your {personality.name} personality
+              People like you are part of <span className="font-semibold text-green-700">{investorHubGroup.name}</span> inside Investor Hub.
             </p>
           </div>
-          
-          <div className="max-w-xl">
-            <ClubRecommendationCard 
-              club={recommendedClub} 
-              hasJoined={false}
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Explore Other Clubs */}
-      {otherClubs.length > 0 && (
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">Explore Other Clubs</h2>
-            <p className="text-sm text-slate-500">
-              Discover more communities that match your interests
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {otherClubs.slice(0, 6).map((club) => (
-              <div 
-                key={club.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer group"
-                onClick={() => router.push(`/dashboard/community/${club.id}`)}
+          <div className="rounded-2xl border border-green-100 bg-green-50 p-6 flex flex-col sm:flex-row items-center gap-4">
+            <span className="text-3xl">{investorHubGroup.iconName}</span>
+            <div className="flex-1">
+              <div className="font-bold text-green-800 text-lg mb-1">{investorHubGroup.name}</div>
+              <div className="text-green-700 mb-2">{investorHubGroup.tagline}</div>
+              <div className="text-gray-600 mb-2">{investorHubGroup.description}</div>
+              <button
+                onClick={() => router.push(`/dashboard/investor-hub/groups/${investorHubGroup.id}`)}
+                className="mt-2 px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700"
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-10 h-10 rounded-lg bg-linear-to-br ${club.gradient} flex items-center justify-center shrink-0`}>
-                    <span className="text-xl">{club.icon}</span>
-                  </div>
-                  <h3 className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">{club.name}</h3>
-                </div>
-                <p className="text-sm text-slate-600 line-clamp-2">{club.tagline}</p>
-              </div>
-            ))}
+                Explore {investorHubGroup.name}
+              </button>
+            </div>
           </div>
         </section>
       )}
