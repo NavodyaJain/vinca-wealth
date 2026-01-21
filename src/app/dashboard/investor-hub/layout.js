@@ -2,6 +2,7 @@
 
 "use client";
 import InvestorHubNav from '../../../components/investorHub/InvestorHubNav';
+import InvestorHubHeader from '../../../components/investorHub/shared/InvestorHubHeader';
 import React, { useRef, useEffect, useState } from 'react';
 import '../../globals.css';
 import { usePathname } from 'next/navigation';
@@ -36,6 +37,9 @@ export default function InvestorHubLayout({ children }) {
           <p className="text-gray-700 mb-1">Learn, connect, and discuss retirement planning with investors like you.</p>
           <p className="text-xs text-gray-500">Educational community. No investment recommendations.</p>
         </div>
+      )}
+      {hideBanner && (
+        <InvestorHubHeader />
       )}
       <div className="flex flex-col md:flex-row gap-0 md:gap-6 max-w-7xl mx-auto w-full px-0 md:px-6 py-6">
         <main className="flex-1 w-full mt-4 md:mt-0">{children}</main>

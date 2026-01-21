@@ -2,6 +2,8 @@
 import groups from '../../../../../lib/investorHubGroups';
 import { getJoinedGroups, joinGroup, isGroupJoined, leaveGroup } from '../../../../../lib/investorHubMembership';
 import { useState, useEffect } from 'react';
+import GroupFaqSection from '@/components/investorHub/groups/GroupFaqSection';
+import GroupDiscussion from '@/components/investorHub/groups/GroupDiscussion';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 
@@ -20,6 +22,13 @@ export default function GroupDetailPage() {
   ]);
   const [input, setInput] = useState('');
   const [tab, setTab] = useState('discussion');
+  // Map groupId to FAQ key
+  const groupIdToFaqKey = {
+    'group-1': 'fire',
+    'group-2': 'health',
+    'group-3': 'adventure',
+  };
+  const faqKey = groupIdToFaqKey[groupId];
   const handleExitGroup = () => {
     leaveGroup(groupId);
     setJoined(false);
@@ -71,13 +80,13 @@ export default function GroupDetailPage() {
             &lt;
           </button>
           <button
-            className={`px-4 py-2 rounded-xl font-semibold border transition-all flex-1 ${tab === 'trending' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
-            onClick={() => setTab('trending')}
-          >Trending</button>
-          <button
             className={`px-4 py-2 rounded-xl font-semibold border transition-all flex-1 ${tab === 'discussion' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
             onClick={() => setTab('discussion')}
           >Discussion</button>
+          <button
+            className={`px-4 py-2 rounded-xl font-semibold border transition-all flex-1 ${tab === 'faq' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+            onClick={() => setTab('faq')}
+          >FAQ</button>
           <button
             className={`px-4 py-2 rounded-xl font-semibold border transition-all flex-1 ${tab === 'stories' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
             onClick={() => setTab('stories')}
@@ -89,61 +98,32 @@ export default function GroupDetailPage() {
         </div>
       )}
       <div className="rounded-2xl border bg-white p-6">
-        {(!joined || tab === 'discussion') && (
-          <>
-            <h3 className="font-semibold text-green-700 mb-2">Discussion</h3>
-            {!joined ? (
-              <div>
-                <div className="text-gray-500 mb-4">Join this group to participate in the discussion.</div>
-                <button onClick={handleJoin} className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">Join Group to Participate</button>
-                <div className="mt-6">
-                  <div className="text-gray-400 italic">Locked preview:</div>
-                  <div className="bg-gray-50 rounded-lg p-3 mt-2 text-gray-500">{messages[0].text}</div>
-                </div>
+        {tab === 'faq' ? (
+          <GroupFaqSection groupId={faqKey} joined={joined} />
+        ) : tab === 'discussion' ? (
+          joined ? (
+            <GroupDiscussion groupId={groupId} />
+          ) : (
+            <div>
+              <div className="text-gray-500 mb-4">Join this group to participate in the discussion.</div>
+              <button onClick={handleJoin} className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">Join Group to Participate</button>
+              <div className="mt-6">
+                <div className="text-gray-400 italic">Locked preview:</div>
+                <div className="bg-gray-50 rounded-lg p-3 mt-2 text-gray-500">Discussion preview not available.</div>
               </div>
-            ) : (
-              <div>
-                <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-                  {messages.map((msg, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <span className="font-semibold text-green-700">{msg.user}:</span>
-                      <span className="text-gray-700">{msg.text}</span>
-                      <span className="ml-auto text-xs text-gray-400">{msg.time}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <input
-                    className="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    placeholder="Type your message..."
-                    onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
-                  />
-                  <button onClick={handleSend} className="px-4 py-2 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">Send</button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-        {joined && tab === 'trending' && (
-          <div>
-            <h3 className="font-semibold text-green-700 mb-2">Trending</h3>
-            <div className="text-gray-500">Trending content coming soon.</div>
-          </div>
-        )}
-        {joined && tab === 'stories' && (
+            </div>
+          )
+        ) : tab === 'stories' ? (
           <div>
             <h3 className="font-semibold text-green-700 mb-2">Member Stories</h3>
             <div className="text-gray-500">Member stories coming soon.</div>
           </div>
-        )}
-        {joined && tab === 'tools' && (
+        ) : tab === 'tools' ? (
           <div>
             <h3 className="font-semibold text-green-700 mb-2">Tools</h3>
             <div className="text-gray-500">Group tools coming soon.</div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
