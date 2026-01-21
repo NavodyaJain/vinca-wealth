@@ -13,10 +13,10 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-900 mb-2">Age: {label}</p>
+        <div className="bg-white p-3 sm:p-4 border border-gray-200 rounded-lg shadow-lg max-w-[90vw] sm:max-w-xs break-words">
+          <p className="font-semibold text-gray-900 mb-2 text-xs sm:text-sm">Age: {label}</p>
           {payload.map((entry, index) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={index} className="text-xs sm:text-sm" style={{ color: entry.color }}>
               {entry.name}: {formatCurrency(entry.value)}
             </p>
           ))}
@@ -36,7 +36,8 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
 
   return (
     <div className="space-y-4">
-      <div className="h-64 sm:h-72 lg:h-96">
+      {/* Chart container: min height 260px mobile, 340px+ desktop */}
+      <div className="min-h-[260px] sm:min-h-[300px] lg:min-h-[340px] h-[260px] sm:h-[300px] lg:h-[380px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
@@ -45,12 +46,12 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="age" 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
+              tick={{ fill: '#6b7280', fontSize: 11 }}
             />
             <YAxis 
               tickFormatter={formatCurrency}
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-              width={70}
+              tick={{ fill: '#6b7280', fontSize: 11 }}
+              width={60}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area
@@ -74,7 +75,7 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
         </ResponsiveContainer>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-600">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500" />
@@ -85,7 +86,7 @@ const YearOnYearCorpusChart = ({ chartData, currentAge, retirementAge, lifespan 
             <span>Total Invested</span>
           </div>
         </div>
-        <div className="text-gray-500 text-xs sm:text-sm">
+        <div className="text-gray-500 text-[10px] sm:text-xs">
           Ages {currentAge} - {lifespan}
         </div>
       </div>

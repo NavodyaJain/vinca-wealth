@@ -32,9 +32,9 @@ export default function SaveReadingCTA({
     return (
       <button
         disabled
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-100 text-emerald-700 font-medium text-sm cursor-default"
+        className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-emerald-100 text-emerald-700 font-medium text-base cursor-default w-full sm:w-auto min-h-[44px]"
       >
-        <Check className="w-4 h-4" />
+        <Check className="w-5 h-5" />
         Saved
       </button>
     );
@@ -44,16 +44,16 @@ export default function SaveReadingCTA({
     <button
       onClick={handleSave}
       disabled={saving}
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-indigo-600 text-white font-medium text-base hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-h-[44px]"
     >
       {saving ? (
         <>
-          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           Saving...
         </>
       ) : (
         <>
-          <Save className="w-4 h-4" />
+          <Save className="w-5 h-5" />
           Save
         </>
       )}

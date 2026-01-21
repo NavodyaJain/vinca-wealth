@@ -21,7 +21,7 @@ import { usePremium } from '@/lib/premium';
 import { getJoinedClubIds } from '@/lib/userJourneyStorage';
 import { CLUBS } from '@/lib/retirementPersonalityEngine';
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ onNav }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [joinedClubs, setJoinedClubs] = useState([]);
   const pathname = usePathname();
@@ -95,6 +95,7 @@ export default function DashboardSidebar() {
   const handleNavigation = (path) => {
     router.push(path);
     setIsMobileOpen(false);
+    if (onNav) onNav();
   };
 
   useEffect(() => {
@@ -130,20 +131,19 @@ export default function DashboardSidebar() {
     <>
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/40"
+          className="lg:hidden fixed inset-0 z-50 bg-black/40"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40 w-72
-          transform transition-transform duration-300 ease-in-out
+          h-full flex flex-col
+          w-full
           bg-white border-r border-slate-200 shadow-lg
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:static lg:translate-x-0 lg:shadow-none lg:flex lg:flex-col
+          lg:static lg:shadow-none lg:flex lg:flex-col lg:w-72 lg:max-w-none
         `}
-        aria-hidden={!isMobileOpen && typeof window !== 'undefined' && window.innerWidth < 1024}
+        aria-hidden={!isMobileOpen}
       >
         <div className="h-full flex flex-col">
           {/* Mobile header */}
@@ -196,16 +196,15 @@ export default function DashboardSidebar() {
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Tools</h3>
             </div>
             <nav className="space-y-1 px-3 pt-2">
-              {tools.map((tool) => renderNavItem(tool))}
+              {tools.length > 0 ? tools.map((tool) => renderNavItem(tool)) : <div className="text-xs text-red-500">No tools found</div>}
             </nav>
-
 
             {/* COMMUNITY SECTION */}
             <div className="px-4 pt-6">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Community</h3>
             </div>
             <nav className="space-y-1 px-3 pt-2">
-              {communityItems.map((item) => renderNavItem(item))}
+              {communityItems.length > 0 ? communityItems.map((item) => renderNavItem(item)) : <div className="text-xs text-red-500">No community items</div>}
             </nav>
 
             {/* SUPPORT SECTION */}
@@ -213,7 +212,7 @@ export default function DashboardSidebar() {
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Support</h3>
             </div>
             <nav className="space-y-1 px-3 pt-2">
-              {supportItems.map((item) => renderNavItem(item))}
+              {supportItems.length > 0 ? supportItems.map((item) => renderNavItem(item)) : <div className="text-xs text-red-500">No support items</div>}
             </nav>
           </div>
 

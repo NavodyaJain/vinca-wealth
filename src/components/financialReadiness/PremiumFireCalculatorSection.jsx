@@ -50,8 +50,8 @@ const PremiumFireCalculatorSection = ({ results, onUpgradeClick, onSave, isSaved
   };
 
   return (
-    <div id="fire-calculator-section" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-6">
+    <div id="fire-calculator-section" className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden w-full">
+      <div className="p-4 sm:p-6">
         <FireCalculatorPremiumUI 
           fireResults={fireResults}
           results={results}

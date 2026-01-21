@@ -339,100 +339,91 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium =
       >
         <div className="space-y-6">
           {/* Smart Surplus Lever */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-6 shadow-sm">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-slate-900">Adjust the smart surplus lever to know your early retirement age.</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-full">
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={selectedPercent}
-                disabled={!isPremium || surplusCalc.investableSurplus <= 0}
-                onChange={(e) => setSelectedRatio(Number(e.target.value) / 100)}
-                className="w-full accent-emerald-600"
-                style={{
-                  background: getAllocationGradient(selectedRatio),
-                  height: '6px',
-                  borderRadius: '9999px',
-                  WebkitAppearance: 'none'
-                }}
-              />
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-6 shadow-sm w-full">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-900">Adjust the smart surplus lever to know your early retirement age.</p>
             </div>
-            <div className="w-20 text-right text-sm font-semibold text-gray-900">{selectedPercent}%</div>
-          </div>
-          {surplusCalc.investableSurplus <= 0 && (
-            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
-              No investable surplus after your current SIP. Allocation stays at 0% until your surplus improves.
+            <div className="space-y-4">
+              <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-3 w-full">
+                <div className="w-full">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={selectedPercent}
+                    disabled={!isPremium || surplusCalc.investableSurplus <= 0}
+                    onChange={(e) => setSelectedRatio(Number(e.target.value) / 100)}
+                    className="w-full accent-emerald-600"
+                    style={{
+                      background: getAllocationGradient(selectedRatio),
+                      height: '6px',
+                      borderRadius: '9999px',
+                      WebkitAppearance: 'none'
+                    }}
+                  />
+                </div>
+                <div className="w-full xs:w-20 text-right text-sm font-semibold text-gray-900 shrink-0">{selectedPercent}%</div>
+              </div>
+              {surplusCalc.investableSurplus <= 0 && (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  No investable surplus after your current SIP. Allocation stays at 0% until your surplus improves.
+                </div>
+              )}
+              {fireResults?.premiumLeverPct >= 1 && fireResults?.safetyScenario && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg p-3">
+                  This is the earliest age possible with 100% surplus. To keep an emergency buffer, a {formatPercentage(fireResults.safetyScenario.ratio)} allocation still retires you at {formatAge(fireResults.safetyScenario.fireAge)}.
+                </div>
+              )}
             </div>
-          )}
-          {fireResults?.premiumLeverPct >= 1 && fireResults?.safetyScenario && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm rounded-lg p-3">
-              This is the earliest age possible with 100% surplus. To keep an emergency buffer, a {formatPercentage(fireResults.safetyScenario.ratio)} allocation still retires you at {formatAge(fireResults.safetyScenario.fireAge)}.
-            </div>
-          )}
-          {/* Allocation summary removed per latest request */}
-        </div>
-
-        {/* Quick KPI strip tied to the lever */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
-              <div className="text-sm text-slate-600">Surplus used</div>
-              <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.additionalSIP)}/month</div>
-            </div>
-            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
-              <div className="text-sm text-slate-600">Total SIP</div>
-              <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.totalMonthlySIP)}/month</div>
-            </div>
-            <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
-              <div className="text-sm text-slate-600">Expected corpus</div>
-              <div className="text-xl font-semibold text-slate-900">{formatCurrency(fireSimulation.projectedAtFire)}</div>
-            </div>
-          </div>
-
-
-          <div className="space-y-4">
-            <div className="border border-emerald-100 bg-linear-to-r from-emerald-50 via-white to-emerald-50 rounded-2xl p-5 text-center">
-              <div className="text-sm text-emerald-700">Early retirement age</div>
-              <div className="text-2xl font-bold text-emerald-900 mt-1">
-                {fireAge === null ? 'Not achievable yet' : `${fireAge.toFixed(1)} years`}
+            {/* Quick KPI strip tied to the lever */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+              <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+                <div className="text-sm text-slate-600">Surplus used</div>
+                <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.additionalSIP)}/month</div>
+              </div>
+              <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+                <div className="text-sm text-slate-600">Total SIP</div>
+                <div className="text-xl font-semibold text-slate-900">{formatCurrency(surplusCalc.totalMonthlySIP)}/month</div>
+              </div>
+              <div className="border border-gray-200 rounded-2xl bg-white p-4 text-center space-y-1">
+                <div className="text-sm text-slate-600">Expected corpus</div>
+                <div className="text-xl font-semibold text-slate-900">{formatCurrency(fireSimulation.projectedAtFire)}</div>
               </div>
             </div>
-            <div className="text-sm text-amber-700 text-center border border-amber-200 bg-amber-50 rounded-xl p-3">
-              You can retire {yearsEarlyText === '—' ? '—' : `${yearsEarlyText} years`} early from your expected retirement age
-            </div>
-            {/* Save Reading Button - moved here below early retirement age */}
-            <div className="flex justify-end pt-2">
-              <SaveReadingCTA
-                onSave={onSave}
-                isSaved={isSaved}
-              />
+            <div className="space-y-4">
+              <div className="border border-emerald-100 bg-linear-to-r from-emerald-50 via-white to-emerald-50 rounded-2xl p-4 sm:p-5 text-center w-full">
+                <div className="text-sm text-emerald-700">Early retirement age</div>
+                <div className="text-2xl font-bold text-emerald-900 mt-1">
+                  {fireAge === null ? 'Not achievable yet' : `${fireAge.toFixed(1)} years`}
+                </div>
+              </div>
+              <div className="text-sm text-amber-700 text-center border border-amber-200 bg-amber-50 rounded-xl p-3">
+                You can retire {yearsEarlyText === '—' ? '—' : `${yearsEarlyText} years`} early from your expected retirement age
+              </div>
+              {/* Save Reading Button - moved here below early retirement age */}
+              <div className="flex justify-end pt-2 w-full">
+                <SaveReadingCTA
+                  onSave={onSave}
+                  isSaved={isSaved}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-          {renderLifestylePlannerCTA()}
-        </div>
-      </PremiumBlurGate>
-
-      {/* Reset Pro Link */}
-      <div className="text-center pt-6 border-t border-gray-200">
-        <button
-          onClick={onResetPro}
-          className="text-sm text-gray-500 hover:text-gray-700 underline"
-        >
-          Reset Pro (for testing)
-        </button>
-      </div>
-    </>
+        {renderLifestylePlannerCTA()}
+    </PremiumBlurGate>
+    {/* Reset Pro Link - outside PremiumBlurGate */}
+    <div className="text-center pt-6 border-t border-gray-200">
+      <button
+        onClick={onResetPro}
+        className="text-sm text-gray-500 hover:text-gray-700 underline"
+      >
+        Reset Pro (for testing)
+      </button>
+    </div>
+  </>
   );
-};
+}
 
 export default FireCalculatorPremiumUI;

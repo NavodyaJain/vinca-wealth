@@ -1,3 +1,4 @@
+"use client";
 // app/layout.jsx
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -8,10 +9,6 @@ import Footer from '../components/Footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
-  title: 'Vinca Wealth | Financial Freedom Calculator',
-  description: 'Plan your journey to financial freedom with our smart calculator',
-};
 
 export default function RootLayout({ children }) {
   return (

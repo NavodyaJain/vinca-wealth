@@ -191,11 +191,11 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <>
             <button
-              className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+              className="fixed inset-0 z-50 bg-black/40 lg:hidden"
               aria-label="Close menu overlay"
               onClick={closeAll}
             />
-            <div className="relative z-50">{renderMobileMenu()}</div>
+            <div className="relative z-50 w-full">{renderMobileMenu()}</div>
           </>
         )}
       </div>

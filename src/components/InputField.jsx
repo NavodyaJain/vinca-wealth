@@ -177,18 +177,18 @@ export default function InputField({
   return (
     <div className={`space-y-2 ${className}`}>
       {label && (
-        <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+        <label htmlFor={id} className="block text-base font-medium text-slate-700">
           {label}
         </label>
       )}
-      
+
       <div className="relative">
         {prefix && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
             {prefix}
           </span>
         )}
-        
+
         <input
           ref={inputRef}
           id={id}
@@ -200,36 +200,37 @@ export default function InputField({
           min={min}
           max={max}
           className={`
-            w-full px-3 py-2 border border-slate-300 rounded-lg 
+            w-full px-3 py-3 border border-slate-300 rounded-lg text-base
             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-            ${prefix ? 'pl-8' : ''} 
+            ${prefix ? 'pl-8' : ''}
             ${hasNumberControls ? 'pr-20' : suffix ? 'pr-10' : ''}
+            min-h-[44px]
           `}
           placeholder={type === 'currency' ? '0' : ''}
           inputMode={type === 'number' || type === 'currency' || type === 'percentage' ? 'decimal' : 'text'}
         />
-        
+
         {hasNumberControls && (
           <>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1">
               <button
                 type="button"
                 onClick={handleDecrement}
-                className="w-6 h-6 flex items-center justify-center rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors min-h-[44px]"
                 aria-label="Decrease"
               >
-                <span className="text-slate-500">−</span>
+                <span className="text-slate-500 text-lg">−</span>
               </button>
               <button
                 type="button"
                 onClick={handleIncrement}
-                className="w-6 h-6 flex items-center justify-center rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-300 hover:bg-slate-50 transition-colors min-h-[44px]"
                 aria-label="Increase"
               >
-                <span className="text-slate-500">+</span>
+                <span className="text-slate-500 text-lg">+</span>
               </button>
             </div>
-            
+
             {type === 'percentage' && (
               <span className="absolute right-14 top-1/2 -translate-y-1/2 text-slate-500">
                 %
@@ -237,16 +238,16 @@ export default function InputField({
             )}
           </>
         )}
-        
+
         {suffix && !hasNumberControls && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
             {suffix}
           </span>
         )}
       </div>
-      
+
       {helper && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 break-words">
           {helper}
         </p>
       )}

@@ -45,26 +45,29 @@ const FinancialReadinessStatusBanner = ({ results }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 space-y-5">
-      <div className="grid grid-cols-2 max-[420px]:grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      {/* KPI Cards: 1 col mobile, 2 col sm, 4 col lg */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Expected Retirement Age" value={retirementAge ? `${Math.round(retirementAge)} yrs` : '—'} helper="Your selected retirement age" />
         <KpiCard title="Expected Corpus by that Age" value={formatCurrency(expectedCorpusAtRetirement)} helper="Projected with current SIP" />
         <KpiCard title="Required Corpus" value={formatCurrency(requiredCorpusAtRetirement)} helper="Needed to sustain till lifespan" />
         <KpiCard title={`${gapLabel} in Corpus`} value={gap !== null ? formatCurrency(gap) : '—'} helper="Required minus expected corpus" />
       </div>
 
-      <div className={`text-sm sm:text-base font-medium rounded-xl border px-4 py-3 ${toneClasses[tone]}`}>{depletionCopy}</div>
+      {/* Depletion disclaimer wraps nicely */}
+      <div className={`text-xs sm:text-sm lg:text-base font-medium rounded-xl border px-3 sm:px-4 py-3 ${toneClasses[tone]}`}>{depletionCopy}</div>
 
+      {/* SIP Action block: stacks on mobile, row on lg */}
       <div className="border border-slate-200 rounded-2xl p-3 sm:p-4 bg-slate-50 space-y-3 sm:space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          <div className="border border-slate-200 rounded-xl p-4 bg-white">
-            <p className="text-sm text-slate-600 mb-1">Current SIP</p>
-            <div className="text-2xl font-semibold text-slate-900">{formatCurrency(currentMonthlySIP)}</div>
-            <p className="text-xs text-slate-500">Per month</p>
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1 border border-slate-200 rounded-xl p-4 bg-white">
+            <p className="text-xs sm:text-sm text-slate-600 mb-1">Current SIP</p>
+            <div className="text-lg sm:text-xl lg:text-2xl font-semibold text-slate-900">{formatCurrency(currentMonthlySIP)}</div>
+            <p className="text-[11px] sm:text-xs text-slate-500">Per month</p>
           </div>
-          <div className="border border-green-100 rounded-xl p-4 bg-emerald-50">
-            <p className="text-sm text-emerald-700 mb-1">Required SIP</p>
-            <div className="text-2xl font-semibold text-slate-900">{formatCurrency(requiredMonthlySIP)}</div>
-            <p className="text-xs text-emerald-700">Targets corpus that meets your need at retirement</p>
+          <div className="flex-1 border border-green-100 rounded-xl p-4 bg-emerald-50">
+            <p className="text-xs sm:text-sm text-emerald-700 mb-1">Required SIP</p>
+            <div className="text-lg sm:text-xl lg:text-2xl font-semibold text-slate-900">{formatCurrency(requiredMonthlySIP)}</div>
+            <p className="text-[11px] sm:text-xs text-emerald-700">Targets corpus that meets your need at retirement</p>
           </div>
         </div>
       </div>
