@@ -7,7 +7,7 @@ import { calculateFirePremiumResults } from '@/lib/financialReadiness/firePremiu
 import { usePremium } from '@/lib/premium';
 import { saveUserReading } from '@/lib/userJourneyStorage';
 
-const PremiumFireCalculatorSection = ({ results, onUpgradeClick }) => {
+const PremiumFireCalculatorSection = ({ results, onUpgradeClick, onSave, isSaved }) => {
   const { isPremium, downgradeToFree } = usePremium();
   const [fireResults, setFireResults] = useState(null);
 
@@ -58,6 +58,8 @@ const PremiumFireCalculatorSection = ({ results, onUpgradeClick }) => {
           onResetPro={handleResetPro}
           isPremium={isPremium}
           onUpgradeClick={onUpgradeClick}
+          onSave={onSave}
+          isSaved={isSaved}
         />
       </div>
     </div>

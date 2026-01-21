@@ -1,5 +1,6 @@
-// src/components/financialReadiness/FireCalculatorPremiumUI.jsx
+
 'use client';
+import SaveReadingCTA from '../shared/SaveReadingCTA';
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -133,7 +134,7 @@ const runFireSimulation = ({
   };
 };
 
-const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium = false, onUpgradeClick }) => {
+const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium = false, onUpgradeClick, onSave, isSaved }) => {
   const [selectedRatio, setSelectedRatio] = useState(0);
 
   const inputs = results?.inputs || {};
@@ -395,8 +396,9 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium =
             </div>
           </div>
 
+
           <div className="space-y-4">
-            <div className="border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 rounded-2xl p-5 text-center">
+            <div className="border border-emerald-100 bg-linear-to-r from-emerald-50 via-white to-emerald-50 rounded-2xl p-5 text-center">
               <div className="text-sm text-emerald-700">Early retirement age</div>
               <div className="text-2xl font-bold text-emerald-900 mt-1">
                 {fireAge === null ? 'Not achievable yet' : `${fireAge.toFixed(1)} years`}
@@ -404,6 +406,13 @@ const FireCalculatorPremiumUI = ({ fireResults, results, onResetPro, isPremium =
             </div>
             <div className="text-sm text-amber-700 text-center border border-amber-200 bg-amber-50 rounded-xl p-3">
               You can retire {yearsEarlyText === '—' ? '—' : `${yearsEarlyText} years`} early from your expected retirement age
+            </div>
+            {/* Save Reading Button - moved here below early retirement age */}
+            <div className="flex justify-end pt-2">
+              <SaveReadingCTA
+                onSave={onSave}
+                isSaved={isSaved}
+              />
             </div>
           </div>
         </div>

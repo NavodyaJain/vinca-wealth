@@ -151,17 +151,13 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
         <YearOnYearCorpusTable tableRows={computedResults.tableRows} />
       </div>
 
-      {/* Save Reading Button - After outputs, before Lifestyle CTA */}
-      <div className="flex justify-end">
-        <SaveReadingCTA
-          onSave={handleSaveReading}
-          isSaved={isSaved}
-        />
-      </div>
+
 
       <PremiumFireCalculatorSection 
         results={computedResults}
         onUpgradeClick={() => setShowProModal(true)}
+        onSave={handleSaveReading}
+        isSaved={isSaved}
       />
 
       {showProModal && (
