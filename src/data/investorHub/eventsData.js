@@ -1,0 +1,48 @@
+// Mock data for Investor Hub Events (Phase 2)
+export const events = [
+  {
+    id: 'event1',
+    title: 'Retirement Planning 101',
+    description: 'Learn the basics of retirement planning in India.',
+    dateTimeISO: '2026-02-10T18:00:00+05:30',
+    platform: 'Zoom',
+    banner: 'https://placehold.co/600x200?text=Retirement+101',
+    groupId: 'group1',
+  },
+  {
+    id: 'event2',
+    title: 'Tax Strategies for Seniors',
+    description: 'Optimize your taxes post-retirement with expert tips.',
+    dateTimeISO: '2026-01-15T19:00:00+05:30',
+    platform: 'Google Meet',
+    banner: 'https://placehold.co/600x200?text=Tax+Strategies',
+    groupId: 'group2',
+  },
+  {
+    id: 'event3',
+    title: 'Health & Wealth: Panel Discussion',
+    description: 'Panel with doctors and financial planners on holistic retirement.',
+    dateTimeISO: '2025-12-20T17:00:00+05:30',
+    platform: 'Zoom',
+    banner: 'https://placehold.co/600x200?text=Health+%26+Wealth',
+    groupId: 'group3',
+  },
+  {
+    id: 'event4',
+    title: 'Women & Retirement',
+    description: 'Special session for women investors on retirement planning.',
+    dateTimeISO: '2026-03-05T18:30:00+05:30',
+    platform: 'Zoom',
+    banner: 'https://placehold.co/600x200?text=Women+%26+Retirement',
+    groupId: 'group1',
+  },
+  {
+    id: 'event5',
+    title: 'NRI Retirement Q&A',
+    description: 'Live Q&A for NRIs planning to retire in India.',
+    dateTimeISO: '2026-01-28T20:00:00+05:30',
+    platform: 'Google Meet',
+    banner: 'https://placehold.co/600x200?text=NRI+Retirement',
+    groupId: 'group2',
+  },
+];

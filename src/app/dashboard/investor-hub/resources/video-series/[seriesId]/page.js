@@ -3,12 +3,14 @@ import { useParams, useRouter } from "next/navigation";
 import { videoSeries } from "@/data/investorHub/resourcesData";
 import useResourcesSavedState from "@/hooks/useResourcesSavedState";
 import VideoSeriesModulesAccordion from "@/components/investorHub/resources/VideoSeriesModulesAccordion";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 export default function VideoSeriesDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { savedSeries, toggleSavedSeries } = useResourcesSavedState();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const seriesId = params?.seriesId;
   const series = useMemo(() => videoSeries.find((s) => s.id === seriesId), [seriesId]);
 
@@ -79,8 +81,9 @@ export default function VideoSeriesDetailsPage() {
                 className="w-full bg-blue-600 text-white text-sm py-2 rounded hover:bg-blue-700 transition"
                 onClick={() => toggleSavedSeries(series.id)}
                 type="button"
+                aria-pressed={mounted && savedSeries.includes(series.id)}
               >
-                {savedSeries.includes(series.id) ? "Saved" : "Save Series"}
+                {mounted ? (savedSeries.includes(series.id) ? "Saved" : "Save Series") : "Save Series"}
               </button>
               <button
                 className="w-full border border-blue-600 text-blue-700 text-sm py-2 rounded hover:bg-blue-50 transition"

@@ -1,66 +1,118 @@
 "use client";
-// ...existing code...
-import { useState, useMemo } from "react";
-import InvestorHubEventsTabs from "@/components/investorHub/InvestorHubEventsTabs";
-import InvestorHubEventCard from "@/components/investorHub/InvestorHubEventCard";
-import { useInvestorHubEventsState } from "@/hooks/useInvestorHubEventsState";
-import events from "@/lib/investorHubEvents";
+import { useState, useMemo, useEffect } from "react";
+import { events as EVENTS } from "@/data/investorHub/eventsData";
 
-const GROUP_IDS = ["group1", "group2", "group3"];
+const TABS = [
+  { key: "all", label: "All Events" },
+  { key: "recent", label: "Recent Events" },
+  { key: "past", label: "Past Events" },
+  { key: "interested", label: "Interested" },
+  { key: "registered", label: "Registered" },
+  { key: "group1", label: "Group 1" },
+  { key: "group2", label: "Group 2" },
+  { key: "group3", label: "Group 3" },
+];
+
+function getLocal(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const val = window.localStorage.getItem(key);
+    return val ? JSON.parse(val) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function setLocal(key, value) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }
+}
 
 export default function EventsPage() {
   const [tab, setTab] = useState("all");
-  const {
-    interestedEventIds,
-    registeredEventIds,
-    toggleInterested,
-    toggleRegistered,
-    hydrated,
-  } = useInvestorHubEventsState();
+  const [interested, setInterested] = useState(() => getLocal("vinca_events_interested", []));
+  const [registered, setRegistered] = useState(() => getLocal("vinca_events_registered", []));
+
+  useEffect(() => { setLocal("vinca_events_interested", interested); }, [interested]);
+  useEffect(() => { setLocal("vinca_events_registered", registered); }, [registered]);
 
   const now = new Date();
   const filteredEvents = useMemo(() => {
-    if (!hydrated) return [];
     switch (tab) {
       case "recent":
-        return events.filter(e => new Date(e.dateTimeISO) > now && new Date(e.dateTimeISO) < addDays(now, 30));
+        return EVENTS.filter(e => new Date(e.dateTimeISO) > now && new Date(e.dateTimeISO) < addDays(now, 30));
       case "past":
-        return events.filter(e => new Date(e.dateTimeISO) < now);
-      case "group":
-        return events.filter(e => GROUP_IDS.includes(e.groupId));
+        return EVENTS.filter(e => new Date(e.dateTimeISO) < now);
       case "interested":
-        return events.filter(e => interestedEventIds.includes(e.id));
+        return EVENTS.filter(e => interested.includes(e.id));
       case "registered":
-        return events.filter(e => registeredEventIds.includes(e.id));
+        return EVENTS.filter(e => registered.includes(e.id));
+      case "group1":
+      case "group2":
+      case "group3":
+        return EVENTS.filter(e => e.groupId === tab);
       default:
-        return events;
+        return EVENTS;
     }
-  }, [tab, events, interestedEventIds, registeredEventIds, hydrated]);
+  }, [tab, interested, registered]);
+
+  const handleInterested = (id) => {
+    setInterested((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const handleRegistered = (id) => {
+    setRegistered((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-      <div className="mb-2">
-        <h1 className="text-2xl md:text-3xl font-bold text-green-800 mb-1">Investor Hub Events</h1>
-        <p className="text-slate-600 text-sm">Explore live sessions, group discussions, AMAs, and retirement planning workshops.</p>
+    <div className="max-w-3xl mx-auto px-2 sm:px-4 py-8">
+      <h1 className="text-2xl font-bold text-emerald-800 mb-6">Events</h1>
+      <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto no-scrollbar">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-150 whitespace-nowrap ${tab === t.key ? 'border-emerald-600 text-emerald-800 bg-emerald-50' : 'border-transparent text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
-      <InvestorHubEventsTabs activeTab={tab} onTabChange={setTab} />
-      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-6">
         {filteredEvents.length === 0 && (
-          <div className="col-span-full text-center text-slate-400 py-12">No events found for this filter.</div>
+          <div className="text-center text-gray-400 py-12">No events found for this filter.</div>
         )}
         {filteredEvents.map(event => {
           const isPast = new Date(event.dateTimeISO) < now;
-          // Remove groupId display from event card
           return (
-            <InvestorHubEventCard
-              key={event.id}
-              event={{ ...event, groupId: undefined }} // Remove groupId for display
-              isInterested={interestedEventIds.includes(event.id)}
-              isRegistered={registeredEventIds.includes(event.id)}
-              isPast={isPast}
-              onInterested={() => toggleInterested(event.id)}
-              onRegistered={() => toggleRegistered(event.id)}
-            />
+            <div key={event.id} className={`flex flex-col md:flex-row bg-white rounded-xl shadow p-4 md:p-0 overflow-hidden border ${isPast ? 'opacity-60' : ''}`}>
+              <img src={event.banner} alt={event.title} className="w-full md:w-56 h-40 md:h-auto object-cover rounded-xl md:rounded-none md:rounded-l-xl" />
+              <div className="flex-1 flex flex-col p-4 gap-2">
+                <div className="flex flex-wrap gap-2 items-center text-xs text-gray-500">
+                  <span>{new Date(event.dateTimeISO).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                  <span>•</span>
+                  <span>{event.platform}</span>
+                  <span>•</span>
+                  <span className="capitalize">{event.groupId.replace('group', 'Group ')}</span>
+                </div>
+                <div className="font-semibold text-lg text-emerald-800">{event.title}</div>
+                <div className="text-gray-700 text-sm mb-2">{event.description}</div>
+                <div className="flex gap-2 mt-auto">
+                  <button
+                    className={`px-4 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-xs ${interested.includes(event.id) ? 'bg-emerald-100 border-emerald-400' : ''}`}
+                    onClick={() => handleInterested(event.id)}
+                  >
+                    {interested.includes(event.id) ? 'Interested ✓' : 'Interested'}
+                  </button>
+                  <button
+                    className={`px-4 py-1 rounded bg-emerald-600 text-white font-semibold text-xs ${isPast ? 'opacity-50 cursor-not-allowed' : ''} ${registered.includes(event.id) ? 'bg-emerald-800' : ''}`}
+                    onClick={() => !isPast && handleRegistered(event.id)}
+                    disabled={isPast}
+                  >
+                    {registered.includes(event.id) ? 'Registered' : 'Register'}
+                  </button>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>

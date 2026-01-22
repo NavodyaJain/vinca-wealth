@@ -68,14 +68,14 @@ export default function DashboardSidebar({ onNav }) {
     }
   ];
 
-  // Community section
-  const communityItems = [
-    {
-      id: 'investor-hub',
-      label: 'Investor Hub',
-      path: '/dashboard/investor-hub/overview',
-      icon: <Users size={20} />
-    }
+  // Community section with Investor Hub drawer
+  // (declaration moved below isActive)
+  const investorHubItems = [
+  { id: 'ih-events', label: 'Events', path: '/dashboard/investor-hub/events' },
+  { id: 'ih-resources', label: 'Resources', path: '/dashboard/investor-hub/resources' },
+  { id: 'ih-perks', label: 'Perks', path: '/dashboard/investor-hub/perks' },
+  { id: 'ih-pricing', label: 'Pricing', path: '/dashboard/investor-hub/pricing' },
+  { id: 'ih-portfolio', label: 'Portfolio Review', path: '/dashboard/investor-hub/portfolio-review' },
   ];
 
   // Support section
@@ -91,6 +91,9 @@ export default function DashboardSidebar({ onNav }) {
   const isActive = (path) => {
     return pathname === path || pathname?.startsWith(path + '/');
   };
+
+  // Community section with Investor Hub drawer
+  const [investorHubOpen, setInvestorHubOpen] = useState(isActive('/dashboard/investor-hub'));
 
   const handleNavigation = (path) => {
     router.push(path);
@@ -204,7 +207,45 @@ export default function DashboardSidebar({ onNav }) {
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Community</h3>
             </div>
             <nav className="space-y-1 px-3 pt-2">
-              {communityItems.length > 0 ? communityItems.map((item) => renderNavItem(item)) : <div className="text-xs text-red-500">No community items</div>}
+              {/* Investor Hub Drawer */}
+              <div>
+                <button
+                  className={`w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center space-x-3 ${
+                    isActive('/dashboard/investor-hub')
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-green-600'
+                  }`}
+                  onClick={() => setInvestorHubOpen((open) => !open)}
+                  aria-expanded={investorHubOpen}
+                  aria-controls="investor-hub-drawer"
+                >
+                  <div className={isActive('/dashboard/investor-hub') ? 'text-green-600' : 'text-slate-500'}>
+                    <Users size={20} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-medium">Investor Hub</div>
+                  </div>
+                  <ChevronRight size={16} className={`text-slate-300 transition-transform ${investorHubOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {investorHubOpen && (
+                  <div id="investor-hub-drawer" className="ml-7 mt-1 space-y-1">
+                    {investorHubItems.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavigation(item.path)}
+                        className={`w-full text-left px-3 py-2 rounded-lg flex items-center text-sm transition-all ${
+                          isActive(item.path)
+                            ? 'bg-green-100 text-green-800 font-semibold'
+                            : 'text-slate-700 hover:bg-green-50 hover:text-green-700'
+                        }`}
+                        style={{ marginBottom: 2 }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* SUPPORT SECTION */}
