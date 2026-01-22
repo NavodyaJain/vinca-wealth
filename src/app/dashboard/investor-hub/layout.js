@@ -22,11 +22,12 @@ export default function InvestorHubLayout({ children }) {
     }
   }, [hideBanner]);
 
+  const hideHeader = pathname === '/dashboard/investor-hub/pricing';
   return (
     <div className="min-h-screen bg-white w-full px-4 sm:px-6 lg:px-8 py-6">
       {/* Mobile: nav above banner, Desktop: nav sidebar */}
       <div className="block md:hidden w-full h-4" />
-      <InvestorHubHeader />
+      {!hideHeader && <InvestorHubHeader />}
       <div className="mx-auto w-full max-w-7xl">
         <main className="flex-1 w-full">{children}</main>
       </div>
