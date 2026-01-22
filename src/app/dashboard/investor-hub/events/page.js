@@ -65,7 +65,7 @@ export default function EventsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-2 sm:px-4 py-8">
-      <h1 className="text-2xl font-bold text-emerald-800 mb-6">Events</h1>
+      <h1 className="text-lg md:text-2xl font-bold text-emerald-900 mb-6">Events</h1>
       <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto no-scrollbar">
         {TABS.map((t) => (
           <button
@@ -84,7 +84,7 @@ export default function EventsPage() {
         {filteredEvents.map(event => {
           const isPast = new Date(event.dateTimeISO) < now;
           return (
-            <div key={event.id} className={`flex flex-col md:flex-row bg-white rounded-xl shadow p-4 md:p-0 overflow-hidden border ${isPast ? 'opacity-60' : ''}`}>
+            <div key={event.id} className={`flex flex-col md:flex-row bg-white rounded-2xl shadow-sm p-4 sm:p-6 overflow-hidden border ${isPast ? 'opacity-60' : ''}`}>
               <img src={event.banner} alt={event.title} className="w-full md:w-56 h-40 md:h-auto object-cover rounded-xl md:rounded-none md:rounded-l-xl" />
               <div className="flex-1 flex flex-col p-4 gap-2">
                 <div className="flex flex-wrap gap-2 items-center text-xs text-gray-500">

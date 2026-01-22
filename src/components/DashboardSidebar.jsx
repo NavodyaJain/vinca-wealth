@@ -73,6 +73,7 @@ export default function DashboardSidebar({ onNav }) {
   const investorHubItems = [
   { id: 'ih-events', label: 'Events', path: '/dashboard/investor-hub/events' },
   { id: 'ih-resources', label: 'Resources', path: '/dashboard/investor-hub/resources' },
+  { id: 'ih-elevate', label: 'Elevate', path: '/dashboard/investor-hub/elevate' },
   { id: 'ih-perks', label: 'Perks', path: '/dashboard/investor-hub/perks' },
   { id: 'ih-pricing', label: 'Pricing', path: '/dashboard/investor-hub/pricing' },
   { id: 'ih-portfolio', label: 'Portfolio Review', path: '/dashboard/investor-hub/portfolio-review' },

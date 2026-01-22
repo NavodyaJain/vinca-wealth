@@ -44,41 +44,52 @@ export default function PerksPage() {
     }
   }, [redeemed]);
   const handleRedeem = (id) => setRedeemed((prev) => prev.includes(id) ? prev : [...prev, id]);
+  // Filter perks by tab
+  const filteredPerks =
+    tab === 'all' ? mockPerks : mockPerks.filter((p) => p.type === tab);
+
   return (
-    <div className="max-w-5xl md:max-w-6xl mx-auto px-4 md:px-6 py-8">
-      <h1 className="text-2xl font-bold text-emerald-800 mb-6">Perks</h1>
-      <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto no-scrollbar">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-150 whitespace-nowrap ${tab === t.key ? 'border-emerald-600 text-emerald-800 bg-emerald-50' : 'border-transparent text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {mockPerks.filter(p => tab === 'all' || p.type === tab).map(p => (
-          <div key={p.id} className="bg-white rounded-xl shadow flex flex-col md:flex-row overflow-hidden border">
-            <img src={p.banner} alt={p.title} className="w-full md:w-40 h-32 object-cover rounded-t-xl md:rounded-t-none md:rounded-l-xl" />
-            <div className="flex-1 flex flex-col p-4 gap-2">
-              <div className="flex gap-2 items-center text-xs text-gray-500 mb-1">
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">{p.category}</span>
-                <span>{p.validity}</span>
-              </div>
-              <div className="font-semibold text-lg text-emerald-800">{p.title}</div>
-              <div className="text-gray-700 text-sm mb-2">{p.desc}</div>
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="text-lg md:text-2xl font-bold text-emerald-900">Perks</div>
+        </div>
+        <div className="w-full overflow-x-auto mb-6">
+          <div className="flex w-max gap-2">
+            {TABS.map((t) => (
               <button
-                className={`mt-auto px-4 py-2 rounded bg-emerald-600 text-white font-semibold transition ${redeemed.includes(p.id) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                disabled={redeemed.includes(p.id)}
-                onClick={() => handleRedeem(p.id)}
+                key={t.key}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${tab === t.key ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-emerald-800 hover:bg-emerald-200'}`}
+                onClick={() => setTab(t.key)}
               >
-                {redeemed.includes(p.id) ? 'Redeemed ' : 'Redeem'}
+                {t.label}
               </button>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
+        <div className="w-full space-y-4 mt-6">
+          {filteredPerks.length === 0 ? (
+            <div className="text-center text-gray-500 py-12">No perks found.</div>
+          ) : (
+            filteredPerks.map((perk) => (
+              <div key={perk.id} className="w-full bg-white rounded-2xl shadow-sm p-4 sm:p-6 flex flex-col md:flex-row gap-4 border border-slate-200">
+                <img src={perk.banner} alt={perk.title} className="w-full md:w-56 h-40 md:h-auto object-cover rounded-xl md:rounded-none md:rounded-l-xl" />
+                <div className="flex-1 flex flex-col p-4 gap-2">
+                  <div className="font-semibold text-lg text-emerald-800">{perk.title}</div>
+                  <div className="text-gray-700 text-sm mb-2">{perk.desc}</div>
+                  <div className="text-xs text-gray-500 mb-1">{perk.validity}</div>
+                  <button
+                    className={`px-4 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-xs ${redeemed.includes(perk.id) ? 'bg-emerald-100 border-emerald-400' : ''}`}
+                    onClick={() => handleRedeem(perk.id)}
+                    disabled={redeemed.includes(perk.id)}
+                  >
+                    {redeemed.includes(perk.id) ? 'Redeemed ' : 'Redeem'}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

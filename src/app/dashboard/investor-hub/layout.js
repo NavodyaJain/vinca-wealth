@@ -23,23 +23,12 @@ export default function InvestorHubLayout({ children }) {
   }, [hideBanner]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white w-full px-4 sm:px-6 lg:px-8 py-6">
       {/* Mobile: nav above banner, Desktop: nav sidebar */}
-      {/* Mobile: InvestorHubNav sticky at top of main content, never in sidebar */}
-      {/* Spacer for mobile nav (InvestorHubNav removed) */}
       <div className="block md:hidden w-full h-4" />
-      {!hideBanner && (
-        <div ref={bannerRef} className="w-full bg-green-50 border-b border-green-200 py-6 px-4 md:px-8 mt-0 md:mt-0">
-          <h1 className="text-2xl md:text-3xl font-bold text-green-800 mb-1">Welcome to Investor Hub</h1>
-          <p className="text-gray-700 mb-1">Learn, connect, and discuss retirement planning with investors like you.</p>
-          <p className="text-xs text-gray-500">Educational community. No investment recommendations.</p>
-        </div>
-      )}
-      {hideBanner && (
-        <InvestorHubHeader />
-      )}
-      <div className="flex flex-col md:flex-row gap-0 md:gap-6 max-w-7xl mx-auto w-full px-0 md:px-6 py-6">
-        <main className="flex-1 w-full mt-4 md:mt-0">{children}</main>
+      <InvestorHubHeader />
+      <div className="mx-auto w-full max-w-7xl">
+        <main className="flex-1 w-full">{children}</main>
       </div>
     </div>
   );

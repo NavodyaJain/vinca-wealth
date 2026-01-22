@@ -13,10 +13,13 @@ export default function PortfolioReviewPage() {
   };
 
   return (
-    <div className="max-w-5xl md:max-w-6xl mx-auto px-4 md:px-6 py-8">
-      <h1 className="text-2xl font-bold text-emerald-800 mb-6">Portfolio Review</h1>
-      {!reviewed ? (
-        <div className="bg-white rounded-xl shadow p-8 flex flex-col items-center gap-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="text-lg md:text-2xl font-bold text-emerald-900">Portfolio Review</div>
+        </div>
+        {!reviewed ? (
+          <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 flex flex-col items-center gap-6 border border-slate-200">
           <label className="w-full flex flex-col items-center justify-center border-2 border-dashed border-emerald-300 rounded-xl py-8 px-4 cursor-pointer hover:border-emerald-500 transition">
             <span className="text-emerald-700 font-semibold mb-2">Upload your portfolio (PDF or images)</span>
             <input type="file" accept=".pdf,image/*" multiple className="hidden" onChange={handleFileChange} />
@@ -44,7 +47,7 @@ export default function PortfolioReviewPage() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow p-8 text-center flex flex-col items-center gap-6">
+        <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 text-center flex flex-col items-center gap-6 border border-slate-200">
           <div className="font-semibold text-lg mb-2 text-emerald-800">Portfolio Health Score: <span className="text-2xl">78/100</span></div>
           <div className="text-left w-full max-w-md mx-auto">
             <div className="font-semibold text-emerald-700 mb-1">Risk Flags</div>
@@ -65,6 +68,7 @@ export default function PortfolioReviewPage() {
           <div className="text-xs text-gray-500 mt-4">Educational only. No investment advice. Please consult a SEBI-registered advisor for personalized guidance.</div>
         </div>
       )}
+      </div>
     </div>
   );
 }
