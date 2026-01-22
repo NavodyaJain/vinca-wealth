@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const MANAGER_DATA = [
@@ -23,7 +23,8 @@ const MANAGER_DATA = [
   },
 ];
 
-export default function ElevateBookPage() {
+
+function ElevateBookPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedManager, setSelectedManager] = useState(null);
@@ -37,7 +38,6 @@ export default function ElevateBookPage() {
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
-    // Get manager from query or localStorage
     const managerName = searchParams.get("manager") || localStorage.getItem("vinca_elevate_selectedManager");
     const manager = MANAGER_DATA.find((m) => m.name === managerName) || MANAGER_DATA[0];
     setSelectedManager(manager);
@@ -186,5 +186,13 @@ export default function ElevateBookPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ElevateBookPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ElevateBookPageInner />
+    </Suspense>
   );
 }
