@@ -6,11 +6,11 @@ export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex w-full">
+        <div className="min-h-screen w-full bg-slate-50">
       {/* Desktop sidebar */}
-      <div className="hidden lg:block">
-        <DashboardSidebar />
-      </div>
+          <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r pt-16">
+            <DashboardSidebar />
+          </aside>
       {/* Mobile sidebar toggle button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-30 bg-white border border-slate-200 rounded-full p-2 shadow-md focus:outline-none"
@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }) {
         </>
       )}
       {/* Main content */}
-      <main className="flex-1 min-w-0 w-full lg:pl-4 relative z-10">
+          <main className="ml-64 min-h-screen w-[calc(100%-16rem)]">
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Spacer for mobile hamburger */}
           <div className="lg:hidden h-12" />
