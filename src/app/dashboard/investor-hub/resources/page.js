@@ -16,9 +16,7 @@ export default function ResourcesPage() {
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
       <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="text-lg md:text-2xl font-bold text-emerald-900">Investor Hub Resources</div>
-        </div>
+        {/* Removed Investor Hub Resources heading as requested */}
         <div className="w-full overflow-x-auto mb-8">
           <div className="flex w-max gap-2 border-b border-gray-200">
             {TABS.map((t) => (
