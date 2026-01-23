@@ -25,7 +25,6 @@ export default function PricingPage() {
               <li className="flex items-center gap-3 text-gray-800 text-base"><Calendar className="h-5 w-5 text-emerald-500" /> Live events & webinars</li>
               <li className="flex items-center gap-3 text-gray-800 text-base"><BookOpen className="h-5 w-5 text-emerald-500" /> Curated resources & video series</li>
               <li className="flex items-center gap-3 text-gray-800 text-base"><Gift className="h-5 w-5 text-emerald-500" /> Perks & discount coupons</li>
-              <li className="flex items-center gap-3 text-gray-800 text-base"><FileText className="h-5 w-5 text-emerald-500" /> Portfolio Review (upload + analysis workflow)</li>
               <li className="flex items-center gap-3 text-gray-800 text-base"><UserCheck className="h-5 w-5 text-emerald-500" /> Elevate: 1:1 wealth manager session booking (educational)</li>
             </ul>
           </div>
@@ -69,18 +68,6 @@ export default function PricingPage() {
               <li className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-emerald-500" /> Redeemable coupons</li>
               <li className="flex items-center gap-2"><FileText className="h-5 w-5 text-emerald-500" /> Perk preview page</li>
               <li className="flex items-center gap-2"><Calendar className="h-5 w-5 text-emerald-500" /> Validity tracking</li>
-            </ul>
-          </div>
-          {/* Section D: Portfolio Review */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-10 grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
-            <div>
-              <div className="text-xl font-bold text-emerald-800 mb-2">Portfolio Review</div>
-              <div className="text-gray-600 mb-4">Upload portfolio and get structured insights (education-only).</div>
-            </div>
-            <ul className="col-span-2 grid grid-cols-2 gap-3 text-base text-gray-800">
-              <li className="flex items-center gap-2"><Upload className="h-5 w-5 text-emerald-500" /> Upload PDF/images</li>
-              <li className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-emerald-500" /> “Review My Portfolio” flow</li>
-              <li className="flex items-center gap-2"><FileText className="h-5 w-5 text-emerald-500" /> Output placeholder section (future analysis)</li>
             </ul>
           </div>
           {/* Section E: Elevate */}

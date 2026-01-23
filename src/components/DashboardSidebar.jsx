@@ -49,15 +49,10 @@ export default function DashboardSidebar({ onNav }) {
         {
           id: 'health-stress',
           label: 'Health Stress Test',
-          path: '/dashboard/health-stress-test',
+          path: '/dashboard/health-stress',
           icon: <HeartPulse className="h-4 w-4" />
         },
-        {
-          id: 'portfolio-review',
-          label: 'Portfolio Review',
-          path: '/dashboard/investor-hub/portfolio-review',
-          icon: <FileSearch className="h-4 w-4" />
-        }
+        // Portfolio Review removed as requested
       ]
     },
     {
