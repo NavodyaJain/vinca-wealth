@@ -6,6 +6,7 @@ import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Cart
 import { usePremium } from "@/lib/premium";
 import { formatCurrency, formatNumberShort } from "@/lib/lifestylePlanner";
 import PremiumBlurGate from "../shared/PremiumBlurGate";
+import { setVincaReadings } from '@/lib/readings/vincaReadingsStore';
 
 export default function PremiumLifestyleAnalysis({
   inputs,
@@ -101,6 +102,20 @@ export default function PremiumLifestyleAnalysis({
     }
     return `Lifestyle sustained till age ${sustainableTillAge} across ${yearsSupported}/${totalYears} retirement years.`;
   }, [failureAge, hasAnalysis, isAffordable, monthlyGap, sustainableTillAge, totalYears, yearsSupported]);
+
+  useEffect(() => {
+    if (!hasAnalysis) return;
+    setVincaReadings({
+      lifestyle: {
+        lifestyleTier: inputs.lifestyleTier,
+        supportedMonthlyIncome: supportedMonthlyIncomeAtRetirement,
+        requiredMonthlyIncome: requiredMonthlyIncomeAtRetirement,
+        monthlyGap: gapMonthlyAtFailure,
+        affordabilityStatus: affordability.status, // "Affordable" | "Tight" | "Not Affordable"
+        sustainableTillAge
+      }
+    });
+  }, [hasAnalysis, inputs, supportedMonthlyIncomeAtRetirement, requiredMonthlyIncomeAtRetirement, gapMonthlyAtFailure, affordability, sustainableTillAge]);
 
   return (
     <PremiumBlurGate

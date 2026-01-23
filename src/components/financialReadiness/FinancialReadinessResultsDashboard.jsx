@@ -10,6 +10,7 @@ import SaveReadingCTA from '../shared/SaveReadingCTA';
 import { usePremium } from '@/lib/premium';
 import { calculateFinancialReadinessResults } from '@/lib/financialReadiness/financialReadinessEngine';
 import { saveUserReading, saveUserInputs, isToolCompleted } from '@/lib/userJourneyStorage';
+import { setVincaReadings } from '@/lib/readings/vincaReadingsStore';
 
 const FinancialReadinessResultsDashboard = ({ formData, results }) => {
   const { isPremium, upgradeToPremium } = usePremium();
@@ -96,6 +97,28 @@ const FinancialReadinessResultsDashboard = ({ formData, results }) => {
     if (value === 0) return '₹0';
     return `₹${Math.round(value).toLocaleString('en-IN')}`;
   };
+
+  // Save to vincaUserReadings when results change
+  useEffect(() => {
+    if (!computedResults || !formData) return;
+    setVincaReadings({
+      financialReadiness: {
+        retirementAge: computedResults.retirementAge,
+        lifespan: computedResults.lifespan,
+        expectedCorpus: computedResults.expectedCorpus,
+        requiredCorpus: computedResults.requiredCorpus,
+        corpusGap: computedResults.corpusGap,
+        currentSip: computedResults.currentMonthlySIP,
+        requiredSip: computedResults.requiredMonthlySIP,
+        sipGap: computedResults.requiredMonthlySIP !== undefined && computedResults.currentMonthlySIP !== undefined ? computedResults.requiredMonthlySIP - computedResults.currentMonthlySIP : null,
+        sustainableTillAge: computedResults.sustainableTillAge,
+        isReady: computedResults.expectedCorpus >= computedResults.requiredCorpus && computedResults.requiredMonthlySIP <= (formData.monthlyIncome || 0),
+        monthlyIncome: formData.monthlyIncome,
+        monthlyExpenses: formData.monthlyExpenses,
+        monthlySurplus: (formData.monthlyIncome || 0) - (formData.monthlyExpenses || 0)
+      }
+    });
+  }, [computedResults, formData]);
 
   if (!computedResults) {
     return (

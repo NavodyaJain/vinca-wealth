@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -10,6 +11,7 @@ import {
 } from 'recharts';
 import { formatCurrency } from '@/lib/formatter';
 import HealthCategoryCards from './HealthCategoryCards';
+import { setVincaReadings } from '@/lib/readings/vincaReadingsStore';
 
 const formatINR = (value, { compact = false, allowZero = false } = {}) => {
   const num = Number(value);
@@ -47,6 +49,23 @@ const HealthPremiumImpactAnalysis = ({ analysis, isLocked, selectedCategory, onS
   const statusLabel = analysis.statusLabel || (statusTone === 'green' ? 'Survives' : statusTone === 'amber' ? 'Tight' : 'Not Affordable');
 
   const pressureSeries = analysis.pressureSeries || [];
+
+  useEffect(() => {
+    if (!analysis || analysis.error) return;
+    setVincaReadings({
+      health: {
+        category: selectedCategory,
+        healthAdjustedCorpus: analysis.healthAdjustedCorpusAtRetirement,
+        extraMonthlyHealthLoad: analysis.extraMonthlyHealthLoad,
+        monthlyRequiredWithDisease: analysis.requiredMonthlyAtRetirement,
+        monthlySupportedByPlan: analysis.supportedMonthlyAtRetirement,
+        monthlyGap: analysis.monthlyGap,
+        sustainableTillAge: analysis.survivalAge,
+        hospitalizationDaysAffordable: analysis.hospitalizationDaysAffordable,
+        nursingMonthsAffordable: analysis.nursingMonthsAffordable
+      }
+    });
+  }, [analysis, selectedCategory]);
 
   return (
     <div className={`rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 ${isLocked ? 'select-none' : ''}`}>

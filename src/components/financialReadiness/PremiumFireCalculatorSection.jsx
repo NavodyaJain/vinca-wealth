@@ -6,6 +6,7 @@ import FireCalculatorPremiumUI from './FireCalculatorPremiumUI';
 import { calculateFirePremiumResults } from '@/lib/financialReadiness/firePremiumEngine';
 import { usePremium } from '@/lib/premium';
 import { saveUserReading } from '@/lib/userJourneyStorage';
+import { setVincaReadings } from '@/lib/readings/vincaReadingsStore';
 
 const PremiumFireCalculatorSection = ({ results, onUpgradeClick, onSave, isSaved }) => {
   const { isPremium, downgradeToFree } = usePremium();
@@ -39,6 +40,22 @@ const PremiumFireCalculatorSection = ({ results, onUpgradeClick, onSave, isSaved
           earlyRetirementAge: fireAge,
           yearsEarly,
           optimizerStyle
+        });
+        // Save to vincaUserReadings
+        setVincaReadings({
+          fire: {
+            allocationPercent: fireData.allocationPercent,
+            surplusUsedAmount: fireData.surplusUsedAmount,
+            additionalSip: fireData.additionalSip,
+            totalSip: fireData.totalSIP,
+            emergencyLeft: fireData.emergencyLeft,
+            fireAge: fireData.fireAge,
+            yearsEarly,
+            projectedCorpusAtFireAge: fireData.expectedCorpusAtFireAge,
+            requiredCorpusAtFireAge: fireData.requiredCorpusAtFireAge,
+            isFireSustainable: fireData.expectedCorpusAtFireAge >= fireData.requiredCorpusAtFireAge,
+            isFeasible: fireData.totalSIP <= (results?.inputs?.monthlyIncome || 0)
+          }
         });
       }
     }
