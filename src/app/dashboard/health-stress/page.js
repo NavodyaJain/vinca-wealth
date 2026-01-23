@@ -250,25 +250,43 @@ export default function HealthStressPage() {
         </div>
 
         {/* Save Reading Button - After health analysis */}
+
         {isProUser && userInputs && (
-          <div className="mb-6 flex justify-end">
-            <SaveReadingCTA
-              onSave={handleSaveReading}
-              isSaved={isSaved}
-            />
-          </div>
+          <>
+            <div className="mb-6 flex justify-end">
+              <SaveReadingCTA
+                onSave={handleSaveReading}
+                isSaved={isSaved}
+              />
+            </div>
+            {/* Elevate CTA Card */}
+            <div className="mb-8">
+              <div className="rounded-2xl border bg-emerald-50 shadow-sm p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex items-center justify-center h-10 w-10 rounded-full bg-emerald-100">
+                    {/* Icon: Sparkles from lucide-react */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M19 21v-4m2 2h-4M12 8v8m-4-4h8" /></svg>
+                  </span>
+                  <div>
+                    <div className="text-base md:text-lg font-semibold text-emerald-900 mb-1">Elevate your retirement planning</div>
+                    <div className="text-slate-600 text-sm mb-1">Get clarity on your plan with a 1:1 educational session with our Wealth Manager.</div>
+                    <div className="text-xs text-slate-500">Educational guidance only. No stock tips or recommendations.</div>
+                  </div>
+                </div>
+                <div className="shrink-0 md:ml-4">
+                  <button
+                    className="px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold text-base hover:bg-emerald-700 transition"
+                    onClick={() => router.push('/dashboard/investor-hub/elevate')}
+                  >
+                    Book a 1:1 session
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Journey Unlock Banner - Only show after explicit save */}
-        {showUnlockBanner && isProUser && isSaved && (
-          <div className="mb-6">
-            <JourneyUnlockBanner
-              isVisible={true}
-              completionStatus={completionStatus}
-              onViewProfile={() => router.push('/dashboard/profile')}
-            />
-          </div>
-        )}
+        {/* Journey Unlock Banner removed as requested */}
       </div>
 
       {isPremiumModalOpen && (
