@@ -1,16 +1,14 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { events as EVENTS } from "@/data/investorHub/eventsData";
+import { Bell, Search } from 'lucide-react';
 
 const TABS = [
-  { key: "all", label: "All Events" },
-  { key: "recent", label: "Recent Events" },
-  { key: "past", label: "Past Events" },
+  { key: "all", label: "All" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "past", label: "Past" },
   { key: "interested", label: "Interested" },
   { key: "registered", label: "Registered" },
-  { key: "group1", label: "Group 1" },
-  { key: "group2", label: "Group 2" },
-  { key: "group3", label: "Group 3" },
 ];
 
 function getLocal(key, fallback) {
@@ -28,8 +26,10 @@ function setLocal(key, value) {
   }
 }
 
+
 export default function EventsPage() {
   const [tab, setTab] = useState("all");
+  const [search, setSearch] = useState("");
   const [interested, setInterested] = useState(() => getLocal("vinca_events_interested", []));
   const [registered, setRegistered] = useState(() => getLocal("vinca_events_registered", []));
 
@@ -38,23 +38,37 @@ export default function EventsPage() {
 
   const now = new Date();
   const filteredEvents = useMemo(() => {
+    let events = EVENTS;
+    // Tab filtering
     switch (tab) {
-      case "recent":
-        return EVENTS.filter(e => new Date(e.dateTimeISO) > now && new Date(e.dateTimeISO) < addDays(now, 30));
+      case "upcoming":
+        events = events.filter(e => new Date(e.dateTimeISO) > now);
+        break;
       case "past":
-        return EVENTS.filter(e => new Date(e.dateTimeISO) < now);
+        events = events.filter(e => new Date(e.dateTimeISO) < now);
+        break;
       case "interested":
-        return EVENTS.filter(e => interested.includes(e.id));
+        events = events.filter(e => interested.includes(e.id));
+        break;
       case "registered":
-        return EVENTS.filter(e => registered.includes(e.id));
-      case "group1":
-      case "group2":
-      case "group3":
-        return EVENTS.filter(e => e.groupId === tab);
+        events = events.filter(e => registered.includes(e.id));
+        break;
+      // Removed group tabs
       default:
-        return EVENTS;
+        break;
     }
-  }, [tab, interested, registered]);
+    // Search filtering
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      events = events.filter(e =>
+        e.title.toLowerCase().includes(q) ||
+        e.description.toLowerCase().includes(q) ||
+        (e.groupId && e.groupId.toLowerCase().includes(q)) ||
+        (e.platform && e.platform.toLowerCase().includes(q))
+      );
+    }
+    return events;
+  }, [tab, interested, registered, search]);
 
   const handleInterested = (id) => {
     setInterested((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -64,57 +78,103 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-2 sm:px-4 py-8">
-      <h1 className="text-lg md:text-2xl font-bold text-emerald-900 mb-6">Events</h1>
-      <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto no-scrollbar">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`px-4 py-2 font-semibold border-b-2 transition-colors duration-150 whitespace-nowrap ${tab === t.key ? 'border-emerald-600 text-emerald-800 bg-emerald-50' : 'border-transparent text-gray-600 hover:text-emerald-700 hover:bg-emerald-50'}`}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-6">
-        {filteredEvents.length === 0 && (
-          <div className="text-center text-gray-400 py-12">No events found for this filter.</div>
-        )}
-        {filteredEvents.map(event => {
-          const isPast = new Date(event.dateTimeISO) < now;
-          return (
-            <div key={event.id} className={`flex flex-col md:flex-row bg-white rounded-2xl shadow-sm p-4 sm:p-6 overflow-hidden border ${isPast ? 'opacity-60' : ''}`}>
-              <img src={event.banner} alt={event.title} className="w-full md:w-56 h-40 md:h-auto object-cover rounded-xl md:rounded-none md:rounded-l-xl" />
-              <div className="flex-1 flex flex-col p-4 gap-2">
-                <div className="flex flex-wrap gap-2 items-center text-xs text-gray-500">
-                  <span>{new Date(event.dateTimeISO).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                  <span>•</span>
-                  <span>{event.platform}</span>
-                  <span>•</span>
-                  <span className="capitalize">{event.groupId.replace('group', 'Group ')}</span>
+    <div className="w-full px-2 sm:px-4 lg:px-8 py-6 overflow-x-hidden">
+      <div className="mx-auto w-full max-w-6xl">
+        {/* Search bar removed as requested */}
+        {/* Tabs: Pills */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar py-2 mb-4">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all min-w-[110px] focus:outline-none
+                ${tab === t.key
+                  ? "bg-emerald-600 text-white border-emerald-600 shadow"
+                  : "bg-white text-slate-700 border-slate-200 hover:bg-emerald-50"}
+              `}
+              onClick={() => setTab(t.key)}
+              type="button"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {/* Events Grid */}
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
+          {filteredEvents.length === 0 ? (
+            <div className="col-span-full text-center text-gray-500 py-12">No events found. Try another keyword.</div>
+          ) : (
+            filteredEvents.map(event => {
+              const isPast = new Date(event.dateTimeISO) < now;
+              const isInterested = interested.includes(event.id);
+              const isRegistered = registered.includes(event.id);
+              return (
+                <div
+                  key={event.id}
+                  className={`flex flex-col bg-white border rounded-2xl shadow-sm h-full transition-opacity duration-200 ${isPast ? "opacity-70" : "hover:shadow-md"}`}
+                >
+                  {/* Banner */}
+                  {event.banner ? (
+                    <img
+                      src={event.banner}
+                      alt={event.title}
+                      className="w-full h-32 object-cover rounded-t-2xl"
+                    />
+                  ) : (
+                    <div className="w-full h-32 rounded-t-2xl bg-gradient-to-br from-green-100 to-green-300 flex items-center justify-center">
+                      <span className="text-emerald-600 font-bold text-lg">Event</span>
+                    </div>
+                  )}
+                  {/* Content */}
+                  <div className="flex-1 flex flex-col p-4 gap-2">
+                    <div className="font-bold text-lg text-emerald-800 line-clamp-2">{event.title}</div>
+                    <div className="text-slate-600 text-sm line-clamp-2 min-h-[40px]">{event.description}</div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                      <span>{new Date(event.dateTimeISO).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                      <span>•</span>
+                      <span>{event.platform}</span>
+                      <span>•</span>
+                      <span className="capitalize">{event.groupId.replace('group', 'Group ')}</span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold transition-all
+                          ${isInterested ? "bg-emerald-50 border-emerald-600 text-emerald-700" : "bg-white border-slate-200 text-slate-600 hover:bg-emerald-50"}
+                        `}
+                        onClick={() => handleInterested(event.id)}
+                        disabled={isPast}
+                        type="button"
+                      >
+                        {isInterested ? "Interested ✓" : "Interested"}
+                      </button>
+                      <button
+                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold transition-all
+                          ${isRegistered ? "bg-emerald-600 border-emerald-600 text-white" : "bg-white border-slate-200 text-slate-600 hover:bg-emerald-50"}
+                          ${isPast ? "opacity-50 cursor-not-allowed" : ""}`}
+                        onClick={() => !isPast && handleRegistered(event.id)}
+                        disabled={isPast}
+                        type="button"
+                      >
+                        {isRegistered ? "Registered" : "Register"}
+                      </button>
+                    </div>
+                    {isPast && (
+                      <div className="mt-2 text-xs text-slate-400 text-center">Past</div>
+                    )}
+                  </div>
                 </div>
-                <div className="font-semibold text-lg text-emerald-800">{event.title}</div>
-                <div className="text-gray-700 text-sm mb-2">{event.description}</div>
-                <div className="flex gap-2 mt-auto">
-                  <button
-                    className={`px-4 py-1 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-xs ${interested.includes(event.id) ? 'bg-emerald-100 border-emerald-400' : ''}`}
-                    onClick={() => handleInterested(event.id)}
-                  >
-                    {interested.includes(event.id) ? 'Interested ✓' : 'Interested'}
-                  </button>
-                  <button
-                    className={`px-4 py-1 rounded bg-emerald-600 text-white font-semibold text-xs ${isPast ? 'opacity-50 cursor-not-allowed' : ''} ${registered.includes(event.id) ? 'bg-emerald-800' : ''}`}
-                    onClick={() => !isPast && handleRegistered(event.id)}
-                    disabled={isPast}
-                  >
-                    {registered.includes(event.id) ? 'Registered' : 'Register'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })
+          )}
+        </div>
+        {/* Hide horizontal scrollbar for category tabs only */}
+        <style jsx global>{`
+          .no-scrollbar {
+            scrollbar-width: none;
+          }
+          .no-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
       </div>
     </div>
   );
