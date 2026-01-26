@@ -1,4 +1,4 @@
-This file has been removed to prevent routing conflicts and ensure the new UI is deployed.
+// This file has been removed to prevent routing conflicts and ensure the new UI is deployed.
 
 export const dynamic = 'force-dynamic';
 "use client";
