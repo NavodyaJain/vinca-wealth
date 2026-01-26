@@ -45,12 +45,15 @@ export default function NewJournalEntry({ searchParams }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+
   // Only load draft, since challenge feature is removed
   useEffect(() => {
     const draft = getDraftEntry();
     if (draft) setEntry(draft);
     setStreak(getJournalStreak());
   }, []);
+
+  // Remove any leftover challenge prefill or setSelectedPrompt logic
 
   // Draft autosave
   useEffect(() => {
