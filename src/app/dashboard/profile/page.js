@@ -4,6 +4,8 @@ import { Edit2, User, Check } from 'lucide-react';
 // src/app/dashboard/profile/page.js
 
 import { useState, useEffect } from 'react';
+import { getActiveTemplateId, getActiveTemplateStarted } from '@/lib/templates/templatesStorage';
+import { getTemplateById } from '@/lib/templates/templatesData';
 import { useRouter } from 'next/navigation';
 import { useCalculator } from '@/context/CalculatorContext';
 import UserInputsSummary from '@/components/profile/UserInputsSummary';
@@ -16,6 +18,17 @@ import {
   getUserProfile
 } from '@/lib/userJourneyStorage';
 function ProfilePage() {
+    // Active Template State
+    const [activeTemplate, setActiveTemplate] = useState(null);
+    const [activeTemplateStarted, setActiveTemplateStarted] = useState(null);
+    useEffect(() => {
+      // Load active template from localStorage
+      const id = getActiveTemplateId();
+      if (id) {
+        setActiveTemplate(getTemplateById(id));
+        setActiveTemplateStarted(getActiveTemplateStarted());
+      }
+    }, []);
   const router = useRouter();
   const { formData } = useCalculator();
   const [journey, setJourney] = useState(null);
@@ -73,8 +86,36 @@ function ProfilePage() {
     );
   }
 
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Active Plan Template Card */}
+      {activeTemplate && (
+        <div className="w-full bg-white border border-emerald-200 rounded-2xl p-5 sm:p-7 flex flex-col sm:flex-row items-center gap-4 mb-8 shadow-sm">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-lg text-slate-900">Active Plan Template:</span>
+              <span className="bg-emerald-50 text-emerald-700 text-xs font-medium rounded px-2 py-0.5">{activeTemplate.badge}</span>
+            </div>
+            <div className="text-xl font-bold text-emerald-700 mb-1">{activeTemplate.name}</div>
+            <div className="text-xs text-slate-500 mb-2">Started: {activeTemplateStarted ? new Date(activeTemplateStarted).toLocaleDateString() : 'Today'}</div>
+          </div>
+          <div className="flex flex-col gap-2 w-full sm:w-auto">
+            <button
+              className="w-full sm:w-auto px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition"
+              onClick={() => router.push(`/dashboard/challenges?pack=${activeTemplate.recommendedChallengeId}`)}
+            >
+              Start Challenge
+            </button>
+            <button
+              className="w-full sm:w-auto px-5 py-2 rounded-lg border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50 transition"
+              onClick={() => router.push('/dashboard/templates')}
+            >
+              Change Template
+            </button>
+          </div>
+        </div>
+      )}
       {/* Profile Header Card - Name at top */}
       <div className="bg-green-600 rounded-2xl p-6 sm:p-8 text-white mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
