@@ -1,5 +1,5 @@
 "use client";
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   saveJournalEntry,
@@ -25,11 +25,10 @@ const quickAnswers = [
   "Plan feels unrealistic"
 ];
 
-export default function NewJournalEntry() {
+export default function NewJournalEntry({ searchParams }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const prefillChallengeId = searchParams.get('challengeId');
-  const prefillDay = searchParams.get('day');
+  const prefillChallengeId = searchParams?.challengeId || null;
+  const prefillDay = searchParams?.day || null;
 
   const [entry, setEntry] = useState({
     title: '',
