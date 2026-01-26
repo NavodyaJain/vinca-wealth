@@ -45,23 +45,12 @@ export default function NewJournalEntry({ searchParams }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Prefill from challenge or draft
+  // Only load draft, since challenge feature is removed
   useEffect(() => {
-    // Only load draft, since challenge feature is removed
     const draft = getDraftEntry();
     if (draft) setEntry(draft);
     setStreak(getJournalStreak());
   }, []);
-      setSelectedPrompt(prefill.reflectionPrompt || reflectionPrompts[0]);
-    } else {
-      const draft = getDraftEntry();
-      if (draft) {
-        setEntry(draft);
-        setSelectedPrompt(draft.reflectionPrompt || reflectionPrompts[0]);
-      }
-    }
-    setStreak(getJournalStreak());
-  }, [prefillChallengeId, prefillDay]);
 
   // Draft autosave
   useEffect(() => {
