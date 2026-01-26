@@ -8,7 +8,7 @@ import {
   saveDraftEntry,
   clearDraftEntry
 } from '@/lib/journal/journalStorage';
-import { getChallengeById } from '@/lib/challenges/challengesData';
+
 import { getJournalStreak } from '@/lib/journal/journalStreakStorage';
 
 const moods = ["😀", "🙂", "😐", "😕", "😢"];
@@ -47,29 +47,11 @@ export default function NewJournalEntry({ searchParams }) {
 
   // Prefill from challenge or draft
   useEffect(() => {
-    if (prefillChallengeId && prefillDay) {
-      // Inline prefill logic from challenge data
-      const challenge = getChallengeById(prefillChallengeId);
-      const dayIdx = parseInt(prefillDay, 10) - 1;
-      let prefill = {};
-      if (challenge && challenge.dailyTasks && challenge.dailyTasks[dayIdx]) {
-        const tasks = challenge.dailyTasks[dayIdx];
-        prefill = {
-          title: `${challenge.title} - Day ${parseInt(prefillDay, 10)}`,
-          tags: [challenge.title],
-          actions: tasks.map(t => ({
-            id: t.id,
-            label: t.title,
-            isVerified: false
-          })),
-          reflectionPrompt: tasks.find(t => t.type === 'reflection')?.description || reflectionPrompts[0],
-          reflectionText: '',
-          mood: '',
-          confidenceScore: '',
-          nextStep: ''
-        };
-      }
-      setEntry(e => ({ ...e, ...prefill }));
+    // Only load draft, since challenge feature is removed
+    const draft = getDraftEntry();
+    if (draft) setEntry(draft);
+    setStreak(getJournalStreak());
+  }, []);
       setSelectedPrompt(prefill.reflectionPrompt || reflectionPrompts[0]);
     } else {
       const draft = getDraftEntry();
