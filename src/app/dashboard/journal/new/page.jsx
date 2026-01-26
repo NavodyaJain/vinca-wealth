@@ -1,125 +1,160 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import {
-  saveJournalEntry,
-  createJournalEntry,
-  getDraftEntry,
-  saveDraftEntry,
-  clearDraftEntry
-} from '@/lib/journal/journalStorage';
 
-import { getJournalStreak } from '@/lib/journal/journalStreakStorage';
-
-const moods = ["😀", "🙂", "😐", "😕", "😢"];
-const reflectionPrompts = [
-  "What went well today?",
-  "What confused you today?",
-  "What’s blocking you right now?",
-  "What do you want to do next?"
+import { saveJournalEntry, getJournalEntries } from '@/lib/journal/financialJournalStore';
+const moods = [
+  "🙂", // Neutral
+  "😃", // Happy
+  "😔", // Sad
+  "😠", // Stressed
+  "😎", // Confident
+  "😐", // Uncertain
 ];
 const quickAnswers = [
-  "Feeling confident",
-  "Need clarity",
-  "Too many options",
-  "Plan feels unrealistic"
+  "Stayed on budget",
+  "Avoided impulse buys",
+  "Reviewed my plan",
+  "Tracked expenses",
+  "Saved for emergency",
+  "Discussed with family"
 ];
 
-import { use } from 'react';
-
-export default function NewJournalEntry({ searchParams }) {
-  const router = useRouter();
-  const params = use(searchParams);
-  const prefillChallengeId = params?.challengeId || null;
-  const prefillDay = params?.day || null;
-
-  const [entry, setEntry] = useState({
-    title: '',
-    tags: [],
-    actions: [],
-    reflectionPrompt: reflectionPrompts[0],
-    reflectionText: '',
-    mood: '',
-    confidenceScore: '',
-    nextStep: '',
-  });
-  const [selectedPrompt, setSelectedPrompt] = useState(reflectionPrompts[0]);
-  const [streak, setStreak] = useState({ streakCount: 0 });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+const defaultActions = [
+  "Ran Financial Readiness",
+  "Updated Lifestyle Planner",
+  "Took Health Stress Test",
+  "Watched Resources module",
+  "Registered for an Event",
+  "Redeemed a Perk",
+  "Booked Elevate session",
+  "Uploaded Portfolio Review"
+];
+const reflectionPrompts = [
+  "Biggest financial blocker this week",
+  "One improvement I made",
+  "One expense I controlled",
+  "A surprise I handled well"
+];
 
 
-  // Only load draft, since challenge feature is removed
+export default function JournalEntryCreatePage() {
+    // Hydration-safe max date for date input
+    const todayISO = typeof window !== "undefined"
+      ? new Date().toISOString().slice(0, 10)
+      : "2026-01-26";
+  // Streak calculation (hydration-safe)
+  const [streakCount, setStreakCount] = useState(0);
   useEffect(() => {
-    const draft = getDraftEntry();
-    if (draft) setEntry(draft);
-    setStreak(getJournalStreak());
+    const entries = getJournalEntries();
+    let count = 0;
+    if (entries.length > 0) {
+      const sorted = [...entries].sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart));
+      let lastDate = new Date(sorted[0].weekStart);
+      count = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const currentDate = new Date(sorted[i].weekStart);
+        if ((lastDate - currentDate) === 7 * 24 * 60 * 60 * 1000) {
+          count++;
+          lastDate = currentDate;
+        } else {
+          break;
+        }
+      }
+    }
+    setStreakCount(count);
   }, []);
+      const [saving, setSaving] = useState(false);
+    // Alias for Save button
+    const handleSave = handleSubmit;
+  const router = useRouter();
+  // Form state
+  const [weekStart, setWeekStart] = useState("");
+    const [tags, setTags] = useState([]);
+  const [weekEnd, setWeekEnd] = useState("");
+  const [sipCurrent, setSipCurrent] = useState("");
+  const [sipChanged, setSipChanged] = useState(false);
+  const [sipChange, setSipChange] = useState("");
+  const [sipChangeReason, setSipChangeReason] = useState("");
+  const [expenseDrift, setExpenseDrift] = useState("");
+  const [emergency, setEmergency] = useState(false);
+  const [emergencyAmount, setEmergencyAmount] = useState("");
+  const [emergencyCategory, setEmergencyCategory] = useState("");
+  const [disciplineRating, setDisciplineRating] = useState(3);
+  const [actions, setActions] = useState([]);
+  const [reflectionPrompt, setReflectionPrompt] = useState("");
+  const [reflectionText, setReflectionText] = useState("");
+  const [mood, setMood] = useState("");
+  const [confidenceScore, setConfidenceScore] = useState("");
+  const [nextStep, setNextStep] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Remove any leftover challenge prefill or setSelectedPrompt logic
-
-  // Draft autosave
-  useEffect(() => {
-    saveDraftEntry(entry);
-  }, [entry]);
-
-  function handleChange(field, value) {
-    setEntry(e => ({ ...e, [field]: value }));
-    if (field === 'reflectionPrompt') setSelectedPrompt(value);
-  }
-
-  function handleTagInput(e) {
-    if (e.key === 'Enter' && e.target.value.trim()) {
-      setEntry(prev => ({ ...prev, tags: [...(prev.tags || []), e.target.value.trim()] }));
-      e.target.value = '';
+  // Week validation
+  function handleWeekStartChange(e) {
+    setWeekStart(e.target.value);
+    if (e.target.value) {
+      const start = new Date(e.target.value);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      setWeekEnd(end.toISOString().slice(0, 10));
+    } else {
+      setWeekEnd("");
     }
   }
 
-  function removeTag(tag) {
-    setEntry(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+  function validateWeek() {
+    if (!weekStart || !weekEnd) return false;
+    const entries = getJournalEntries();
+    return !entries.some(e => e.weekStart === weekStart);
   }
 
-  async function handleSave() {
+  function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
     setSaving(true);
-    setError('');
-    // Minimal validation: at least a prompt or actions
-    if (!selectedPrompt && (!entry.actions || entry.actions.length === 0)) {
-      setError('Please select a reflection prompt or add an action.');
-      setSaving(false);
+    if (!weekStart || !weekEnd) {
+      setError("Week period is required.");
       return;
     }
-    // Auto title
-    let title = entry.title;
-    if (!title) {
-      const today = new Date();
-      const isChallenge = (entry.tags || []).includes('Challenge');
-      if (isChallenge) title = 'Challenge progress saved';
-      else title = `Journal entry — ${today.toLocaleDateString()}`;
+    if (!validateWeek()) {
+      setError("This week already has an entry or overlaps.");
+      return;
     }
-    // Auto tags
-    let tags = Array.isArray(entry.tags) ? [...entry.tags] : [];
-    if (entry.actions && entry.actions.some(a => (a.label || '').toLowerCase().includes('challenge'))) {
-      if (!tags.includes('Challenge')) tags.push('Challenge');
-    } else if (entry.actions && entry.actions.some(a => (a.label || '').toLowerCase().includes('readiness'))) {
-      if (!tags.includes('Readiness')) tags.push('Readiness');
-    } else if (!tags.includes('Journal')) {
-      tags.push('Journal');
+    if (!sipCurrent) {
+      setError("Current SIP is required.");
+      return;
     }
-    const entryToSave = {
-      ...entry,
-      title,
+    if (!disciplineRating) {
+      setError("Discipline rating is required.");
+      return;
+    }
+    // Save entry
+    const entry = {
+      id: `${weekStart}`,
+      weekStart,
+      weekEnd,
+      sipCurrent: Number(sipCurrent),
+      sipChanged,
+      sipChange: sipChanged ? Number(sipChange) : 0,
+      sipChangeReason: sipChanged ? sipChangeReason : "",
+      expenseDrift: Number(expenseDrift),
+      emergency,
+      emergencyAmount: emergency ? Number(emergencyAmount) : 0,
+      emergencyCategory: emergency ? emergencyCategory : "",
+      disciplineScore: disciplineRating * 20,
+      actions,
+      reflectionPrompt,
+      reflectionText,
       tags,
-      reflectionPrompt: selectedPrompt,
-      isDraft: false
+      createdAt: new Date().toISOString()
     };
-    try {
-      createJournalEntry(entryToSave);
-      clearDraftEntry();
-      router.replace('/dashboard/journal?saved=1');
-    } catch (e) {
-      setError('Failed to save entry.');
-    }
-    setSaving(false);
+    saveJournalEntry(entry);
+    setSuccess("Weekly check-in saved");
+    setTimeout(() => {
+      setSaving(false);
+      router.push("/dashboard/journal");
+    }, 1200);
   }
 
   return (
@@ -130,29 +165,60 @@ export default function NewJournalEntry({ searchParams }) {
       </div>
       <div className="px-4 sm:px-8 mb-6">
         <div className="bg-white border border-emerald-200 rounded-2xl shadow-sm p-6 flex flex-col gap-4">
+          {/* Week Period Section */}
           <div>
-            <label className="block font-semibold mb-1">Title</label>
+            <label className="block font-semibold mb-1">Week Period</label>
+            <div className="flex items-center gap-4">
+              <div>
+                <span className="text-xs text-slate-500 mr-2">Start</span>
+                <input
+                  type="date"
+                  className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none"
+                  value={weekStart || ""}
+                  onChange={handleWeekStartChange}
+                  max={todayISO}
+                />
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 mr-2">End</span>
+                <span className="font-mono text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200">{weekEnd || '--'}</span>
+              </div>
+            </div>
+          </div>
+          {/* Current SIP Field */}
+          <div>
+            <label className="block font-semibold mb-1">Current SIP <span className="text-red-500">*</span></label>
             <input
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              value={entry.title}
-              onChange={e => handleChange('title', e.target.value)}
-              placeholder="e.g. My Retirement Progress"
-              maxLength={60}
+              type="number"
+              className="border border-slate-200 rounded px-2 py-1 text-base focus:outline-none w-40"
+              value={sipCurrent}
+              onChange={e => setSipCurrent(e.target.value)}
+              min={0}
+              required
+              placeholder="Enter SIP amount"
             />
           </div>
           <div>
             <label className="block font-semibold mb-1">Tags</label>
             <div className="flex flex-wrap gap-2 mb-1">
-              {(entry.tags || []).map(tag => (
+              {(tags || []).map(tag => (
                 <span key={tag} className="bg-emerald-50 text-emerald-700 text-xs rounded px-2 py-0.5 flex items-center gap-1">
                   {tag}
-                  <button type="button" className="ml-1 text-xs text-red-500" onClick={() => removeTag(tag)}>&times;</button>
+                  <button type="button" className="ml-1 text-xs text-red-500" onClick={() => setTags(tags.filter(t => t !== tag))}>&times;</button>
                 </span>
               ))}
               <input
                 className="border border-slate-200 rounded px-2 py-1 text-xs focus:outline-none"
                 placeholder="Add tag"
-                onKeyDown={handleTagInput}
+                defaultValue=""
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    if (!tags.includes(e.target.value.trim())) {
+                      setTags([...tags, e.target.value.trim()]);
+                    }
+                    e.target.value = '';
+                  }
+                }}
               />
             </div>
           </div>
@@ -164,8 +230,8 @@ export default function NewJournalEntry({ searchParams }) {
                 <button
                   key={prompt}
                   type="button"
-                  className={`px-3 py-1 rounded-full border text-xs font-medium ${selectedPrompt === prompt ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}
-                  onClick={() => handleChange('reflectionPrompt', prompt)}
+                  className={`px-3 py-1 rounded-full border text-xs font-medium ${reflectionPrompt === prompt ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}
+                  onClick={() => setReflectionPrompt(prompt)}
                 >
                   {prompt}
                 </button>
@@ -173,9 +239,9 @@ export default function NewJournalEntry({ searchParams }) {
             </div>
             <textarea
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-200 min-h-20"
-              value={entry.reflectionText}
-              onChange={e => handleChange('reflectionText', e.target.value)}
-              placeholder={`Write your thoughts here (optional, 300 chars)...\n${selectedPrompt}`}
+              value={reflectionText}
+              onChange={e => setReflectionText(e.target.value)}
+              placeholder={`Write your thoughts here (optional, 300 chars)...\n${reflectionPrompt}`}
               maxLength={300}
             />
             <div className="flex flex-wrap gap-2 mt-2">
@@ -184,7 +250,7 @@ export default function NewJournalEntry({ searchParams }) {
                   key={ans}
                   type="button"
                   className="px-2 py-1 rounded-full border border-emerald-200 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
-                  onClick={() => setEntry(e => ({ ...e, reflectionText: (e.reflectionText ? e.reflectionText + ' ' : '') + ans }))}
+                  onClick={() => setReflectionText(reflectionText ? reflectionText + ' ' + ans : ans)}
                 >
                   {ans}
                 </button>
@@ -198,8 +264,8 @@ export default function NewJournalEntry({ searchParams }) {
                 <button
                   key={mood}
                   type="button"
-                  className={`text-2xl px-2 py-1 rounded-lg border ${entry.mood === mood ? 'border-emerald-600 bg-emerald-50' : 'border-slate-200'}`}
-                  onClick={() => handleChange('mood', mood)}
+                  className={`text-2xl px-2 py-1 rounded-lg border ${mood === mood ? 'border-emerald-600 bg-emerald-50' : 'border-slate-200'}`}
+                  onClick={() => setMood(mood)}
                 >
                   {mood}
                 </button>
@@ -210,8 +276,8 @@ export default function NewJournalEntry({ searchParams }) {
             <label className="block font-semibold mb-1">Confidence Score</label>
             <select
               className="border border-slate-200 rounded-lg px-2 py-1 text-base"
-              value={entry.confidenceScore}
-              onChange={e => handleChange('confidenceScore', e.target.value)}
+              value={confidenceScore || ""}
+              onChange={e => setConfidenceScore(e.target.value)}
             >
               <option value="">Select</option>
               {[1,2,3,4,5].map(n => (
@@ -223,8 +289,8 @@ export default function NewJournalEntry({ searchParams }) {
             <label className="block font-semibold mb-1">Next Step</label>
             <input
               className="w-full border border-slate-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              value={entry.nextStep}
-              onChange={e => handleChange('nextStep', e.target.value)}
+              value={nextStep || ""}
+              onChange={e => setNextStep(e.target.value)}
               placeholder="e.g. Review my plan next week"
               maxLength={100}
             />
@@ -239,7 +305,29 @@ export default function NewJournalEntry({ searchParams }) {
             </button>
             <button
               className="px-5 py-2 rounded-lg border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50"
-              onClick={() => { clearDraftEntry(); setEntry({ title: '', tags: [], actions: [], reflectionPrompt: '', reflectionText: '', mood: '', confidenceScore: '', nextStep: '' }); }}
+              onClick={() => {
+                clearDraftEntry();
+                setTags([]);
+                setWeekStart("");
+                setWeekEnd("");
+                setSipCurrent("");
+                setSipChanged(false);
+                setSipChange("");
+                setSipChangeReason("");
+                setExpenseDrift("");
+                setEmergency(false);
+                setEmergencyAmount("");
+                setEmergencyCategory("");
+                setDisciplineRating(3);
+                setActions([]);
+                setReflectionPrompt("");
+                setReflectionText("");
+                setMood("");
+                setConfidenceScore("");
+                setNextStep("");
+                setError("");
+                setSuccess("");
+              }}
               disabled={saving}
             >
               Clear Draft
@@ -248,7 +336,7 @@ export default function NewJournalEntry({ searchParams }) {
           {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
         </div>
         <div className="mt-8 text-xs text-slate-400 text-center">
-          Streak: {streak.streakCount} days. Your journal is private.
+          Streak: {streakCount} days. Your journal is private.
         </div>
       </div>
     </div>

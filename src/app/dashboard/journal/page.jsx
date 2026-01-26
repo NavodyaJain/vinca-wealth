@@ -1,226 +1,108 @@
+
 "use client";
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getAllJournalEntries, getDraftEntry } from '@/lib/journal/journalStorage';
-import { getJournalEntries as getJournalEntriesV1 } from '@/lib/journalStore';
-import { getJournalStreak } from '@/lib/journal/journalStreakStorage';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import JournalKpiRing from "@/components/journal/JournalKpiRing";
+import JournalSignals from "@/components/journal/JournalSignals";
+import JournalEntryList from "@/components/journal/JournalEntryList";
+import MonthlySummaryCards from "@/components/journal/MonthlySummaryCards";
+import { getJournalEntries, getMonthlySummaries } from "@/lib/journal/financialJournalStore";
+import { computeJourneyCompletion, computePlanHealthScore, computeDisciplineScore, computeSignals } from "@/lib/journal/financialJournalEngine";
 
-function formatDate(dateStr) {
-  const d = new Date(dateStr);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return d.toLocaleDateString();
-}
+export default function JournalDashboardPage() {
+	const router = useRouter();
+	const [entries, setEntries] = useState([]);
+	const [monthlySummaries, setMonthlySummaries] = useState([]);
+	// TODO: Replace with real readings from user profile/tools
+	const readings = {
+		requiredCorpus: 10000000,
+		expectedCorpus: 8500000,
+		sustainabilityFlag: true,
+		sipRequired: 25000,
+		sipCurrent: 20000,
+		healthStressResult: "risk"
+	};
+	const journey = {
+		journeyStartDate: "2022-01-01",
+		retirementDate: "2052-01-01"
+	};
 
-export default function JournalHome() {
-  const router = useRouter();
-  const [entries, setEntries] = useState([]);
-  const [draft, setDraft] = useState(null);
-  const [streak, setStreak] = useState({ streakCount: 0, lastSavedDateISO: null });
-  const [search, setSearch] = useState('');
-  const [tagFilter, setTagFilter] = useState('');
-  const [onlyVerified, setOnlyVerified] = useState(false);
+	useEffect(() => {
+		setEntries(getJournalEntries());
+		setMonthlySummaries(getMonthlySummaries());
+	}, []);
 
-  // Load and refresh entries
-  function loadEntries() {
-    // Get entries from both old and new keys
-    let oldEntries = getAllJournalEntries() || [];
-    let newEntries = getJournalEntriesV1() || [];
-    // Normalize date fields for sorting
-    const normalize = (e) => ({
-      ...e,
-      createdAtISO: e.createdAtISO || e.createdAt || '',
-      id: e.id || ''
-    });
-    oldEntries = oldEntries.map(normalize).filter(e => !e.isDraft);
-    newEntries = newEntries.map(normalize);
-    // Merge and deduplicate by id (prefer newEntries)
-    const allMap = new Map();
-    [...oldEntries, ...newEntries].forEach(e => {
-      if (!allMap.has(e.id)) allMap.set(e.id, e);
-    });
-    let all = Array.from(allMap.values());
-    all.sort((a, b) => (b.createdAtISO || '').localeCompare(a.createdAtISO || ''));
-    setEntries(all);
-    setDraft(getDraftEntry());
-    setStreak(getJournalStreak());
-  }
+	// KPIs
+	const journeyCompletion = computeJourneyCompletion(journey);
 
-  useEffect(() => {
-    loadEntries();
-    window.addEventListener('storage', loadEntries);
-    return () => window.removeEventListener('storage', loadEntries);
-  }, []);
-
-  // Compute this week's entries
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 6);
-  const weekCount = entries.filter(e => new Date(e.createdAtISO) >= weekAgo).length;
-
-  // Tag list for filter
-  const allTags = Array.from(new Set(entries.flatMap(e => e.tags || [])));
+	// Retirement Corpus Generated KPI
+	const corpusPercent = readings.expectedCorpus && readings.requiredCorpus
+		? Math.max(0, Math.min(100, Math.round((readings.expectedCorpus / readings.requiredCorpus) * 100)))
+		: 0;
+	function formatINR(num) {
+		if (!num && num !== 0) return "₹0";
+		return `₹${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+	}
+	const corpusText = `${corpusPercent}% of corpus generated`;
+	const corpusSubtext = `${formatINR(readings.expectedCorpus)} of ${formatINR(readings.requiredCorpus)} goal`;
 
 
-  // Separate challenge completion entries
-  const challengeEntries = entries.filter(e => e.type === 'challenge_completion');
-  let filtered = entries.filter(e =>
-    (!search || (e.title && e.title.toLowerCase().includes(search.toLowerCase()))) &&
-    (!tagFilter || (e.tags && e.tags.includes(tagFilter))) &&
-    (!onlyVerified || (e.actions && e.actions.some(a => a.isVerified))) &&
-    (e.type !== 'challenge_completion')
-  );
+	// Monthly SIP Goal KPI
+	// Assume readings.sipRequired is the current monthly SIP goal
+	// Assume readings.sipIncreaseRate is the % increase rate per month (from initial setup)
+	const sipGoal = readings.sipRequired || 0;
+	const sipIncreaseRate = readings.sipIncreaseRate || 0.05; // default 5% monthly
+	const sipGoalText = `Monthly SIP Goal`;
+	const sipGoalSubtext = `₹${sipGoal.toLocaleString()} (↑ ${Math.round(sipIncreaseRate * 100)}%/mo)`;
 
-  return (
-    <div className="w-full max-w-none px-0 py-6">
-      <div className="px-4 sm:px-8 mb-6 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Retirement Journal</h1>
-          <p className="text-slate-600">Track progress, build clarity, and stay consistent.</p>
-        </div>
-        <div className="flex gap-2 mt-2 sm:mt-0">
-          <button
-            className="px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
-            onClick={() => router.push('/dashboard/journal/new')}
-          >
-            Start today’s entry
-          </button>
-          {draft && (
-            <button
-              className="px-5 py-2 rounded-lg border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50"
-              onClick={() => router.push('/dashboard/journal/new')}
-            >
-              Resume draft
-            </button>
-          )}
-        </div>
-      </div>
-      {/* Streak + Momentum */}
-      <div className="px-4 sm:px-8 mb-6">
-        <div className="bg-white border border-emerald-200 rounded-2xl shadow-sm p-4 flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex-1">
-            <div className="font-semibold text-emerald-700">Current streak: {streak.streakCount} days</div>
-            <div className="text-xs text-slate-500">This week: {weekCount} entries saved</div>
-            <div className="text-xs text-slate-400 mt-1">Your journal is private by default.</div>
-          </div>
-        </div>
-      </div>
-      {/* Quick Suggestions */}
-      <div className="px-4 sm:px-8 mb-6 flex gap-3 flex-wrap">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
-          <div className="font-semibold text-slate-800 mb-1">Start a challenge</div>
-          <div className="text-xs text-slate-500">Build momentum with guided steps</div>
-        </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/financial-readiness')}>
-          <div className="font-semibold text-slate-800 mb-1">Run Financial Readiness</div>
-          <div className="text-xs text-slate-500">Check your plan’s health</div>
-        </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/pricing')}>
-          <div className="font-semibold text-slate-800 mb-1">Upgrade to Pro</div>
-          <div className="text-xs text-slate-500">Unlock premium features</div>
-        </div>
-      </div>
-      {/* Filters */}
-      <div className="px-4 sm:px-8 mb-4 flex flex-wrap gap-2 items-center">
-        <input
-          type="text"
-          placeholder="Search title..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="border border-slate-200 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-200"
-        />
-        <select
-          value={tagFilter}
-          onChange={e => setTagFilter(e.target.value)}
-          className="border border-slate-200 rounded-lg px-2 py-1 text-sm"
-        >
-          <option value="">All tags</option>
-          {allTags.map(tag => (
-            <option key={tag} value={tag}>{tag}</option>
-          ))}
-        </select>
-        <label className="flex items-center gap-1 text-xs text-slate-600">
-          <input
-            type="checkbox"
-            checked={onlyVerified}
-            onChange={e => setOnlyVerified(e.target.checked)}
-            className="accent-emerald-600"
-          />
-          Only verified actions
-        </label>
-      </div>
-      {/* Challenge Completions Section */}
-      {challengeEntries.length > 0 && (
-        <div className="px-4 sm:px-8 mb-8">
-          <div className="font-semibold text-emerald-700 mb-2 text-lg flex items-center gap-2">
-            <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2l4-4m5 2a9 9 0 11-18 0a9 9 0 0118 0z" /></svg>
-            Completed Challenges
-          </div>
-          <div className="flex flex-col gap-3">
-            {challengeEntries.map(entry => (
-              <div
-                key={entry.id}
-                className="bg-emerald-50 border border-emerald-200 rounded-2xl shadow p-5 flex flex-col sm:flex-row items-center gap-3 cursor-pointer hover:bg-emerald-100"
-                onClick={() => router.push(`/dashboard/journal/${entry.id}`)}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 items-center mb-1">
-                    <span className="font-semibold text-emerald-900 text-base">{entry.title}</span>
-                  </div>
-                  <div className="text-xs text-emerald-700 mb-1">{formatDate(entry.createdAtISO)}</div>
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {(entry.tags || []).map(tag => (
-                      <span key={tag} className="bg-white text-emerald-700 border border-emerald-200 text-xs rounded px-2 py-0.5">{tag}</span>
-                    ))}
-                  </div>
-                  <div className="text-xs text-emerald-800">{entry.actions?.length || 0} tasks completed</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+	return (
+		<div className="w-full px-0 sm:px-6 py-8">
+			{/* Header Section */}
+			<div className="flex flex-row items-center justify-between mb-8">
+				<div>
+					<div className="text-2xl font-bold text-slate-900">Financial Journal</div>
+					<div className="text-base text-slate-500">Weekly check-ins to track discipline + retirement progress.</div>
+				</div>
+				<div className="flex items-center gap-3">
+					{/* Bell icon placeholder */}
+					<button className="p-2 rounded-full bg-slate-100 text-slate-500 hover:text-emerald-700">
+						<svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+					</button>
+					<button
+						className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-base shadow hover:bg-emerald-700"
+						onClick={() => router.push("/dashboard/journal/new")}
+					>
+						+ Add New Entry
+					</button>
+				</div>
+			</div>
 
-      {/* Entries Timeline */}
-      <div className="px-4 sm:px-8">
-        {filtered.length === 0 ? (
-          <div className="text-center text-slate-400 py-12">
-            No journal entries yet.<br />
-            <button
-              className="mt-4 px-5 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
-              onClick={() => router.push('/dashboard/journal/new')}
-            >
-              Start today’s entry
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map(entry => (
-              <div
-                key={entry.id}
-                className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 flex flex-col sm:flex-row items-center gap-3 cursor-pointer hover:bg-emerald-50"
-                onClick={() => router.push(`/dashboard/journal/${entry.id}`)}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 items-center mb-1">
-                    <span className="font-semibold text-slate-900 text-base">{entry.title}</span>
-                    {entry.mood && <span className="bg-slate-100 text-slate-600 text-xs rounded px-2 py-0.5">{entry.mood}</span>}
-                  </div>
-                  <div className="text-xs text-slate-500 mb-1">{formatDate(entry.createdAtISO)}</div>
-                  <div className="flex flex-wrap gap-1 mb-1">
-                    {(entry.tags || []).map(tag => (
-                      <span key={tag} className="bg-emerald-50 text-emerald-700 text-xs rounded px-2 py-0.5">{tag}</span>
-                    ))}
-                  </div>
-                  <div className="text-xs text-slate-400">{entry.actions?.length || 0} actions</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+			{/* KPI Dashboard */}
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+				<JournalKpiRing
+					value={journeyCompletion}
+					label="Journey Completion"
+					subtext={`Time left: 26 years, 0 months`}
+				/>
+				<JournalKpiRing
+					value={corpusPercent}
+					label={corpusText}
+					subtext={corpusSubtext}
+				/>
+				<div className="flex flex-col items-center bg-white rounded-2xl shadow-md p-6 min-w-[180px] justify-center">
+					<div className="text-lg font-semibold text-slate-800 mb-1">This Month's SIP Goal</div>
+					<div className="text-3xl font-bold text-emerald-700 mb-2">₹{sipGoal.toLocaleString()}</div>
+					<div className="text-xs text-slate-500">{sipGoalSubtext}</div>
+				</div>
+			</div>
+
+
+
+			{/* Weekly Entry List */}
+			<JournalEntryList entries={entries} />
+
+			{/* Monthly Summary Section */}
+			<MonthlySummaryCards summaries={monthlySummaries} />
+		</div>
+	);
 }
