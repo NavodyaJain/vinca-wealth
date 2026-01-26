@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getChallenges, getChallengeById } from '@/lib/challenges/challengesData';
 import { getActiveChallenge, startChallenge, stopChallenge, getChallengeProgress } from '@/lib/challenges/challengesStorage';
-import { getActiveTemplateId } from '@/lib/templates/templatesStorage';
+import roleModelTemplates from '@/lib/templates/roleModelTemplates';
 import ChallengeCard from '@/components/shared/ChallengeCard';
 import ChallengeProgressBar from '@/components/shared/ChallengeProgressBar';
 
@@ -13,6 +13,7 @@ export default function ChallengesPage() {
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [progress, setProgress] = useState(null);
   const [templateId, setTemplateId] = useState(null);
+  const [roleModel, setRoleModel] = useState(null);
   const [allChallenges, setAllChallenges] = useState([]);
 
   useEffect(() => {
@@ -20,7 +21,17 @@ export default function ChallengesPage() {
     const ac = getActiveChallenge();
     setActiveChallenge(ac);
     if (ac) setProgress(getChallengeProgress(ac.challengeId));
-    setTemplateId(getActiveTemplateId());
+    // Get template from query param or localStorage
+    let tid = null;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      tid = urlParams.get('template') || localStorage.getItem('vinca_selected_role_model_template');
+    }
+    setTemplateId(tid);
+    if (tid) {
+      const rm = roleModelTemplates.find(t => t.id === tid);
+      setRoleModel(rm);
+    }
   }, []);
 
   function handleStart(challenge) {
@@ -37,8 +48,8 @@ export default function ChallengesPage() {
 
   // Recommended challenge logic
   let recommended = null;
-  if (templateId) {
-    recommended = allChallenges.find(c => c.id.startsWith(templateId.split('_')[0]));
+  if (roleModel) {
+    recommended = allChallenges.find(c => c.id === roleModel.recommendedChallengePackId);
   }
 
   return (
@@ -46,6 +57,19 @@ export default function ChallengesPage() {
       <div className="px-4 sm:px-8 mb-6">
         <h1 className="text-2xl font-bold text-slate-900 mb-1">Challenges</h1>
         <p className="text-slate-600 mb-4">Complete small steps daily to build a retirement-ready plan.</p>
+        {roleModel && (
+          <div className="bg-linear-to-r from-emerald-50 via-white to-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-emerald-700 mb-1">Following {roleModel.name}'s journey</div>
+              <div className="text-lg font-bold text-slate-900 mb-1">Recommended path: {recommended?.title || 'Challenge'}</div>
+              <div className="text-xs text-slate-500 mb-2">{roleModel.heroLine}</div>
+            </div>
+            <button
+              className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition"
+              onClick={() => window.location.href = `/dashboard/templates/${roleModel.id}`}
+            >View role model journey</button>
+          </div>
+        )}
       </div>
       {/* Active Challenge Section */}
       {activeChallenge && progress && (
@@ -92,6 +116,7 @@ export default function ChallengesPage() {
             activeChallengeId={activeChallenge?.challengeId}
             onStart={handleStart}
             disableStart={!!activeChallenge}
+            highlight={true}
           />
         </div>
       )}
