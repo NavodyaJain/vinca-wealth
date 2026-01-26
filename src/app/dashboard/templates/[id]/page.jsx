@@ -80,14 +80,7 @@ export default function RoleModelJourneyPage() {
           </div>
         ))}
       </div>
-      <div className="flex gap-4 mt-8">
-        <button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg px-4 py-3 text-lg transition" onClick={followJourney}>
-          Follow this journey (Start Challenge)
-        </button>
-        <button className="flex-1 border border-emerald-600 text-emerald-700 font-semibold rounded-lg px-4 py-3 text-lg hover:bg-emerald-50 transition" onClick={saveForLater}>
-          Save for later
-        </button>
-      </div>
+      {/* Action buttons removed as requested */}
     </div>
   );
 }

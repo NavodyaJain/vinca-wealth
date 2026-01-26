@@ -99,19 +99,7 @@ export default function TemplatesPage() {
               <button
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg px-3 py-2 text-sm transition"
                 onClick={() => router.push(`/dashboard/templates/${template.id}`)}
-              >View Journey</button>
-              <button
-                className="flex-1 border border-emerald-600 text-emerald-700 font-semibold rounded-lg px-3 py-2 text-sm hover:bg-emerald-50 transition"
-                onClick={() => {
-                  // Save for later
-                  const saved = JSON.parse(localStorage.getItem('vinca_saved_role_models') || '[]');
-                  if (!saved.includes(template.id)) {
-                    const updated = [...saved, template.id];
-                    localStorage.setItem('vinca_saved_role_models', JSON.stringify(updated));
-                    setSavedRoleModels(updated);
-                  }
-                }}
-              >Save for later</button>
+              >View Story</button>
             </div>
           </div>
         ))}
