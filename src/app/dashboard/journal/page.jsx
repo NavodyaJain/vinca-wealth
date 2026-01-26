@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getAllJournalEntries, getDraftEntry } from '@/lib/journal/journalStorage';
+import { getJournalEntries as getJournalEntriesV1 } from '@/lib/journalStore';
 import { getJournalStreak } from '@/lib/journal/journalStreakStorage';
 
 function formatDate(dateStr) {
@@ -25,8 +26,23 @@ export default function JournalHome() {
 
   // Load and refresh entries
   function loadEntries() {
-    let all = getAllJournalEntries();
-    all = all.filter(e => !e.isDraft);
+    // Get entries from both old and new keys
+    let oldEntries = getAllJournalEntries() || [];
+    let newEntries = getJournalEntriesV1() || [];
+    // Normalize date fields for sorting
+    const normalize = (e) => ({
+      ...e,
+      createdAtISO: e.createdAtISO || e.createdAt || '',
+      id: e.id || ''
+    });
+    oldEntries = oldEntries.map(normalize).filter(e => !e.isDraft);
+    newEntries = newEntries.map(normalize);
+    // Merge and deduplicate by id (prefer newEntries)
+    const allMap = new Map();
+    [...oldEntries, ...newEntries].forEach(e => {
+      if (!allMap.has(e.id)) allMap.set(e.id, e);
+    });
+    let all = Array.from(allMap.values());
     all.sort((a, b) => (b.createdAtISO || '').localeCompare(a.createdAtISO || ''));
     setEntries(all);
     setDraft(getDraftEntry());
@@ -89,15 +105,15 @@ export default function JournalHome() {
       </div>
       {/* Quick Suggestions */}
       <div className="px-4 sm:px-8 mb-6 flex gap-3 flex-wrap">
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-[180px] text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
           <div className="font-semibold text-slate-800 mb-1">Start a challenge</div>
           <div className="text-xs text-slate-500">Build momentum with guided steps</div>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-[180px] text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/financial-readiness')}>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/financial-readiness')}>
           <div className="font-semibold text-slate-800 mb-1">Run Financial Readiness</div>
           <div className="text-xs text-slate-500">Check your plan’s health</div>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-[180px] text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/pricing')}>
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex-1 min-w-45 text-center cursor-pointer hover:bg-emerald-50" onClick={() => router.push('/dashboard/pricing')}>
           <div className="font-semibold text-slate-800 mb-1">Upgrade to Pro</div>
           <div className="text-xs text-slate-500">Unlock premium features</div>
         </div>
