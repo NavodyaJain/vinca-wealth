@@ -25,10 +25,13 @@ const quickAnswers = [
   "Plan feels unrealistic"
 ];
 
+import { use } from 'react';
+
 export default function NewJournalEntry({ searchParams }) {
   const router = useRouter();
-  const prefillChallengeId = searchParams?.challengeId || null;
-  const prefillDay = searchParams?.day || null;
+  const params = use(searchParams);
+  const prefillChallengeId = params?.challengeId || null;
+  const prefillDay = params?.day || null;
 
   const [entry, setEntry] = useState({
     title: '',
