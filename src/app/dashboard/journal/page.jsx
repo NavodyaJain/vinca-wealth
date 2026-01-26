@@ -63,10 +63,14 @@ export default function JournalHome() {
   // Tag list for filter
   const allTags = Array.from(new Set(entries.flatMap(e => e.tags || [])));
 
+
+  // Separate challenge completion entries
+  const challengeEntries = entries.filter(e => e.type === 'challenge_completion');
   let filtered = entries.filter(e =>
     (!search || (e.title && e.title.toLowerCase().includes(search.toLowerCase()))) &&
     (!tagFilter || (e.tags && e.tags.includes(tagFilter))) &&
-    (!onlyVerified || (e.actions && e.actions.some(a => a.isVerified)))
+    (!onlyVerified || (e.actions && e.actions.some(a => a.isVerified))) &&
+    (e.type !== 'challenge_completion')
   );
 
   return (
@@ -147,6 +151,38 @@ export default function JournalHome() {
           Only verified actions
         </label>
       </div>
+      {/* Challenge Completions Section */}
+      {challengeEntries.length > 0 && (
+        <div className="px-4 sm:px-8 mb-8">
+          <div className="font-semibold text-emerald-700 mb-2 text-lg flex items-center gap-2">
+            <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2l4-4m5 2a9 9 0 11-18 0a9 9 0 0118 0z" /></svg>
+            Completed Challenges
+          </div>
+          <div className="flex flex-col gap-3">
+            {challengeEntries.map(entry => (
+              <div
+                key={entry.id}
+                className="bg-emerald-50 border border-emerald-200 rounded-2xl shadow p-5 flex flex-col sm:flex-row items-center gap-3 cursor-pointer hover:bg-emerald-100"
+                onClick={() => router.push(`/dashboard/journal/${entry.id}`)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex gap-2 items-center mb-1">
+                    <span className="font-semibold text-emerald-900 text-base">{entry.title}</span>
+                  </div>
+                  <div className="text-xs text-emerald-700 mb-1">{formatDate(entry.createdAtISO)}</div>
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {(entry.tags || []).map(tag => (
+                      <span key={tag} className="bg-white text-emerald-700 border border-emerald-200 text-xs rounded px-2 py-0.5">{tag}</span>
+                    ))}
+                  </div>
+                  <div className="text-xs text-emerald-800">{entry.actions?.length || 0} tasks completed</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Entries Timeline */}
       <div className="px-4 sm:px-8">
         {filtered.length === 0 ? (

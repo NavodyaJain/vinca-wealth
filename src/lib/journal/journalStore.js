@@ -1,0 +1,41 @@
+// src/lib/journal/journalStore.js
+const JOURNAL_KEY = "vinca_journal_entries_v1";
+
+export function getJournalEntries() {
+  try {
+    const raw = localStorage.getItem(JOURNAL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveJournalEntries(entries) {
+  localStorage.setItem(JOURNAL_KEY, JSON.stringify(entries));
+}
+
+export function addJournalEntry(entry) {
+  const entries = getJournalEntries();
+  if (!entries.find(e => e.id === entry.id)) {
+    entries.unshift(entry);
+    saveJournalEntries(entries);
+  }
+}
+
+export function hasChallengeCompletionEntry(challengeId) {
+  const entries = getJournalEntries();
+  return entries.some(e => e.type === 'challenge_completion' && e.meta && e.meta.challengeId === challengeId);
+}
+
+export function createChallengeCompletionEntry({ challenge }) {
+  return {
+    id: `jrnl_${challenge.id}_${Date.now()}`,
+    type: "challenge_completion",
+    createdAt: new Date().toISOString(),
+    title: `Completed: ${challenge.title}`,
+    summary: "Challenge completed successfully.",
+    tags: ["Challenge", challenge.cadence],
+    actions: challenge.tasks.map(t => ({ label: t.title, verified: true })),
+    meta: { challengeId: challenge.id }
+  };
+}
