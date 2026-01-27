@@ -1,108 +1,97 @@
 
 "use client";
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import JournalKpiRing from "@/components/journal/JournalKpiRing";
-import JournalSignals from "@/components/journal/JournalSignals";
-import JournalEntryList from "@/components/journal/JournalEntryList";
-import MonthlySummaryCards from "@/components/journal/MonthlySummaryCards";
-import { getJournalEntries, getMonthlySummaries } from "@/lib/journal/financialJournalStore";
-import { computeJourneyCompletion, computePlanHealthScore, computeDisciplineScore, computeSignals } from "@/lib/journal/financialJournalEngine";
+import JourneyCompletionCard from "@/components/journal/JourneyCompletionCard";
+import CorpusGeneratedCard from "@/components/journal/CorpusGeneratedCard";
+import CalendarHeader from "@/components/journal/CalendarHeader";
+import CalendarGrid from "@/components/journal/CalendarGrid";
+import AddEntryModal from "@/components/journal/AddEntryModal";
+import YearSelector from "@/components/journal/YearSelector";
+import YearCalendarGrid from "@/components/journal/YearCalendarGrid";
+import React, { useState } from "react";
+import JourneySummaryTabs from "@/components/journal/JourneySummaryTabs";
 
 export default function JournalDashboardPage() {
-	const router = useRouter();
-	const [entries, setEntries] = useState([]);
-	const [monthlySummaries, setMonthlySummaries] = useState([]);
-	// TODO: Replace with real readings from user profile/tools
-	const readings = {
-		requiredCorpus: 10000000,
-		expectedCorpus: 8500000,
-		sustainabilityFlag: true,
-		sipRequired: 25000,
-		sipCurrent: 20000,
-		healthStressResult: "risk"
-	};
-	const journey = {
-		journeyStartDate: "2022-01-01",
-		retirementDate: "2052-01-01"
-	};
+	const today = new Date();
+	const currentYear = today.getFullYear();
+	const currentMonth = today.getMonth();
+	const [selectedDate, setSelectedDate] = useState(null);
+	const [addEntryOpen, setAddEntryOpen] = useState(false);
+	const [selectedYear, setSelectedYear] = useState(currentYear);
 
-	useEffect(() => {
-		setEntries(getJournalEntries());
-		setMonthlySummaries(getMonthlySummaries());
-	}, []);
-
-	// KPIs
-	const journeyCompletion = computeJourneyCompletion(journey);
-
-	// Retirement Corpus Generated KPI
-	const corpusPercent = readings.expectedCorpus && readings.requiredCorpus
-		? Math.max(0, Math.min(100, Math.round((readings.expectedCorpus / readings.requiredCorpus) * 100)))
-		: 0;
-	function formatINR(num) {
-		if (!num && num !== 0) return "₹0";
-		return `₹${num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+	// Only show Add Entry if a valid, actionable date is selected (not idle/null)
+	function handleAddEntry() {
+		if (selectedDate) setAddEntryOpen(true);
 	}
-	const corpusText = `${corpusPercent}% of corpus generated`;
-	const corpusSubtext = `${formatINR(readings.expectedCorpus)} of ${formatINR(readings.requiredCorpus)} goal`;
 
+	// Helper to check if selectedDate is actionable (not idle/null)
+	function isDateActionable(date) {
+		if (!date) return false;
+		// Use getDateState to check if the selected date is actionable
+		// Dummy data for now; replace with real data from context/props
+		const commitments = [];
+		const entries = [];
+		const todayStr = new Date().toISOString().slice(0, 10);
+		const state = require("@/lib/journal/getDateState").getDateState(date, commitments, entries, todayStr);
+		return state !== "idle";
+	}
 
-	// Monthly SIP Goal KPI
-	// Assume readings.sipRequired is the current monthly SIP goal
-	// Assume readings.sipIncreaseRate is the % increase rate per month (from initial setup)
-	const sipGoal = readings.sipRequired || 0;
-	const sipIncreaseRate = readings.sipIncreaseRate || 0.05; // default 5% monthly
-	const sipGoalText = `Monthly SIP Goal`;
-	const sipGoalSubtext = `₹${sipGoal.toLocaleString()} (↑ ${Math.round(sipIncreaseRate * 100)}%/mo)`;
+	// Only one year visible at a time
+	const years = [currentYear - 1, currentYear, currentYear + 1];
 
 	return (
-		<div className="w-full px-0 sm:px-6 py-8">
-			{/* Header Section */}
-			<div className="flex flex-row items-center justify-between mb-8">
-				<div>
-					<div className="text-2xl font-bold text-slate-900">Financial Journal</div>
-					<div className="text-base text-slate-500">Weekly check-ins to track discipline + retirement progress.</div>
-				</div>
-				<div className="flex items-center gap-3">
-					{/* Bell icon placeholder */}
-					<button className="p-2 rounded-full bg-slate-100 text-slate-500 hover:text-emerald-700">
-						<svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-					</button>
+		<div className="w-full px-0 sm:px-6 py-8 max-w-5xl mx-auto">
+			{/* 1️⃣ PAGE HEADER */}
+			<div className="journal-header mb-8">
+				<h1 className="text-3xl font-bold text-slate-900">Retirement Execution Journal</h1>
+			</div>
+
+			{/* 2️⃣ KPI STRIP */}
+			<div className="journal-kpis grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+				<JourneyCompletionCard />
+				<CorpusGeneratedCard />
+			</div>
+
+			{/* 3️⃣ CURRENT MONTH EXECUTION CALENDAR */}
+			<div className="execution-calendar mb-12">
+				<CalendarHeader />
+				<CalendarGrid
+					year={currentYear}
+					month={currentMonth}
+					selectedDate={selectedDate}
+					setSelectedDate={setSelectedDate}
+				/>
+				<div className="flex justify-end mt-4">
 					<button
-						className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-base shadow hover:bg-emerald-700"
-						onClick={() => router.push("/dashboard/journal/new")}
+						className={`px-4 py-2 rounded font-semibold transition-colors ${isDateActionable(selectedDate) ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"}`}
+						onClick={isDateActionable(selectedDate) ? handleAddEntry : undefined}
+						disabled={!isDateActionable(selectedDate)}
 					>
-						+ Add New Entry
+						Add Entry
 					</button>
 				</div>
 			</div>
 
-			{/* KPI Dashboard */}
-			<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-				<JournalKpiRing
-					value={journeyCompletion}
-					label="Journey Completion"
-					subtext={`Time left: 26 years, 0 months`}
+			{/* 4️⃣ ADD ENTRY MODAL/SECTION */}
+			<AddEntryModal open={addEntryOpen} date={selectedDate} onClose={() => setAddEntryOpen(false)} />
+
+			{/* 5️⃣ YEAR SELECTOR + HISTORICAL CALENDARS */}
+			<div className="calendar-history mb-12">
+				<YearSelector
+					years={years}
+					selected={selectedYear}
+					onSelect={setSelectedYear}
 				/>
-				<JournalKpiRing
-					value={corpusPercent}
-					label={corpusText}
-					subtext={corpusSubtext}
+				<YearCalendarGrid
+					year={selectedYear}
+					selectedDate={selectedDate}
+					setSelectedDate={setSelectedDate}
 				/>
-				<div className="flex flex-col items-center bg-white rounded-2xl shadow-md p-6 min-w-[180px] justify-center">
-					<div className="text-lg font-semibold text-slate-800 mb-1">This Month's SIP Goal</div>
-					<div className="text-3xl font-bold text-emerald-700 mb-2">₹{sipGoal.toLocaleString()}</div>
-					<div className="text-xs text-slate-500">{sipGoalSubtext}</div>
-				</div>
 			</div>
 
-
-
-			{/* Weekly Entry List */}
-			<JournalEntryList entries={entries} />
-
-			{/* Monthly Summary Section */}
-			<MonthlySummaryCards summaries={monthlySummaries} />
+			{/* 6️⃣ JOURNEY SUMMARY TABS */}
+			<div className="journey-summary">
+				<JourneySummaryTabs />
+			</div>
 		</div>
 	);
 }

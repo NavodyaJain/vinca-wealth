@@ -121,7 +121,7 @@ export default function ChallengeDetailPage() {
   }
   function handleLogToJournal() {
     if (!hasChallengeCompletionEntry(challenge.id)) {
-      createChallengeCompletionEntry(challenge.id, plan?.suggestedSIP || plan?.totalQuarterlySIP || plan?.totalAnnualSIP || 0);
+      createChallengeCompletionEntry({ challenge, phase: plan?.suggestedSIP || plan?.totalQuarterlySIP || plan?.totalAnnualSIP || 0 });
     }
     router.push("/dashboard/journal");
   }

@@ -1,5 +1,5 @@
-// src/app/dashboard/challenges/page.js
 "use client";
+// src/app/dashboard/challenges/page.js
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHALLENGES } from "@/lib/challenges/challengeCatalog";

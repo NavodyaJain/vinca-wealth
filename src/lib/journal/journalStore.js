@@ -42,7 +42,7 @@ export function createChallengeCompletionEntry({ challenge, phase }) {
     title: `Completed: ${challenge.title}`,
     summary: "Challenge completed successfully.",
     tags: ["Challenge", challenge.cadence],
-    actions: challenge.tasks.map(t => ({ label: t.title, verified: true })),
+    actions: Array.isArray(challenge.tasks) ? challenge.tasks.map(t => ({ label: t.title, verified: true })) : [],
     meta: { challengeId: challenge.id },
     phase: phase || 'foundation'
   };
