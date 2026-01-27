@@ -50,13 +50,14 @@ function getChallengeProgress(challengeId, challenge) {
   const state = getChallengeState();
   const progress = state.progress && state.progress[challengeId];
   if (!progress || !challenge) return { completedCount: 0, totalCount: 0, percent: 0 };
-  const totalCount = challenge.tasks.length;
-  const completedCount = challenge.tasks.filter(t => progress.tasks[t.id]).length;
-  return {
-    completedCount,
-    totalCount,
-    percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0
-  };
+  // New challenge structure: no tasks
+  if (progress.status === "completed") {
+    return { completedCount: 1, totalCount: 1, percent: 100 };
+  }
+  if (progress.status === "active") {
+    return { completedCount: 0, totalCount: 1, percent: 0 };
+  }
+  return { completedCount: 0, totalCount: 1, percent: 0 };
 }
 
 export {

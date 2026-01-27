@@ -5,26 +5,24 @@ import { useRouter } from "next/navigation";
 import { CHALLENGES } from "@/lib/challenges/challengeCatalog";
 import { getChallengeState } from "@/lib/challenges/challengeStore";
 
-const CADENCES = ["all", "weekly", "monthly", "quarterly", "yearly"];
+const CADENCES = ["monthly", "quarterly", "yearly"];
 
 export default function ChallengesHome() {
   const router = useRouter();
-  const [cadence, setCadence] = useState("all");
+  const [cadence, setCadence] = useState("monthly");
   const [challengeState, setChallengeState] = useState({});
 
   useEffect(() => {
     setChallengeState(getChallengeState());
   }, []);
 
-  const filtered = cadence === "all"
-    ? CHALLENGES
-    : CHALLENGES.filter(c => c.cadence === cadence);
+  const filtered = CHALLENGES.filter(c => c.cadence === cadence);
 
   return (
     <div className="w-full px-0 py-6">
       <div className="px-4 sm:px-8 mb-6">
         <h1 className="text-2xl font-bold text-slate-900 mb-1">Challenges</h1>
-        <p className="text-slate-600 mb-4">Build retirement discipline with weekly/monthly systems.</p>
+        <p className="text-slate-600 mb-4">Build retirement discipline with structured SIP commitment challenges.</p>
         <div className="flex gap-2 mb-4">
           {CADENCES.map(c => (
             <button
