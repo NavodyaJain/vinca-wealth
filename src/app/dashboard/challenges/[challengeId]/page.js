@@ -2,6 +2,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CHALLENGES, getChallengeById } from "@/lib/challenges/challengeCatalog";
+import ChallengeSummaryCardRow from "@/components/ChallengeSummaryCardRow";
 import {
   getChallengeState,
   saveChallengeState,
@@ -129,157 +130,412 @@ export default function ChallengeDetailPage() {
   // --- PREMIUM FINTECH UI ---
   // ...existing logic...
   // --- PREMIUM FINTECH UI ---
-  return (
-    <div className="w-full max-w-4xl mx-auto px-6 py-12 flex flex-col gap-10 items-center">
-      {/* 1️⃣ CHALLENGE BANNER (TOP HERO) */}
-      <div className="w-full bg-white rounded-3xl shadow-lg p-8 flex flex-col gap-4 items-center text-center">
-        <div className="flex flex-row items-center justify-center gap-4 mb-2">
-          <h1 className="text-4xl font-extrabold text-slate-900 flex-1">{challenge.title}</h1>
-          <span className="text-base font-semibold rounded-full px-4 py-1 bg-emerald-100 text-emerald-700">{challenge.typeLabel}</span>
-          <span className={`text-base font-semibold rounded-full px-4 py-1 ${status === "not_started" ? "bg-slate-100 text-slate-600" : status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-emerald-600 text-white"}`}>{status === "not_started" ? "Not Started" : status === "active" ? "In Progress" : "Completed"}</span>
-        </div>
-        <div className="flex flex-row justify-center gap-6 text-lg text-slate-700 mb-1">
-          {startDate && <div><span className="font-semibold">Start:</span> {startDate}</div>}
-          {endDate && <div><span className="font-semibold">End:</span> {endDate}</div>}
-        </div>
-        <div className="text-slate-500 text-xl font-medium italic mb-1">Build long-term retirement discipline through structured SIP execution.</div>
-      </div>
+    // --- Helper for month/quarter date ranges ---
+    function getMonthRange(start, monthOffset) {
+      const base = new Date(start);
+      const monthStart = new Date(base.getFullYear(), base.getMonth() + monthOffset, base.getDate());
+      const monthEnd = new Date(monthStart);
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      return {
+        label: monthStart.toLocaleString('default', { month: 'long', year: 'numeric' }),
+        range: `${monthStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} → ${monthEnd.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+        start: monthStart,
+        end: monthEnd
+      };
+    }
+    function getQuarterRange(start, quarterIdx) {
+      const base = new Date(start);
+      const qStart = new Date(base.getFullYear(), base.getMonth() + quarterIdx * 3, base.getDate());
+      const qEnd = new Date(qStart);
+      qEnd.setMonth(qEnd.getMonth() + 3);
+      return {
+        label: `Q${quarterIdx + 1} ${qStart.getFullYear()}`,
+        range: `${qStart.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} → ${qEnd.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`,
+        start: qStart,
+        end: qEnd
+      };
+    }
 
-      {/* 2️⃣ OBJECTIVE CARD */}
-      <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-2 items-center">
+    // --- Execution unit state model ---
+    // { [unitIdx]: { form: {...}, isOpen, isDirty, isSaved, isCompleted } }
+    const [units, setUnits] = useState({});
+    useEffect(() => {
+      if (status === "active" || status === "completed") {
+        const state = getChallengeState();
+        const saved = state.progress?.[challengeId]?.units || {};
+        setUnits(saved);
+      }
+    }, [challengeId, status]);
+
+    function updateUnit(unitIdx, patch) {
+      setUnits(prev => {
+        const next = { ...prev, [unitIdx]: { ...prev[unitIdx], ...patch, isDirty: true } };
+        return next;
+      });
+    }
+
+    function saveUnit(unitIdx) {
+      setUnits(prev => {
+        const next = { ...prev, [unitIdx]: { ...prev[unitIdx], isSaved: true, isCompleted: true, isDirty: false } };
+        // Persist
+        const state = getChallengeState();
+        state.progress[challengeId].units = next;
+        saveChallengeState(state);
+        return next;
+      });
+    }
+
+    function logToJournal(unitIdx, meta) {
+      const unit = units[unitIdx];
+      addJournalEntry({
+        challengeId,
+        challengeTitle: challenge.title,
+        period: meta.label,
+        range: meta.range,
+        quarter: meta.quarter,
+        answers: unit?.form
+      });
+      router.push("/dashboard/journal");
+    }
+
+    function toggleUnitOpen(unitIdx) {
+      setUnits(prev => ({ ...prev, [unitIdx]: { ...prev[unitIdx], isOpen: !prev[unitIdx]?.isOpen } }));
+    }
+
+    // --- UI ---
+    return (
+      <div className="w-full max-w-3xl mx-auto pl-4 pr-4 sm:pl-8 sm:pr-8 py-10 flex flex-col gap-10">
+        {/* 1️⃣ CHALLENGE HEADER */}
+        <div className="w-full bg-white rounded-2xl shadow p-7 flex flex-col gap-2 items-start">
+          <h1 className="text-3xl font-bold text-slate-900 mb-1">{challenge.title}</h1>
+          <div className="text-[16px] text-slate-700 mb-1">This challenge breaks your long-term retirement SIP into manageable execution sprints.</div>
+          <div className="text-sm mt-2">
+            {status === "completed" ? (
+              <span className="text-emerald-700 font-medium">Completed</span>
+            ) : status === "active" ? (
+              <span className="text-emerald-600 font-medium">In Progress</span>
+            ) : (
+              <span className="text-slate-400 font-medium">Not Started</span>
+            )}
+          </div>
+        </div>
+
+      {/* 2️⃣ OBJECTIVE CARD (REWRITTEN) */}
+      <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-2 items-start">
         <div className="text-lg font-bold text-slate-900 mb-2">Objective</div>
-        <div className="flex flex-row gap-8 text-base text-slate-700 justify-center">
-          <div><span className="font-semibold">Why:</span> {challenge.objective}</div>
-          <div><span className="font-semibold">Who:</span> {challenge.whoFor}</div>
-          <div><span className="font-semibold">Discipline:</span> {challenge.disciplineType}</div>
+        <div className="flex flex-row gap-8 text-base text-slate-700">
+          <div><span className="font-semibold">Why:</span> Reduce execution friction by focusing on a single, time-bound SIP commitment.</div>
+          <div><span className="font-semibold">Who:</span> Investors starting or restarting retirement investing.</div>
+          <div><span className="font-semibold">Discipline:</span> Salary-aligned SIP execution with clear completion criteria.</div>
         </div>
       </div>
 
-      {/* 3️⃣ HOW TO COMPLETE THIS CHALLENGE */}
-      <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-2 items-center">
-        <div className="text-lg font-bold text-slate-900 mb-2">How to complete this challenge</div>
-        {challenge.id === "monthly_sip_kickstart" && (
+      {/* 3️⃣ HOW TO COMPLETE (STANDARDIZED, ANNUAL) */}
+      <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-2 items-start">
+        <div className="text-lg font-bold text-slate-900 mb-2">How to complete</div>
+        {challenge.id === "annual_retirement_consistency" ? (
           <ul className="list-disc text-base text-slate-700 pl-6 text-left w-full max-w-2xl">
-            <li>A recommended monthly SIP amount is calculated from your saved retirement readings.</li>
-            <li>You must execute this SIP once within the salary month.</li>
-            <li>After SIP execution, mark the challenge as completed.</li>
-            <li>The challenge completes after one successful SIP confirmation.</li>
-          </ul>
-        )}
-        {challenge.id === "quarterly_sip_discipline" && (
-          <ul className="list-disc text-base text-slate-700 pl-6 text-left w-full max-w-2xl">
-            <li>A total Quarterly SIP commitment is calculated using your saved retirement readings.</li>
-            <li>This amount is automatically divided into 3 monthly SIP executions.</li>
-            <li>Each month, you must:
+            <li>Your annual SIP commitment is divided into quarterly and monthly execution sprints</li>
+            <li>Each month requires:
               <ul className="list-disc pl-6">
-                <li>Execute the SIP</li>
-                <li>Mark it as completed</li>
+                <li>SIP execution</li>
+                <li>Reflection & notes to track comfort, challenges, and discipline</li>
               </ul>
             </li>
-            <li>The challenge completes only when all 3 months are completed.</li>
+            <li>These reflections help you understand sustainability over time</li>
+            <li>Completion depends on consistent execution + tracking, not just investing once</li>
           </ul>
-        )}
-        {challenge.id === "annual_retirement_consistency" && (
+        ) : (
           <ul className="list-disc text-base text-slate-700 pl-6 text-left w-full max-w-2xl">
-            <li>A yearly SIP commitment is calculated using your saved retirement readings.</li>
-            <li>This amount is divided into 4 quarterly SIP targets.</li>
-            <li>Each quarter, you must:
-              <ul className="list-disc pl-6">
-                <li>Complete the SIP for that quarter</li>
-                <li>Mark the quarter as completed</li>
-              </ul>
-            </li>
-            <li>The challenge completes only when all 4 quarters are completed.</li>
+            <li>SIP amount is pre-calculated from your saved retirement plan</li>
+            <li>You must execute the SIP within the defined time window</li>
+            <li>Each execution confirms progress for this sprint</li>
+            <li>Completion is based on confirmed execution, not intent</li>
           </ul>
         )}
       </div>
 
-      {/* 4️⃣ NUMERIC INSIGHT CARDS */}
-      <div className="w-full flex flex-row gap-8 justify-center">
-        {/* Card 1: SIP Commitment */}
-        <div className="flex-1 bg-emerald-50 rounded-2xl shadow p-6 flex flex-col items-center">
-          <div className="text-xs text-slate-500 mb-1">
-            {challenge.id === "monthly_sip_kickstart"
-              ? "Suggested Monthly SIP"
-              : challenge.id === "annual_retirement_consistency"
-                ? "Annual SIP Commitment"
-                : "Quarterly SIP Commitment"}
-          </div>
-          <div className="text-3xl font-extrabold text-emerald-700">
-            ₹{
-              challenge.id === "monthly_sip_kickstart"
-                ? plan?.suggestedSIP || "-"
-                : challenge.id === "annual_retirement_consistency"
-                  ? plan?.totalAnnualSIP || "-"
-                  : plan?.totalQuarterlySIP || "-"}
-          </div>
-        </div>
-        {/* Card 2: Salary Month / SIP Completed Till Now */}
-        <div className="flex-1 bg-slate-50 rounded-2xl shadow p-6 flex flex-col items-center">
-          <div className="text-xs text-slate-500 mb-1">
-            {challenge.id === "monthly_sip_kickstart" ? "Salary Month" : "SIP Completed Till Now"}
-          </div>
-          <div className="text-3xl font-extrabold text-slate-900">
-            {challenge.id === "monthly_sip_kickstart"
-              ? plan?.monthLabel || "-"
-              : challenge.id === "annual_retirement_consistency"
-                ? (plan?.quarterlySIPs && phaseStatus.length > 0
-                    ? plan.quarterlySIPs.reduce((sum, amt, idx) => sum + (phaseStatus[idx] === "completed" ? amt : 0), 0)
-                    : 0)
-                : (plan?.monthlySIPs && phaseStatus.length > 0
-                    ? plan.monthlySIPs.reduce((sum, amt, idx) => sum + (phaseStatus[idx] === "completed" ? amt : 0), 0)
-                    : 0)}
-          </div>
-        </div>
-        {/* Card 3: Challenge Completion */}
-        <div className="flex-1 bg-emerald-50 rounded-2xl shadow p-6 flex flex-col items-center">
-          <div className="text-xs text-slate-500 mb-1">Challenge Completion</div>
-          <div className="text-3xl font-extrabold text-emerald-700">{phaseStatus.length > 0 ? `${Math.round(100 * phaseStatus.filter(s => s === "completed").length / phaseStatus.length)}%` : "0%"}</div>
-        </div>
-      </div>
+      {/* 4️⃣ EXECUTION FLOW (AFTER START) */}
+      {status === "active" || status === "completed" ? (
+        <>
+          {/* Execution Summary (Reusable, compact) */}
+          <ChallengeSummaryCardRow
+            startDate={startDate}
+            endDate={endDate}
+            sipAmount={challenge.id === "monthly_sip_kickstart" ? plan?.suggestedSIP || "-" : challenge.id === "quarterly_sip_discipline" ? plan?.totalQuarterlySIP || "-" : plan?.totalAnnualSIP || "-"}
+            status={status === "completed" ? "Completed" : status === "active" ? "In Progress" : "Current"}
+            className="mb-2 mt-1"
+          />
 
-      {/* 5️⃣ TIMELINE & CHECKLIST */}
-      <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-4 items-center">
-        <div className="text-lg font-bold text-slate-900 mb-2">Timeline & Checklist</div>
-        {challenge.id === "monthly_sip_kickstart" && (
-          <div className="flex flex-row items-center gap-4 justify-center">
-            <button className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-2xl font-bold transition ${phaseStatus[0] === "completed" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => handlePhaseMark(0, "completed")} disabled={phaseStatus[0] === "completed" || status !== "active"}>
-              {phaseStatus[0] === "completed" ? "✓" : ""}
-            </button>
-            <div className="flex flex-col items-start ml-2">
-              <span className="text-base text-slate-700 font-semibold">Monthly SIP Executed</span>
-              <span className="text-xs text-slate-500">Amount: ₹{plan?.suggestedSIP || "-"}</span>
-              <span className="text-xs text-slate-500">Month: {plan?.monthLabel || "-"}</span>
+          {/* Execution Units (Progressive) */}
+          {challenge.id === "monthly_sip_kickstart" && (
+            <div className="w-full mt-8">
+              {/* Only one execution unit */}
+              {(() => {
+                const { label, range } = getMonthRange(startDate, 0);
+                const unit = units[0] || { form: {}, isOpen: true, isDirty: false, isSaved: false, isCompleted: false };
+                const { form = {}, isOpen, isSaved, isCompleted } = unit;
+                // Required fields: completed, comfort, challenge
+                const canSave = form?.completed && form?.comfort && form?.challenge;
+                return (
+                  <div className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
+                      <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(0)}>{isOpen ? "Collapse" : "Expand"}</button>
+                    </div>
+                    <div className="text-slate-500 text-sm mb-1">{range}</div>
+                    <div className="text-slate-600 text-sm mb-2">Status: {isCompleted ? "Completed" : "Current"}</div>
+                    {isOpen && (
+                      <>
+                        {/* Reflection Form */}
+                        {!isCompleted ? (
+                          <div className="flex flex-col gap-3">
+                            <div className="text-slate-700 text-sm">SIP completed?</div>
+                            <div className="flex gap-2">
+                              {["yes","no"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
+                              ))}
+                            </div>
+                            <div className="text-slate-700 text-sm mt-2">Comfort level</div>
+                            <div className="flex gap-2">
+                              {["comfortable","slightly_stretched","difficult"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                              ))}
+                            </div>
+                            <div className="text-slate-700 text-sm mt-2">Challenge faced</div>
+                            <div className="flex flex-wrap gap-2">
+                              {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
+                              ))}
+                            </div>
+                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(0, { form: { ...form, notes: e.target.value } })}></textarea>
+                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(0)}>[ Save Progress ]</button>
+                            {isSaved && (
+                              <div className="flex flex-col gap-2 mt-2">
+                                <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
+                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(0, { label, range })}>Log this into Journal</button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
+                            <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(0, { label, range })}>View in Journal</button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
+          )}
+          {challenge.id === "quarterly_sip_discipline" && (
+            <div className="w-full mt-8">
+              {plan?.monthlySIPs?.map((amt, idx) => {
+                const { label, range } = getMonthRange(startDate, idx);
+                const unit = units[idx] || { form: {}, isOpen: idx === 0, isDirty: false, isSaved: false, isCompleted: false };
+                const { form = {}, isOpen, isSaved, isCompleted } = unit;
+                // Only current month is open, past read-only, future hidden
+                const prevCompleted = idx === 0 || (units[idx - 1] && units[idx - 1].isCompleted);
+                const isCurrent = !isCompleted && prevCompleted;
+                if (!isCompleted && !isCurrent && idx > 0) return null;
+                const canSave = form?.completed && form?.comfort && form?.challenge;
+                return (
+                  <div key={idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
+                      <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(idx)}>{isOpen ? "Collapse" : "Expand"}</button>
+                    </div>
+                    <div className="text-slate-500 text-sm mb-1">{range}</div>
+                    <div className="text-slate-600 text-sm mb-2">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</div>
+                    {isOpen && (
+                      <>
+                        {!isCompleted ? (
+                          <div className="flex flex-col gap-3">
+                            <div className="text-slate-700 text-sm">SIP completed?</div>
+                            <div className="flex gap-2">
+                              {["yes","no"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
+                              ))}
+                            </div>
+                            <div className="text-slate-700 text-sm mt-2">Comfort level</div>
+                            <div className="flex gap-2">
+                              {["comfortable","slightly_stretched","difficult"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                              ))}
+                            </div>
+                            <div className="text-slate-700 text-sm mt-2">Challenge faced</div>
+                            <div className="flex flex-wrap gap-2">
+                              {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
+                              ))}
+                            </div>
+                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(idx, { form: { ...form, notes: e.target.value } })}></textarea>
+                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(idx)}>[ Save Progress ]</button>
+                            {isSaved && (
+                              <div className="flex flex-col gap-2 mt-2">
+                                <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
+                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(idx, { label, range })}>Log this into Journal</button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
+                            <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(idx, { label, range })}>View in Journal</button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {challenge.id === "annual_retirement_consistency" && (
+            <div className="w-full mt-8">
+              {[0,1,2,3].map(qIdx => {
+                const quarterStartMonth = qIdx * 3;
+                const quarterCompleted = [0,1,2].every(m => units[quarterStartMonth + m] && units[quarterStartMonth + m].isCompleted);
+                const prevQuarterCompleted = qIdx === 0 || [0,1,2].every(m => units[quarterStartMonth - 3 + m] && units[quarterStartMonth - 3 + m].isCompleted);
+                const isCurrentQuarter = !quarterCompleted && prevQuarterCompleted;
+                if (!quarterCompleted && !isCurrentQuarter && qIdx > 0) return null;
+                const { label: qLabel, range: qRange } = getQuarterRange(startDate, qIdx);
+                return (
+                  <div key={qIdx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
+                    <div className="flex items-center gap-4 mb-2">
+                      <div className="font-semibold text-slate-900 text-lg">{qLabel}</div>
+                      <div className="text-slate-500 text-sm">{qRange}</div>
+                      <div className="text-slate-600 text-sm">Quarter SIP Commitment: ₹{plan?.quarterlySIPs ? plan.quarterlySIPs[qIdx] : "-"}</div>
+                      <div className="text-slate-500 text-sm">Status: {quarterCompleted ? "Completed" : isCurrentQuarter ? "In Progress" : "Pending"}</div>
+                    </div>
+                    {(isCurrentQuarter || quarterCompleted) && (
+                      <div className="flex flex-col gap-2 ml-4">
+                        {[0,1,2].map(mIdx => {
+                          const monthIdx = quarterStartMonth + mIdx;
+                          const { label, range } = getMonthRange(startDate, monthIdx);
+                          const unit = units[monthIdx] || { form: {}, isOpen: mIdx === 0, isDirty: false, isSaved: false, isCompleted: false };
+                          const { form = {}, isOpen, isSaved, isCompleted } = unit;
+                          const prevCompleted = mIdx === 0 || (units[quarterStartMonth + mIdx - 1] && units[quarterStartMonth + mIdx - 1].isCompleted);
+                          const isCurrent = !isCompleted && prevCompleted;
+                          if (!isCompleted && !isCurrent && mIdx > 0) return null;
+                          const canSave = form?.completed && form?.comfort && form?.challenge;
+                          return (
+                            <div key={mIdx} className="border border-slate-100 rounded-lg p-4 bg-slate-50 mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold text-slate-900 text-base mb-1">{label}</div>
+                                <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(monthIdx)}>{isOpen ? "Collapse" : "Expand"}</button>
+                              </div>
+                              <div className="text-slate-500 text-xs mb-1">{range}</div>
+                              <div className="text-slate-600 text-xs mb-2">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</div>
+                              {isOpen && (
+                                <>
+                                  {!isCompleted ? (
+                                    <div className="flex flex-col gap-3">
+                                      <div className="text-slate-700 text-xs">SIP completed?</div>
+                                      <div className="flex gap-2">
+                                        {["yes","no"].map(val => (
+                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
+                                        ))}
+                                      </div>
+                                      <div className="text-slate-700 text-xs mt-2">Comfort level</div>
+                                      <div className="flex gap-2">
+                                        {["comfortable","slightly_stretched","difficult"].map(val => (
+                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                                        ))}
+                                      </div>
+                                      <div className="text-slate-700 text-xs mt-2">Challenge faced</div>
+                                      <div className="flex flex-wrap gap-2">
+                                        {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
+                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
+                                        ))}
+                                      </div>
+                                      <textarea className="w-full mt-2 p-2 border rounded text-xs" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(monthIdx, { form: { ...form, notes: e.target.value } })}></textarea>
+                                      <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(monthIdx)}>[ Save Progress ]</button>
+                                      {isSaved && (
+                                        <div className="flex flex-col gap-2 mt-2">
+                                          <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
+                                          <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(monthIdx, { label, range, quarter: qLabel })}>Log this into Journal</button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col gap-2">
+                                      <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
+                                      <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(monthIdx, { label, range, quarter: qLabel })}>View in Journal</button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {/* 5️⃣ EXECUTION TIMELINE (ANNUAL, ONLY AFTER START) */}
+      {challenge.id === "annual_retirement_consistency" && status !== "not_started" && (
+        <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-6 items-start">
+          <div className="text-lg font-bold text-slate-900 mb-2">Execution Timeline</div>
+          <div className="flex flex-col gap-4 w-full">
+            {[...Array(12)].map((_, monthIdx) => {
+              const { label, range } = getMonthRange(startDate, monthIdx);
+              const reflection = reflections[monthIdx] || {};
+              const isCurrent = phaseStatus[monthIdx] === "active" || (phaseStatus[monthIdx] !== "completed" && !phaseStatus.slice(0, monthIdx).includes("active"));
+              const isCompleted = phaseStatus[monthIdx] === "completed";
+              const isFuture = phaseStatus.slice(0, monthIdx).some(s => s !== "completed");
+              return (
+                <div key={monthIdx} className={`flex flex-col gap-2 border border-slate-100 rounded-lg p-4 bg-slate-50 ${isCurrent ? "ring-2 ring-emerald-200" : ""}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-semibold text-slate-900">{label}</span>
+                    <span className="text-xs text-slate-500">{range}</span>
+                  </div>
+                  <div className="flex flex-col gap-2 ml-4">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-base font-bold transition ${isCompleted ? "bg-emerald-600 text-white border-emerald-600" : isCurrent ? "bg-white text-emerald-700 border-emerald-400" : "bg-slate-100 text-slate-400 border-slate-200"}`}>{isCompleted ? "✓" : monthIdx + 1}</span>
+                      <span className="text-slate-700 text-sm">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</span>
+                    </div>
+                    {/* Reflection prompts, only for current or completed months */}
+                    {(isCurrent || isCompleted) && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <div className="text-slate-700 text-sm">Have you completed this month’s SIP commitment?</div>
+                        <div className="flex gap-2">
+                          {["yes","no"].map(val => (
+                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, completed: val })}>{val === "yes" ? "Yes" : "No"}</button>
+                          ))}
+                        </div>
+                        <div className="text-slate-700 text-sm mt-2">Were you financially comfortable with this commitment?</div>
+                        <div className="flex gap-2">
+                          {["comfortable","slightly_stretched","difficult"].map(val => (
+                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, comfort: val })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                          ))}
+                        </div>
+                        <div className="text-slate-700 text-sm mt-2">Did you face any challenge?</div>
+                        <div className="flex flex-wrap gap-2">
+                          {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
+                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, challenge: val })}>
+                              {val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember about this month? (optional)" value={reflection.notes || ""} onChange={e => saveReflection(monthIdx, { ...reflection, notes: e.target.value })}></textarea>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-        {challenge.type === "quarterly" && (
-          <div className="flex flex-row gap-8 justify-center">
-            {plan?.monthlySIPs?.map((amt, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-2">
-                <button className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-2xl font-bold transition ${phaseStatus[idx] === "completed" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => handlePhaseMark(idx, "completed")} disabled={phaseStatus[idx] === "completed" || status !== "active"}>
-                  {phaseStatus[idx] === "completed" ? "✓" : ""}
-                </button>
-                <span className="text-xs text-slate-700">Month {idx+1}</span>
-                <span className="text-base font-bold text-emerald-700">₹{amt}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {challenge.id === "annual_retirement_consistency" && (
-          <div className="flex flex-row gap-8 justify-center">
-            {plan?.quarterlySIPs?.map((amt, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-2">
-                <button className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-2xl font-bold transition ${phaseStatus[idx] === "completed" ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => handlePhaseMark(idx, "completed")} disabled={phaseStatus[idx] === "completed" || status !== "active"}>
-                  {phaseStatus[idx] === "completed" ? "✓" : ""}
-                </button>
-                <span className="text-xs text-slate-700">Quarter {idx+1}</span>
-                <span className="text-base font-bold text-emerald-700">₹{amt}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* 6️⃣ START CHALLENGE LOGIC */}
       {status === "not_started" && (

@@ -5,64 +5,86 @@ import { useRouter } from "next/navigation";
 import { CHALLENGES } from "@/lib/challenges/challengeCatalog";
 import { getChallengeState } from "@/lib/challenges/challengeStore";
 
-const CADENCES = ["monthly", "quarterly", "yearly"];
 
 export default function ChallengesHome() {
   const router = useRouter();
-  const [cadence, setCadence] = useState("monthly");
-  const [challengeState, setChallengeState] = useState({});
 
+  const [challengeState, setChallengeState] = useState({});
   useEffect(() => {
     setChallengeState(getChallengeState());
   }, []);
 
-  const filtered = CHALLENGES.filter(c => c.cadence === cadence);
+  // Group challenges by cadence
+  const cadenceOrder = ["monthly", "quarterly", "yearly"];
+  const cadenceMeta = {
+    monthly: {
+      title: "Monthly Challenge",
+      description: "Short-term commitment to kick-start your retirement investing habit."
+    },
+    quarterly: {
+      title: "Quarterly Challenge",
+      description: "Build consistency and discipline across multiple salary cycles."
+    },
+    yearly: {
+      title: "Yearly Challenge",
+      description: "Long-term retirement execution discipline across the year."
+    }
+  };
+
+  // Group challenges by cadence
+  const grouped = cadenceOrder.map(cadence => ({
+    cadence,
+    challenges: CHALLENGES.filter(c => c.cadence === cadence)
+  }));
 
   return (
-    <div className="w-full px-0 py-6">
-      <div className="px-4 sm:px-8 mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">Challenges</h1>
-        <p className="text-slate-600 mb-4">Build retirement discipline with structured SIP commitment challenges.</p>
-        <div className="flex gap-2 mb-4">
-          {CADENCES.map(c => (
-            <button
-              key={c}
-              className={`px-3 py-1 rounded-full border text-sm font-medium ${cadence === c ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`}
-              onClick={() => setCadence(c)}
-            >
-              {c.charAt(0).toUpperCase() + c.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filtered.map(challenge => {
-            const progress = challengeState.progress?.[challenge.id];
-            const isActive = challengeState.activeChallengeId === challenge.id;
-            const isCompleted = progress?.status === "completed";
-            return (
-              <div
-                key={challenge.id}
-                className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 flex flex-col gap-2 cursor-pointer hover:bg-emerald-50"
-                onClick={() => router.push(`/dashboard/challenges/${challenge.id}`)}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-lg text-slate-900">{challenge.title}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">{challenge.cadence.charAt(0).toUpperCase() + challenge.cadence.slice(1)}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">{challenge.durationLabel}</span>
-                </div>
-                <div className="text-slate-600 text-sm mb-1">{challenge.bestFor}</div>
-                <div className="text-slate-700 text-sm mb-2">{challenge.description}</div>
-                {isCompleted ? (
-                  <div className="text-emerald-700 font-semibold">Completed ✅</div>
-                ) : isActive ? (
-                  <div className="text-emerald-600 font-semibold">In Progress</div>
-                ) : (
-                  <div className="text-slate-400 font-medium">Not started</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+    <div className="w-full min-h-screen bg-slate-50">
+      <div className="max-w-5xl mx-auto pl-2 pr-4 sm:pl-4 sm:pr-8 pt-8 pb-12">
+        <h1 className="text-3xl font-semibold text-slate-900 mb-2 tracking-tight">Challenges</h1>
+        <div className="mb-1 text-[17px] text-slate-800 font-medium">Convert long-term retirement investing into small, time-bound SIP execution sprints.</div>
+        <div className="mb-8 text-base text-slate-500 font-normal">Each challenge helps you focus on execution over a defined period — month, quarter, or year.</div>
+        {grouped.map((section, idx) => (
+          <section
+            key={section.cadence}
+            className={`w-full ${idx > 0 ? "mt-8" : ""} ${idx < grouped.length - 1 ? "pb-6 border-b border-slate-200" : "pb-0"}`}
+          >
+            <div className="flex flex-col gap-6">
+              {section.challenges.map(challenge => {
+                const progress = challengeState.progress?.[challenge.id];
+                const isActive = challengeState.activeChallengeId === challenge.id && progress?.status === "active";
+                const isCompleted = progress?.status === "completed";
+                let description = "";
+                if (challenge.id === "monthly_sip_kickstart") {
+                  description = "A 30-day execution sprint to start or restart your retirement SIP. Designed to help you convert intention into your first consistent monthly investment.";
+                } else if (challenge.id === "quarterly_sip_discipline") {
+                  description = "A 3-month execution sprint to maintain SIP discipline across multiple salary cycles. Helps you stay consistent even when expenses, distractions, or motivation fluctuate.";
+                } else if (challenge.id === "annual_retirement_consistency") {
+                  description = "A 12-month execution sprint to sustain long-term retirement investing without burnout. Focused on rhythm, continuity, and staying invested through all market and life phases.";
+                }
+                return (
+                  <div
+                    key={challenge.id}
+                    className="border border-slate-200 bg-white px-6 py-5 flex flex-col gap-2 cursor-pointer hover:bg-emerald-50 transition-all w-full"
+                    style={{ borderRadius: 16, boxShadow: "0 1px 6px 0 rgba(16, 185, 129, 0.03)" }}
+                    onClick={() => router.push(`/dashboard/challenges/${challenge.id}`)}
+                  >
+                    <div className="font-semibold text-lg text-slate-900 leading-tight mb-1">{challenge.title}</div>
+                    <div className="text-slate-500 text-[15px] mb-2 font-normal">{description}</div>
+                    <div className="mt-1">
+                      {isCompleted ? (
+                        <span className="text-emerald-700 font-medium text-sm" style={{ opacity: 0.85 }}>Completed</span>
+                      ) : isActive ? (
+                        <span className="text-emerald-600 font-medium text-sm" style={{ opacity: 0.85 }}>In Progress</span>
+                      ) : (
+                        <span className="text-slate-400 font-medium text-sm">Not Started</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );
