@@ -19,6 +19,15 @@ import {
 } from "@/lib/journal/journalStore";
 
 export default function ChallengeDetailPage() {
+  // --- Annual challenge: monthly reflections state ---
+  const [reflections, setReflections] = useState(() => Array(12).fill({}));
+  function saveReflection(monthIdx, patch) {
+    setReflections(prev => {
+      const next = [...prev];
+      next[monthIdx] = { ...next[monthIdx], ...patch };
+      return next;
+    });
+  }
     // Start Challenge logic
     function handleStart() {
       const today = new Date().toISOString().slice(0, 10);
@@ -332,210 +341,200 @@ export default function ChallengeDetailPage() {
           )}
           {challenge.id === "quarterly_sip_discipline" && (
             <div className="w-full mt-8">
-              {plan?.monthlySIPs?.map((amt, idx) => {
-                const { label, range } = getMonthRange(startDate, idx);
-                const unit = units[idx] || { form: {}, isOpen: idx === 0, isDirty: false, isSaved: false, isCompleted: false };
-                const { form = {}, isOpen, isSaved, isCompleted } = unit;
-                // Only current month is open, past read-only, future hidden
-                const prevCompleted = idx === 0 || (units[idx - 1] && units[idx - 1].isCompleted);
-                const isCurrent = !isCompleted && prevCompleted;
-                if (!isCompleted && !isCurrent && idx > 0) return null;
-                const canSave = form?.completed && form?.comfort && form?.challenge;
-                return (
-                  <div key={idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
-                      <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(idx)}>{isOpen ? "Collapse" : "Expand"}</button>
-                    </div>
-                    <div className="text-slate-500 text-sm mb-1">{range}</div>
-                    <div className="text-slate-600 text-sm mb-2">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</div>
-                    {isOpen && (
-                      <>
-                        {!isCompleted ? (
+              {(() => {
+                if (!plan?.monthlySIPs) return null;
+                // --- Progressive gating: only current and completed months, sorted DESC ---
+                const monthObjs = plan.monthlySIPs.map((amt, idx) => {
+                  const { label, range, start } = getMonthRange(startDate, idx);
+                  const unit = units[idx] || { form: {}, isOpen: idx === 0, isDirty: false, isSaved: false, isCompleted: false };
+                  const { form = {}, isOpen, isSaved, isCompleted } = unit;
+                  const prevCompleted = idx === 0 || (units[idx - 1] && units[idx - 1].isCompleted);
+                  const isCurrent = !isCompleted && prevCompleted;
+                  const isCompletedUnit = isCompleted;
+                  return { idx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && form?.comfort && form?.challenge };
+                });
+                // Sort descending by idx (monthIndex)
+                const sorted = [...monthObjs].sort((a, b) => b.idx - a.idx);
+                const current = sorted.find(m => m.isCurrent);
+                const completed = sorted.filter(m => m.isCompletedUnit);
+                return [
+                  current && (
+                    <div key={current.idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-slate-900 text-lg mb-1">{current.label}</div>
+                        <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(current.idx)}>{current.isOpen ? "Collapse" : "Expand"}</button>
+                      </div>
+                      <div className="text-slate-500 text-sm mb-1">{current.range}</div>
+                      <div className="text-slate-600 text-sm mb-2">Status: Current</div>
+                      {current.isOpen && (
+                        <>
                           <div className="flex flex-col gap-3">
                             <div className="text-slate-700 text-sm">SIP completed?</div>
                             <div className="flex gap-2">
                               {["yes","no"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
                               ))}
                             </div>
                             <div className="text-slate-700 text-sm mt-2">Comfort level</div>
                             <div className="flex gap-2">
                               {["comfortable","slightly_stretched","difficult"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
                               ))}
                             </div>
                             <div className="text-slate-700 text-sm mt-2">Challenge faced</div>
                             <div className="flex flex-wrap gap-2">
                               {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(idx, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
+                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
                               ))}
                             </div>
-                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(idx, { form: { ...form, notes: e.target.value } })}></textarea>
-                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(idx)}>[ Save Progress ]</button>
-                            {isSaved && (
+                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={current.form.notes || ""} onChange={e => updateUnit(current.idx, { form: { ...current.form, notes: e.target.value } })}></textarea>
+                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!current.canSave} onClick={() => saveUnit(current.idx)}>[ Save Progress ]</button>
+                            {current.isSaved && (
                               <div className="flex flex-col gap-2 mt-2">
                                 <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(idx, { label, range })}>Log this into Journal</button>
+                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(current.idx, { label: current.label, range: current.range })}>Log this into Journal</button>
                               </div>
                             )}
                           </div>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
-                            <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(idx, { label, range })}>View in Journal</button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                        </>
+                      )}
+                    </div>
+                  ),
+                  ...completed.map(({ idx, label, range, form, isOpen, isSaved, isCompleted }) => (
+                    <div key={idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4 opacity-80">
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
+                        <span className="ml-auto text-xs text-slate-400">Completed</span>
+                      </div>
+                      <div className="text-slate-500 text-sm mb-1">{range}</div>
+                      <div className="text-slate-600 text-sm mb-2">Status: Completed</div>
+                      {/* Collapsed by default, can expand if needed */}
+                      {false && isOpen && (
+                        <div className="flex flex-col gap-3"> ... </div>
+                      )}
+                    </div>
+                  ))
+                ];
+              })()}
             </div>
           )}
           {challenge.id === "annual_retirement_consistency" && (
             <div className="w-full mt-8">
-              {[0,1,2,3].map(qIdx => {
-                const quarterStartMonth = qIdx * 3;
-                const quarterCompleted = [0,1,2].every(m => units[quarterStartMonth + m] && units[quarterStartMonth + m].isCompleted);
-                const prevQuarterCompleted = qIdx === 0 || [0,1,2].every(m => units[quarterStartMonth - 3 + m] && units[quarterStartMonth - 3 + m].isCompleted);
-                const isCurrentQuarter = !quarterCompleted && prevQuarterCompleted;
-                if (!quarterCompleted && !isCurrentQuarter && qIdx > 0) return null;
-                const { label: qLabel, range: qRange } = getQuarterRange(startDate, qIdx);
-                return (
-                  <div key={qIdx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className="font-semibold text-slate-900 text-lg">{qLabel}</div>
-                      <div className="text-slate-500 text-sm">{qRange}</div>
-                      <div className="text-slate-600 text-sm">Quarter SIP Commitment: ₹{plan?.quarterlySIPs ? plan.quarterlySIPs[qIdx] : "-"}</div>
-                      <div className="text-slate-500 text-sm">Status: {quarterCompleted ? "Completed" : isCurrentQuarter ? "In Progress" : "Pending"}</div>
-                    </div>
-                    {(isCurrentQuarter || quarterCompleted) && (
-                      <div className="flex flex-col gap-2 ml-4">
-                        {[0,1,2].map(mIdx => {
-                          const monthIdx = quarterStartMonth + mIdx;
-                          const { label, range } = getMonthRange(startDate, monthIdx);
-                          const unit = units[monthIdx] || { form: {}, isOpen: mIdx === 0, isDirty: false, isSaved: false, isCompleted: false };
-                          const { form = {}, isOpen, isSaved, isCompleted } = unit;
-                          const prevCompleted = mIdx === 0 || (units[quarterStartMonth + mIdx - 1] && units[quarterStartMonth + mIdx - 1].isCompleted);
-                          const isCurrent = !isCompleted && prevCompleted;
-                          if (!isCompleted && !isCurrent && mIdx > 0) return null;
-                          const canSave = form?.completed && form?.comfort && form?.challenge;
-                          return (
-                            <div key={mIdx} className="border border-slate-100 rounded-lg p-4 bg-slate-50 mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="font-semibold text-slate-900 text-base mb-1">{label}</div>
-                                <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(monthIdx)}>{isOpen ? "Collapse" : "Expand"}</button>
-                              </div>
-                              <div className="text-slate-500 text-xs mb-1">{range}</div>
-                              <div className="text-slate-600 text-xs mb-2">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</div>
-                              {isOpen && (
-                                <>
-                                  {!isCompleted ? (
-                                    <div className="flex flex-col gap-3">
-                                      <div className="text-slate-700 text-xs">SIP completed?</div>
-                                      <div className="flex gap-2">
-                                        {["yes","no"].map(val => (
-                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
-                                        ))}
-                                      </div>
-                                      <div className="text-slate-700 text-xs mt-2">Comfort level</div>
-                                      <div className="flex gap-2">
-                                        {["comfortable","slightly_stretched","difficult"].map(val => (
-                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
-                                        ))}
-                                      </div>
-                                      <div className="text-slate-700 text-xs mt-2">Challenge faced</div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                                          <button key={val} className={`px-3 py-1 rounded-full border text-xs ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(monthIdx, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
-                                        ))}
-                                      </div>
-                                      <textarea className="w-full mt-2 p-2 border rounded text-xs" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(monthIdx, { form: { ...form, notes: e.target.value } })}></textarea>
-                                      <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(monthIdx)}>[ Save Progress ]</button>
-                                      {isSaved && (
-                                        <div className="flex flex-col gap-2 mt-2">
-                                          <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                          <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(monthIdx, { label, range, quarter: qLabel })}>Log this into Journal</button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="flex flex-col gap-2">
-                                      <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
-                                      <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(monthIdx, { label, range, quarter: qLabel })}>View in Journal</button>
+              {(() => {
+                // --- Progressive gating: only current and completed quarters ---
+                // --- Progressive gating: only current and completed quarters, sorted DESC ---
+                const quarterObjs = [0,1,2,3].map(qIdx => {
+                  const quarterStartMonth = qIdx * 3;
+                  const { start } = getQuarterRange(startDate, qIdx);
+                  const quarterCompleted = [0,1,2].every(m => units[quarterStartMonth + m] && units[quarterStartMonth + m].isCompleted);
+                  const prevQuarterCompleted = qIdx === 0 || [0,1,2].every(m => units[quarterStartMonth - 3 + m] && units[quarterStartMonth - 3 + m].isCompleted);
+                  const isCurrentQuarter = !quarterCompleted && prevQuarterCompleted;
+                  return { qIdx, quarterStartMonth, start, quarterCompleted, isCurrentQuarter };
+                });
+                // Sort descending by qIdx (quarterIndex)
+                const sortedQuarters = [...quarterObjs].sort((a, b) => b.qIdx - a.qIdx);
+                const currentQuarter = sortedQuarters.find(q => q.isCurrentQuarter);
+                const completedQuarters = sortedQuarters.filter(q => q.quarterCompleted);
+                return [
+                  currentQuarter && (() => {
+                    // Only show current and completed months in this quarter, sorted DESC
+                    const { qIdx, quarterStartMonth } = currentQuarter;
+                    const { label: qLabel, range: qRange } = getQuarterRange(startDate, qIdx);
+                    const monthObjs = [0,1,2].map(mIdx => {
+                      const monthIdx = quarterStartMonth + mIdx;
+                      const { label, range, start } = getMonthRange(startDate, monthIdx);
+                      const unit = units[monthIdx] || { form: {}, isOpen: mIdx === 0, isDirty: false, isSaved: false, isCompleted: false };
+                      const { form = {}, isOpen, isSaved, isCompleted } = unit;
+                      const prevCompleted = mIdx === 0 || (units[quarterStartMonth + mIdx - 1] && units[quarterStartMonth + mIdx - 1].isCompleted);
+                      const isCurrent = !isCompleted && prevCompleted;
+                      const isCompletedUnit = isCompleted;
+                      return { mIdx, monthIdx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && form?.comfort && form?.challenge };
+                    });
+                    const sortedMonths = [...monthObjs].sort((a, b) => b.mIdx - a.mIdx);
+                    const currentMonth = sortedMonths.find(m => m.isCurrent);
+                    const completedMonths = sortedMonths.filter(m => m.isCompletedUnit);
+                    return (
+                      <div key={qIdx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="font-semibold text-slate-900 text-lg">{qLabel}</div>
+                          <div className="text-slate-500 text-sm">{qRange}</div>
+                          <div className="text-slate-600 text-sm">Quarter SIP Commitment: ₹{plan?.quarterlySIPs ? plan.quarterlySIPs[qIdx] : "-"}</div>
+                          <div className="text-slate-500 text-sm">Status: In Progress</div>
+                        </div>
+                        {currentMonth && (
+                          <div key={currentMonth.mIdx} className="border border-slate-100 rounded-lg p-4 bg-slate-50 mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold text-slate-900 text-base mb-1">{currentMonth.label}</div>
+                              <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(currentMonth.monthIdx)}>{currentMonth.isOpen ? "Collapse" : "Expand"}</button>
+                            </div>
+                            <div className="text-slate-500 text-xs mb-1">{currentMonth.range}</div>
+                            <div className="text-slate-600 text-xs mb-2">Status: Current</div>
+                            {currentMonth.isOpen && (
+                              <>
+                                <div className="flex flex-col gap-3">
+                                  <div className="text-slate-700 text-xs">SIP completed?</div>
+                                  <div className="flex gap-2">
+                                    {["yes","no"].map(val => (
+                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
+                                    ))}
+                                  </div>
+                                  <div className="text-slate-700 text-xs mt-2">Comfort level</div>
+                                  <div className="flex gap-2">
+                                    {["comfortable","slightly_stretched","difficult"].map(val => (
+                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
+                                    ))}
+                                  </div>
+                                  <div className="text-slate-700 text-xs mt-2">Challenge faced</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
+                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
+                                    ))}
+                                  </div>
+                                  <textarea className="w-full mt-2 p-2 border rounded text-xs" rows={2} placeholder="Anything you want to remember? (optional)" value={currentMonth.form.notes || ""} onChange={e => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, notes: e.target.value } })}></textarea>
+                                  <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!currentMonth.canSave} onClick={() => saveUnit(currentMonth.monthIdx)}>[ Save Progress ]</button>
+                                  {currentMonth.isSaved && (
+                                    <div className="flex flex-col gap-2 mt-2">
+                                      <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
+                                      <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(currentMonth.monthIdx, { label: currentMonth.label, range: currentMonth.range, quarter: qLabel })}>Log this into Journal</button>
                                     </div>
                                   )}
-                                </>
-                              )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        {completedMonths.map(({ mIdx, label, range }) => (
+                          <div key={mIdx} className="border border-slate-100 rounded-lg p-4 bg-slate-50 mb-2 opacity-80">
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold text-slate-900 text-base mb-1">{label}</div>
+                              <span className="ml-auto text-xs text-slate-400">Completed</span>
                             </div>
-                          );
-                        })}
+                            <div className="text-slate-500 text-xs mb-1">{range}</div>
+                            <div className="text-slate-600 text-xs mb-2">Status: Completed</div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })(),
+                  ...completedQuarters.map(({ qIdx }) => {
+                    const { label: qLabel, range: qRange } = getQuarterRange(startDate, qIdx);
+                    return (
+                      <div key={qIdx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4 opacity-80">
+                        <div className="flex items-center gap-4 mb-2">
+                          <div className="font-semibold text-slate-900 text-lg">{qLabel}</div>
+                          <div className="text-slate-500 text-sm">{qRange}</div>
+                          <span className="ml-auto text-xs text-slate-400">Completed</span>
+                        </div>
+                        <div className="text-slate-600 text-sm">Status: Completed</div>
+                      </div>
+                    );
+                  })
+                ];
+              })()}
             </div>
           )}
         </>
       ) : null}
-
-      {/* 5️⃣ EXECUTION TIMELINE (ANNUAL, ONLY AFTER START) */}
-      {challenge.id === "annual_retirement_consistency" && status !== "not_started" && (
-        <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-6 items-start">
-          <div className="text-lg font-bold text-slate-900 mb-2">Execution Timeline</div>
-          <div className="flex flex-col gap-4 w-full">
-            {[...Array(12)].map((_, monthIdx) => {
-              const { label, range } = getMonthRange(startDate, monthIdx);
-              const reflection = reflections[monthIdx] || {};
-              const isCurrent = phaseStatus[monthIdx] === "active" || (phaseStatus[monthIdx] !== "completed" && !phaseStatus.slice(0, monthIdx).includes("active"));
-              const isCompleted = phaseStatus[monthIdx] === "completed";
-              const isFuture = phaseStatus.slice(0, monthIdx).some(s => s !== "completed");
-              return (
-                <div key={monthIdx} className={`flex flex-col gap-2 border border-slate-100 rounded-lg p-4 bg-slate-50 ${isCurrent ? "ring-2 ring-emerald-200" : ""}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-slate-900">{label}</span>
-                    <span className="text-xs text-slate-500">{range}</span>
-                  </div>
-                  <div className="flex flex-col gap-2 ml-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-base font-bold transition ${isCompleted ? "bg-emerald-600 text-white border-emerald-600" : isCurrent ? "bg-white text-emerald-700 border-emerald-400" : "bg-slate-100 text-slate-400 border-slate-200"}`}>{isCompleted ? "✓" : monthIdx + 1}</span>
-                      <span className="text-slate-700 text-sm">Status: {isCompleted ? "Completed" : isCurrent ? "Current" : "Pending"}</span>
-                    </div>
-                    {/* Reflection prompts, only for current or completed months */}
-                    {(isCurrent || isCompleted) && (
-                      <div className="mt-2 flex flex-col gap-2">
-                        <div className="text-slate-700 text-sm">Have you completed this month’s SIP commitment?</div>
-                        <div className="flex gap-2">
-                          {["yes","no"].map(val => (
-                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, completed: val })}>{val === "yes" ? "Yes" : "No"}</button>
-                          ))}
-                        </div>
-                        <div className="text-slate-700 text-sm mt-2">Were you financially comfortable with this commitment?</div>
-                        <div className="flex gap-2">
-                          {["comfortable","slightly_stretched","difficult"].map(val => (
-                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, comfort: val })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
-                          ))}
-                        </div>
-                        <div className="text-slate-700 text-sm mt-2">Did you face any challenge?</div>
-                        <div className="flex flex-wrap gap-2">
-                          {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                            <button key={val} className={`px-3 py-1 rounded border text-sm ${reflection.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => saveReflection(monthIdx, { ...reflection, challenge: val })}>
-                              {val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember about this month? (optional)" value={reflection.notes || ""} onChange={e => saveReflection(monthIdx, { ...reflection, notes: e.target.value })}></textarea>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* 6️⃣ START CHALLENGE LOGIC */}
       {status === "not_started" && (
