@@ -65,21 +65,9 @@ export default function DashboardSidebar({ onNav }) {
     },
     {
       id: 'templates',
-      label: 'Templates',
-      path: '/dashboard/templates',
+      label: 'Reflections',
+      path: '/dashboard/reflections',
       icon: <FileSearch className="h-5 w-5" />
-    },
-    {
-      id: 'events',
-      label: 'Events',
-      path: '/dashboard/investor-hub/events',
-      icon: <CalendarDays className="h-5 w-5" />
-    },
-    {
-      id: 'resources',
-      label: 'Resources',
-      path: '/dashboard/investor-hub/resources',
-      icon: <BookOpen className="h-5 w-5" />
     },
     {
       id: 'perks',
@@ -87,23 +75,17 @@ export default function DashboardSidebar({ onNav }) {
       path: '/dashboard/investor-hub/perks',
       icon: <Gift className="h-5 w-5" />
     },
+        {
+      id: 'resources',
+      label: 'Resources',
+      path: '/dashboard/investor-hub/resources',
+      icon: <BookOpen className="h-5 w-5" />
+    },
     {
       id: 'pricing',
       label: 'Pricing',
       path: '/dashboard/investor-hub/pricing',
       icon: <BadgePercent className="h-5 w-5" />
-    },
-    {
-      id: 'journal',
-      label: 'Journal',
-      path: '/dashboard/journal',
-      icon: <BookOpen className="h-5 w-5" />
-    },
-    {
-      id: 'elevate',
-      label: 'Elevate',
-      path: '/dashboard/investor-hub/elevate',
-      icon: <Sparkles className="h-5 w-5" />
     }
   ];
 

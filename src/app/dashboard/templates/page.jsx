@@ -1,109 +1,106 @@
-"use client";
 
-import { useState, useEffect } from 'react';
-import roleModelTemplates from '@/lib/templates/roleModelTemplates';
+"use client";
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+const MOCK_REFLECTIONS = [
+  {
+    id: 'reflection_1',
+    name: 'Amit',
+    avatar: '/images/templates/rolemodel-1.jpg',
+    hook: '“I never thought I could start, but I did.”',
+    preview: 'The first step was the hardest. I spent months just reading and worrying. What changed was... ',
+    full: [
+      'The first step was the hardest. I spent months just reading and worrying. What changed was a conversation with a friend who had started their own journey. Suddenly, it felt possible.',
+      'I was confused about where to begin, and felt overwhelmed by all the advice online. I decided to focus on just one thing: tracking my expenses. That gave me a sense of control.',
+      'If you’re just starting out, know that it’s normal to feel lost. Take one small step, and let yourself learn as you go.'
+    ]
+  },
+  {
+    id: 'reflection_2',
+    name: 'Priya',
+    avatar: '/images/templates/rolemodel-2.jpg',
+    hook: '“Family security was my top priority.”',
+    preview: 'I always worried about my kids’ future. The turning point was when I realized I could plan for them and myself at the same time...',
+    full: [
+      'I always worried about my kids’ future. The turning point was when I realized I could plan for them and myself at the same time. It wasn’t about big leaps, but small, steady changes.',
+      'The hardest part was letting go of the idea that I had to do everything perfectly. I learned to ask for help and to celebrate small wins.',
+      'If you’re feeling anxious, remember: you’re not alone. Everyone’s journey is different, and that’s okay.'
+    ]
+  },
+  {
+    id: 'reflection_3',
+    name: 'Ravi',
+    avatar: '',
+    hook: '“I learned to talk about money openly.”',
+    preview: 'Growing up, money was never discussed. When I started my journey, I had to unlearn a lot of fears...',
+    full: [
+      'Growing up, money was never discussed. When I started my journey, I had to unlearn a lot of fears. The best thing I did was to start talking about it with my partner.',
+      'We made mistakes, but we learned together. The journey is ongoing, and that’s what makes it meaningful.',
+      'To anyone starting out: be kind to yourself. Reflection is as important as action.'
+    ]
+  }
+];
 
-export default function TemplatesPage() {
-  const [activeTab, setActiveTab] = useState('recommended');
-  const [savedRoleModels, setSavedRoleModels] = useState([]);
-  const [userInputs, setUserInputs] = useState({ retirementAge: null });
+export default function ReflectionsPage() {
+  const [reflections, setReflections] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vinca_reflections');
+      if (saved) return JSON.parse(saved);
+    }
+    return MOCK_REFLECTIONS;
+  });
   const router = useRouter();
 
-  useEffect(() => {
-    // Read user inputs from localStorage
-    let inputs = null;
-    try {
-      inputs = JSON.parse(localStorage.getItem('financialReadinessInputs')) ||
-        JSON.parse(localStorage.getItem('retirementInputs')) ||
-        JSON.parse(localStorage.getItem('calculatorInputs')) || {};
-    } catch (e) {
-      inputs = {};
-    }
-    setUserInputs({
-      retirementAge: inputs.retirementAge || inputs.goalRetirementAge || '',
-      monthlyExpenses: inputs.monthlyExpenses || '',
-      monthlySIP: inputs.monthlySIP || '',
-      monthlyIncome: inputs.monthlyIncome || ''
-    });
-    // Saved role models
-    const saved = JSON.parse(localStorage.getItem('vinca_saved_role_models') || '[]');
-    setSavedRoleModels(saved);
-  }, []);
+  // Show only 3 most recent
+  const feed = reflections.slice(0, 3);
 
-  // Matching logic
-  function isMatched(template) {
-    const age = Number(userInputs.retirementAge);
-    if (!age) return false;
-    const [min, max] = template.matches.retireByAgeRange;
-    return age >= min && age <= max;
+  // Floating post button handler
+  function goToPost() {
+    router.push('/dashboard/templates/post');
   }
 
-  // Filter tabs
-  const recommendedTemplates = roleModelTemplates.filter(t => !savedRoleModels.includes(t.id));
-  const savedTemplates = roleModelTemplates.filter(t => savedRoleModels.includes(t.id));
-
-  const templatesToShow = activeTab === 'saved' ? savedTemplates : recommendedTemplates;
+  function viewStory(id) {
+    router.push(`/dashboard/templates/${id}`);
+  }
 
   return (
-    <div className="w-full px-0 py-6">
-      <div className="px-4 sm:px-8 mb-6">
-        <div className="rounded-2xl bg-linear-to-r from-emerald-50 via-white to-emerald-50 p-6 mb-4 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Role Model Templates</h1>
-          <p className="text-slate-600 mb-2">See how people with similar retirement goals achieved financial freedom — step by step.</p>
-          {userInputs.retirementAge && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm font-medium text-emerald-700 bg-emerald-100 rounded px-2 py-0.5">Your goal: Retire by {userInputs.retirementAge}</span>
-              <span className="text-xs text-slate-500 bg-slate-100 rounded px-2 py-0.5">Based on your Financial Readiness inputs</span>
-            </div>
-          )}
+    <div className="w-full min-h-screen bg-slate-50 px-0 py-6 relative">
+      <div className="px-4 sm:px-8 mb-8">
+        <div className="rounded-2xl bg-white p-6 mb-4 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Reflections</h1>
+          <p className="text-slate-600 mb-2">Real experiences from people navigating their financial readiness journey.</p>
         </div>
-        <div className="flex gap-2 mb-4">
-          <button
-            className={`px-4 py-1 rounded-full font-semibold text-sm border ${activeTab === 'recommended' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-200'} transition`}
-            onClick={() => setActiveTab('recommended')}
-          >Recommended</button>
-          <button
-            className={`px-4 py-1 rounded-full font-semibold text-sm border ${activeTab === 'saved' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-emerald-700 border-emerald-200'} transition`}
-            onClick={() => setActiveTab('saved')}
-          >Saved</button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {feed.map(story => (
+            <div key={story.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col h-full overflow-hidden transition hover:shadow-md">
+              <div className="flex flex-col items-center pt-6 pb-2 px-4">
+                <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden mb-3 border-2 border-emerald-100">
+                  {story.avatar ? (
+                    <img src={story.avatar} alt={story.name} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-2xl text-slate-400">👤</div>
+                  )}
+                </div>
+                <div className="font-bold text-slate-900 text-base text-center mb-1 truncate">{story.hook}</div>
+                <div className="text-slate-500 text-sm text-center mb-3 line-clamp-2">{story.preview}</div>
+                <button
+                  className="mt-auto bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full px-4 py-1.5 text-sm transition shadow"
+                  onClick={() => viewStory(story.id)}
+                >View Story</button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-4 sm:px-8">
-        {templatesToShow.length === 0 && (
-          <div className="col-span-3 text-slate-400 text-center py-8">No role models found.</div>
-        )}
-        {templatesToShow.map(template => (
-          <div key={template.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col h-92.5 min-h-92.5 w-full overflow-hidden transition hover:shadow-md">
-            <div className="w-full h-40 bg-slate-100 flex items-center justify-center overflow-hidden">
-              <img src={template.thumbnailImage || '/images/templates/placeholder.jpg'} alt={template.name} className="object-cover w-full h-full rounded-t-2xl" />
-            </div>
-            <div className="flex-1 flex flex-col px-4 py-3 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-slate-900">Hi, I'm {template.name}</span>
-                {isMatched(template) && (
-                  <span className="ml-2 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded px-2 py-0.5">Same as your goal ✅</span>
-                )}
-              </div>
-              <span className="text-emerald-700 font-semibold text-sm">Goal: Retire by {template.goal.retireByAge}</span>
-              <span className="text-slate-700 text-sm">{template.heroLine}</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {template.matches.lifestyleTags.map((tag, i) => (
-                  <span key={i} className="bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 text-xs capitalize">{tag}</span>
-                ))}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">Started at {template.ageWhenStarted} • {template.profession} • {template.city}</div>
-            </div>
-            <div className="px-4 pb-4 flex gap-2">
-              <button
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg px-3 py-2 text-sm transition"
-                onClick={() => router.push(`/dashboard/templates/${template.id}`)}
-              >View Story</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Floating Post Button */}
+      <button
+        className="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg hover:bg-emerald-700 transition text-3xl"
+        onClick={goToPost}
+        aria-label="Post Reflection"
+      >
+        +
+      </button>
     </div>
   );
 }
