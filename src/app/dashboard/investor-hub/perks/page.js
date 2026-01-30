@@ -193,26 +193,3 @@ export default function VincaCurationsPage() {
   );
 }
 
-  // Responsive grid columns via CSS (no external libraries)
-  const style = document.createElement('style');
-  style.innerHTML = `
-    @media (min-width: 1024px) {
-      .vinca-curations-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-      }
-    }
-    @media (min-width: 768px) and (max-width: 1023px) {
-      .vinca-curations-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      }
-    }
-    @media (max-width: 767px) {
-      .vinca-curations-grid {
-        grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-      }
-    }
-  `;
-  if (typeof window !== 'undefined' && !document.head.querySelector('style[data-vinca-curations]')) {
-    style.setAttribute('data-vinca-curations', '');
-    document.head.appendChild(style);
-  }
