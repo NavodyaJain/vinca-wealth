@@ -30,6 +30,12 @@ export default function ChallengeDetailPage() {
   }
     // Start Challenge logic
     function handleStart() {
+      // Enforce only one active sprint at a time
+      const state = getChallengeState();
+      if (state.activeChallengeId && state.activeChallengeId !== challenge.id) {
+        alert("You already have an active sprint in progress. Complete it before switching your sprint mindset.");
+        return;
+      }
       const today = new Date().toISOString().slice(0, 10);
       let calculatedEnd = today;
       let phaseLen = 1;
@@ -43,7 +49,6 @@ export default function ChallengeDetailPage() {
         calculatedEnd = new Date(new Date(today).setMonth(new Date(today).getMonth() + 12)).toISOString().slice(0, 10);
         phaseLen = 4;
       }
-      const state = getChallengeState();
       state.activeChallengeId = challenge.id;
       state.progress = state.progress || {};
       state.progress[challenge.id] = {
@@ -214,21 +219,6 @@ export default function ChallengeDetailPage() {
     // --- UI ---
     return (
       <div className="w-full max-w-3xl mx-auto pl-4 pr-4 sm:pl-8 sm:pr-8 py-10 flex flex-col gap-10">
-        {/* 1️⃣ CHALLENGE HEADER */}
-        <div className="w-full bg-white rounded-2xl shadow p-7 flex flex-col gap-2 items-start">
-          <h1 className="text-3xl font-bold text-slate-900 mb-1">{challenge.title}</h1>
-          <div className="text-[16px] text-slate-700 mb-1">This challenge breaks your long-term retirement SIP into manageable execution sprints.</div>
-          <div className="text-sm mt-2">
-            {status === "completed" ? (
-              <span className="text-emerald-700 font-medium">Completed</span>
-            ) : status === "active" ? (
-              <span className="text-emerald-600 font-medium">In Progress</span>
-            ) : (
-              <span className="text-slate-400 font-medium">Not Started</span>
-            )}
-          </div>
-        </div>
-
       {/* 2️⃣ OBJECTIVE CARD (REWRITTEN) */}
       <div className="w-full bg-white rounded-2xl shadow p-6 flex flex-col gap-2 items-start">
         <div className="text-lg font-bold text-slate-900 mb-2">Objective</div>
@@ -457,9 +447,6 @@ export default function ChallengeDetailPage() {
                       <div key={qIdx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
                         <div className="flex items-center gap-4 mb-2">
                           <div className="font-semibold text-slate-900 text-lg">{qLabel}</div>
-                          <div className="text-slate-500 text-sm">{qRange}</div>
-                          <div className="text-slate-600 text-sm">Quarter SIP Commitment: ₹{plan?.quarterlySIPs ? plan.quarterlySIPs[qIdx] : "-"}</div>
-                          <div className="text-slate-500 text-sm">Status: In Progress</div>
                         </div>
                         {currentMonth && (
                           <div key={currentMonth.mIdx} className="border border-slate-100 rounded-lg p-4 bg-slate-50 mb-2">
@@ -544,7 +531,12 @@ export default function ChallengeDetailPage() {
       )}
 
       {/* 7️⃣ CHALLENGE COMPLETION STATE */}
-      {status === "completed" && (
+      {/* Completion UI: Monthly always, Quarterly only if 3/3, Annual only if 4/4 */}
+      {(status === "completed" && (
+        (challenge.id === "monthly_sip_kickstart") ||
+        (challenge.id === "quarterly_sip_discipline" && plan?.monthlySIPs && plan.monthlySIPs.filter((_, idx) => units[idx]?.isCompleted).length === 3) ||
+        (challenge.id === "annual_retirement_consistency" && plan?.quarterlySIPs && plan.quarterlySIPs.filter((_, qIdx) => [0,1,2].every(m => units[qIdx * 3 + m]?.isCompleted)).length === 4)
+      )) && (
         <div className="w-full bg-emerald-50 border border-emerald-200 rounded-3xl shadow p-8 flex flex-col gap-4 items-center">
           <div className="text-2xl font-bold text-emerald-700 mb-2">Challenge Completed <span className="align-middle">✅</span></div>
           <div className="text-lg text-slate-900">
@@ -569,18 +561,77 @@ export default function ChallengeDetailPage() {
                 : "Discipline maintained"}
           </div>
           <div className="flex gap-4 mt-2">
-            <button className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50" onClick={handleLogToJournal}>
-              Log this into Journal
+            <button
+              className="px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+              onClick={() => {
+                // Start Next Sprint logic for Quarterly and Annual
+                const state = getChallengeState();
+                const prev = state.progress?.[challenge.id];
+                if (!prev) return;
+                let newStartDate = prev.endDate;
+                let newEndDate = newStartDate;
+                let phaseLen = 1;
+                let newPlan = null;
+                if (challenge.id === "quarterly_sip_discipline") {
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 3)).toISOString().slice(0, 10);
+                  phaseLen = 3;
+                  // Generate new plan for new sprint instance
+                  if (challenge.getPlan) {
+                    newPlan = challenge.getPlan({
+                      ...plan,
+                      startDate: newStartDate,
+                      endDate: newEndDate
+                    });
+                  }
+                } else if (challenge.id === "annual_retirement_consistency") {
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 12)).toISOString().slice(0, 10);
+                  phaseLen = 4;
+                  if (challenge.getPlan) {
+                    newPlan = challenge.getPlan({
+                      ...plan,
+                      startDate: newStartDate,
+                      endDate: newEndDate
+                    });
+                  }
+                } else {
+                  // fallback for monthly
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 1)).toISOString().slice(0, 10);
+                  phaseLen = 1;
+                  if (challenge.getPlan) {
+                    newPlan = challenge.getPlan({
+                      ...plan,
+                      startDate: newStartDate,
+                      endDate: newEndDate
+                    });
+                  }
+                }
+                // Create new sprint instance
+                state.activeChallengeId = challenge.id;
+                state.progress = state.progress || {};
+                state.progress[challenge.id] = {
+                  startedAt: newStartDate,
+                  startDate: newStartDate,
+                  endDate: newEndDate,
+                  status: "active",
+                  plan: newPlan,
+                  phaseStatus: Array(phaseLen).fill("pending")
+                };
+                saveChallengeState(state);
+                setStatus("active");
+                setStartDate(newStartDate);
+                setEndDate(newEndDate);
+                setPhaseStatus(Array(phaseLen).fill("pending"));
+                setShowSuccess(false);
+                setUnits({});
+                // Set plan for new sprint instance
+                setPlan(newPlan);
+              }}
+            >
+              Start Next Sprint
             </button>
-            {challenge.id === "monthly_sip_kickstart" ? (
-              <button className="px-6 py-3 rounded-full border border-slate-300 text-slate-700 font-semibold" onClick={() => router.push('/dashboard/challenges/quarterly_sip_discipline')}>
-                View Quarterly SIP Discipline Challenge
-              </button>
-            ) : (
-              <button className="px-6 py-3 rounded-full border border-slate-300 text-slate-700 font-semibold opacity-50 cursor-not-allowed" disabled>
-                View Next Challenge
-              </button>
-            )}
+            <button className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
+              Switch Sprint Mindset
+            </button>
           </div>
         </div>
       )}

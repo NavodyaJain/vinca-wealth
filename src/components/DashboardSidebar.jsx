@@ -14,7 +14,9 @@ import {
   BadgePercent,
   User,
   CheckCircle,
-  ChevronDown
+  FastForward,
+  ChevronDown,
+  Timer
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
 import { getJoinedClubIds } from '@/lib/userJourneyStorage';
@@ -57,9 +59,9 @@ export default function DashboardSidebar({ onNav }) {
     },
     {
       id: 'challenges',
-      label: 'Challenges',
+      label: 'Sprints',
       path: '/dashboard/challenges',
-      icon: <CheckCircle className="h-5 w-5" />
+      icon: <Timer className="h-5 w-5" />
     },
     {
       id: 'templates',
@@ -81,7 +83,7 @@ export default function DashboardSidebar({ onNav }) {
     },
     {
       id: 'perks',
-      label: 'Perks',
+      label: 'Curations',
       path: '/dashboard/investor-hub/perks',
       icon: <Gift className="h-5 w-5" />
     },

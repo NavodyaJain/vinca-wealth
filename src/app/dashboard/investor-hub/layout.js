@@ -22,10 +22,9 @@ export default function InvestorHubLayout({ children }) {
     }
   }, [hideBanner]);
 
-  // Only show search bar on events, perks, and resources pages
+  // Only show search bar on events and resources pages
   const showHeader = [
     '/dashboard/investor-hub/events',
-    '/dashboard/investor-hub/perks',
     '/dashboard/investor-hub/resources'
   ].includes(pathname);
   return (

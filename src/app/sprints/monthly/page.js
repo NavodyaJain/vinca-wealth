@@ -1,0 +1,1 @@
+export { default } from "../monthly.jsx";
