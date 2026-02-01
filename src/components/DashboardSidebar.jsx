@@ -16,7 +16,8 @@ import {
   CheckCircle,
   FastForward,
   ChevronDown,
-  Timer
+  Timer,
+  MessageSquare
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
 import { getJoinedClubIds } from '@/lib/userJourneyStorage';
@@ -76,11 +77,17 @@ export default function DashboardSidebar({ onNav }) {
       icon: <Gift className="h-5 w-5" />
     },
         {
-      id: 'resources',
-      label: 'Resources',
-      path: '/dashboard/investor-hub/resources',
-      icon: <BookOpen className="h-5 w-5" />
-    },
+          id: 'resources',
+          label: 'Resources',
+          path: '/dashboard/investor-hub/resources',
+          icon: <BookOpen className="h-5 w-5" />
+        },
+        {
+          id: 'feedback-opinions',
+          label: 'Feedback & Opinions',
+          path: '/dashboard/feedback-opinions',
+          icon: <MessageSquare className="h-5 w-5" />
+        },
     {
       id: 'pricing',
       label: 'Pricing',
