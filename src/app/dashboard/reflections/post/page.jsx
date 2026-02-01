@@ -73,6 +73,8 @@ function PhotoMomentsSection({ photos, setPhotos }) {
 }
 
 function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, setWordCount, tags, setTags }) {
+  // Generate from Sprint UI state
+  const [genLoading, setGenLoading] = useState(false);
   // Rotating prompt logic
   const [promptIdx, setPromptIdx] = useState(0);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
@@ -108,91 +110,91 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
     setShowPromptDropdown(false);
   };
   return (
-    <section className="flex flex-col gap-3 max-h-100 h-100 justify-start bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 transition-all duration-200">
-      {/* Title + prompt */}
-      <div className="flex flex-col gap-1 mb-2">
-        <label className="text-xs text-gray-400 font-medium mb-1">Title</label>
-        <input
-          className="w-full h-10 px-3 py-2 text-base border border-gray-100 rounded-lg focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
-          type="text"
-          placeholder={PROMPTS[promptIdx]}
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          maxLength={80}
-        />
-        <div className="flex items-center gap-2 mt-1 relative">
-          <button
-            type="button"
-            className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center gap-1 hover:bg-emerald-100 focus:ring-2 focus:ring-emerald-100 transition-all duration-150 shadow-none"
-            onClick={() => setShowPromptDropdown((v) => !v)}
-            tabIndex={0}
-          >
-            <span role="img" aria-label="prompt">💡</span> Choose a prompt
-          </button>
-          {showPromptDropdown && (
-            <div className="absolute z-20 mt-1 w-64 bg-white border border-gray-100 rounded-lg shadow-lg p-2 flex flex-col gap-1">
-              {PROMPTS.map((p, idx) => (
-                <button
-                  key={p}
-                  type="button"
-                  className="text-left text-xs px-2 py-1 rounded hover:bg-emerald-50 text-gray-700"
-                  onClick={() => handlePromptSelect(idx)}
-                >
-                  {p}
-                </button>
-              ))}
-              <button type="button" className="mt-1 text-xs text-gray-300 hover:text-gray-500" onClick={() => setShowPromptDropdown(false)}>Cancel</button>
-            </div>
-          )}
-        </div>
-      </div>
-      {/* Body */}
-      <div className="flex flex-col gap-1 mb-2">
-        <label className="text-xs text-gray-400 font-medium mb-1">Reflection</label>
-        <textarea
-          className="w-full h-24 px-3 py-2 text-base border border-gray-100 rounded-lg resize-none focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
-          placeholder="Write freely. This is your experience — not advice."
-          value={story}
-          onChange={handleStoryChange}
-          maxLength={500}
-          required
-        />
-        <div className="flex justify-end text-[11px] text-gray-300 font-medium">{wordCount}/500</div>
-      </div>
-      {/* Tags */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-400 font-medium mb-1">Tags</label>
-        <div className="flex items-center gap-1 mb-1">
+    <div className="flex flex-col gap-4 max-h-100 h-100 justify-start bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-5 transition-all duration-200 overflow-hidden">
+      <div className="flex flex-col gap-3 w-full">
+        {/* Title + prompt */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-medium mb-1">Title</label>
           <input
-            className="flex-1 h-8 px-3 text-xs border border-gray-100 rounded-lg focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-200 placeholder:font-normal transition-all duration-200"
+            className="w-full h-10 px-3 py-2 text-base border border-gray-100 rounded-lg focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
             type="text"
-            placeholder="Add tag and press Enter"
-            value={tagInput}
-            onChange={handleTagInput}
-            onKeyDown={handleTagKeyDown}
-            maxLength={24}
+            placeholder={PROMPTS[promptIdx]}
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            maxLength={80}
           />
-          <div className="flex flex-wrap gap-1">
-            {tags.map((tag, idx) => (
-              <span key={tag} className="inline-flex items-center bg-emerald-50 text-emerald-600 text-xs px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
-                {tag}
-                <button type="button" className="ml-1 text-emerald-300 hover:text-emerald-600 text-xs" onClick={() => handleRemoveTag(idx)} title="Remove tag">×</button>
-              </span>
-            ))}
+          <div className="flex items-center gap-2 mt-1 relative">
+            <button
+              type="button"
+              className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-500 flex items-center gap-1 hover:bg-emerald-100 focus:ring-2 focus:ring-emerald-100 transition-all duration-150 shadow-none"
+              onClick={() => setShowPromptDropdown((v) => !v)}
+              tabIndex={0}
+            >
+              <span role="img" aria-label="prompt">💡</span> Choose a prompt
+            </button>
+            {showPromptDropdown && (
+              <div className="absolute z-20 mt-1 w-64 bg-white border border-gray-100 rounded-lg shadow-lg p-2 flex flex-col gap-1">
+                {PROMPTS.map((p, idx) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className="text-left text-xs px-2 py-1 rounded hover:bg-emerald-50 text-gray-700"
+                    onClick={() => handlePromptSelect(idx)}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button type="button" className="mt-1 text-xs text-gray-300 hover:text-gray-500" onClick={() => setShowPromptDropdown(false)}>Cancel</button>
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex gap-1 mt-0.5">
-          {["gratitude","family","growth","challenge","success"].map(s => (
-            <button
-              key={s}
-              type="button"
-              className="text-xs px-2 py-0.5 rounded-full border border-gray-100 bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150"
-              onClick={() => { if (!tags.includes(s)) setTags([...tags, s]); }}
-            >{s}</button>
-          ))}
-        </div>
+                {/* Body */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-400 font-medium mb-1">Reflection</label>
+                  <textarea
+                    className="w-full h-24 px-3 py-2 text-base border border-gray-100 rounded-lg resize-none focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
+                    placeholder="Write freely. This is your experience — not advice."
+                    value={story}
+                    onChange={handleStoryChange}
+                    maxLength={500}
+                    required
+                  />
+                  <div className="flex justify-end text-[11px] text-gray-300 font-medium">{wordCount}/500</div>
+                </div>
+                {/* Generate from Sprint helper (UI only, 404-safe) - moved below reflection */}
+                <div className="flex flex-col gap-1 mt-2">
+                  <div className="flex items-center bg-emerald-50/40 border border-emerald-100 rounded-lg px-3 py-2 shadow-sm min-h-[48px] w-full transition-all duration-200">
+                    <span className="flex items-center justify-center mr-3 text-emerald-400 text-lg">
+                      <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path fill="currentColor" d="M10.75 2.5a.75.75 0 0 0-1.5 0v1.19A6.5 6.5 0 0 0 4.19 9.25H3a.75.75 0 0 0 0 1.5h1.19A6.5 6.5 0 0 0 9.25 16.31V17.5a.75.75 0 0 0 1.5 0v-1.19A6.5 6.5 0 0 0 15.81 10.75H17a.75.75 0 0 0 0-1.5h-1.19A6.5 6.5 0 0 0 10.75 3.69V2.5Zm-1.5 3.06V5.5a.75.75 0 0 0 1.5 0v-.06A5 5 0 0 1 14.44 9.25h-.06a.75.75 0 0 0 0 1.5h.06A5 5 0 0 1 10.75 14.44V14.5a.75.75 0 0 0-1.5 0v.06A5 5 0 0 1 5.56 10.75h.06a.75.75 0 0 0 0-1.5h-.06A5 5 0 0 1 9.25 5.56Z"/></svg>
+                    </span>
+                    <div className="flex flex-col flex-grow min-w-0">
+                      <span className="text-xs font-semibold text-gray-700">Generate from Sprint</span>
+                      <span className="text-xs text-gray-400 leading-tight">Turn your recent sprint progress into a reflection draft. You can edit it freely.</span>
+                    </div>
+                    <button
+                      type="button"
+                      className={`ml-3 text-xs px-3 py-1 rounded-md border border-emerald-200 bg-white text-emerald-500 font-medium shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1 ${genLoading ? 'pointer-events-none' : ''}`}
+                      disabled={genLoading}
+                      onClick={() => {
+                        setGenLoading(true);
+                        setTimeout(() => setGenLoading(false), 2000);
+                      }}
+                    >
+                      {genLoading ? (
+                        <>
+                          <svg className="animate-spin mr-1" width="16" height="16" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
+                          Preparing draft...
+                        </>
+                      ) : (
+                        'Generate draft'
+                      )}
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-300 mt-1 ml-1">Available with Pro</span>
+                </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -246,9 +248,6 @@ export default function PostReflectionPage() {
       }
     }
   };
-
-
-
   // --- Render ---
   return (
     <div className="w-full h-screen max-h-screen min-h-150 flex flex-col items-center justify-start bg-gradient-to-b from-emerald-50/40 to-white p-4 select-none overflow-hidden">

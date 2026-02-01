@@ -8,7 +8,7 @@ import { getChallengeState } from "@/lib/challenges/challengeStore";
 
 export default function ChallengesHome() {
   const router = useRouter();
-
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [challengeState, setChallengeState] = useState({});
   useEffect(() => {
     setChallengeState(getChallengeState());
@@ -16,26 +16,29 @@ export default function ChallengesHome() {
 
   // Group challenges by cadence
   const cadenceOrder = ["monthly", "quarterly", "yearly"];
-  const cadenceMeta = {
-    monthly: {
-      title: "Monthly Challenge",
-      description: "Short-term commitment to kick-start your retirement investing habit."
-    },
-    quarterly: {
-      title: "Quarterly Challenge",
-      description: "Build consistency and discipline across multiple salary cycles."
-    },
-    yearly: {
-      title: "Yearly Challenge",
-      description: "Long-term retirement execution discipline across the year."
-    }
-  };
-
-  // Group challenges by cadence
   const grouped = cadenceOrder.map(cadence => ({
     cadence,
     challenges: CHALLENGES.filter(c => c.cadence === cadence)
   }));
+
+  // Mindset cards data
+  const mindsetCards = [
+    {
+      id: "monthly_sip_kickstart",
+      title: "Monthly Sprint Mindset",
+      description: "Kickstart your SIP for the first time. One-time activation to begin your retirement journey."
+    },
+    {
+      id: "quarterly_sip_discipline",
+      title: "Quarterly Sprint Mindset",
+      description: "Short-term sprint with visible progress. Review discipline every quarter and adjust."
+    },
+    {
+      id: "annual_retirement_consistency",
+      title: "Annual Sprint Mindset",
+      description: "Long-term discipline and compounding. Measure progress yearly and stay on track."
+    }
+  ];
 
   return (
     <div className="w-full min-h-screen bg-slate-50">
@@ -46,7 +49,7 @@ export default function ChallengesHome() {
 
         {/* KPI Cards Section */}
         <div className="w-full flex flex-col sm:flex-row gap-6 mb-14">
-          {/* KPI Card 1: Journey Completed */}
+          {/* ...existing KPI cards... */}
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
             <div className="mb-4 font-semibold text-slate-900 text-lg">Journey Completed</div>
             <div className="relative flex items-center justify-center mb-3" style={{ width: 100, height: 100 }}>
@@ -73,8 +76,6 @@ export default function ChallengesHome() {
             </div>
             <div className="text-sm text-slate-500 text-center leading-snug">From start of investing to retirement age</div>
           </div>
-
-          {/* KPI Card 2: Corpus Generated */}
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
             <div className="mb-4 font-semibold text-slate-900 text-lg">Corpus Generated</div>
             <div className="relative flex items-center justify-center mb-3" style={{ width: 100, height: 100 }}>
@@ -101,8 +102,6 @@ export default function ChallengesHome() {
             </div>
             <div className="text-sm text-slate-500 text-center leading-snug">Of target retirement corpus</div>
           </div>
-
-          {/* KPI Card 3: Active Sprint */}
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
             <div className="mb-4 font-semibold text-slate-900 text-lg">Active Sprint</div>
             <div className="flex flex-col items-center justify-center mb-3">
@@ -113,50 +112,46 @@ export default function ChallengesHome() {
           </div>
         </div>
 
-        {/* Sprint Cards */}
-        {grouped.map((section, idx) => (
-          <section
-            key={section.cadence}
-            className={`w-full ${idx > 0 ? "mt-12" : ""} ${idx < grouped.length - 1 ? "pb-10 border-b border-slate-200" : "pb-0"}`}
+        {/* Financial Readiness Sprint Drawer Section */}
+        <div className="w-full bg-white rounded-2xl shadow-lg p-8 mt-10 mb-12">
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="text-2xl font-bold text-slate-900">Financial Readiness Sprint</div>
+            <div className="text-base text-slate-500">Follow this sprint to track your financial readiness.</div>
+          </div>
+          <button
+            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base rounded transition-colors w-fit mb-4"
+            onClick={() => setDrawerOpen((v) => !v)}
+            type="button"
           >
-            <div className="flex flex-col gap-8">
-              {section.challenges.map(challenge => {
-                let title = "";
-                let description = "";
-                if (challenge.id === "monthly_sip_kickstart") {
-                  title = "Monthly Sprint Mindset";
-                  description = "Kickstart your SIP for the first time. One-time activation to begin your retirement journey.";
-                } else if (challenge.id === "quarterly_sip_discipline") {
-                  title = "Quarterly Sprint Mindset";
-                  description = "Short-term sprint with visible progress. Review discipline every quarter and adjust.";
-                } else if (challenge.id === "annual_retirement_consistency") {
-                  title = "Annual Sprint Mindset";
-                  description = "Long-term discipline and compounding. Measure progress yearly and stay on track.";
-                }
-                return (
-                  <div
-                    key={challenge.id}
-                    className="border border-slate-200 bg-white px-8 py-7 flex flex-col gap-3 cursor-pointer hover:bg-emerald-50 transition-all w-full"
-                    style={{ borderRadius: 18, boxShadow: "0 2px 10px 0 rgba(16, 185, 129, 0.04)" }}
-                    onClick={() => router.push(`/dashboard/challenges/${challenge.id}`)}
+            {drawerOpen ? 'Hide Mindsets' : 'Choose Mindset'}
+          </button>
+          {drawerOpen && (
+            <div className="mt-4 flex flex-col gap-6">
+              {mindsetCards.map(card => (
+                <div
+                  key={card.id}
+                  className="border border-slate-200 bg-white px-8 py-7 flex flex-col gap-3 cursor-pointer hover:bg-emerald-50 transition-all w-full"
+                  style={{ borderRadius: 18, boxShadow: "0 2px 10px 0 rgba(16, 185, 129, 0.04)" }}
+                  onClick={() => router.push(`/dashboard/challenges/${card.id}`)}
+                >
+                  <div className="font-semibold text-xl text-slate-900 leading-tight mb-2">{card.title}</div>
+                  <div className="text-slate-500 text-base mb-3 font-normal">{card.description}</div>
+                  <button
+                    className="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base rounded transition-colors w-fit"
+                    onClick={e => {
+                      e.stopPropagation();
+                      router.push(`/dashboard/challenges/${card.id}`);
+                    }}
                   >
-                    <div className="font-semibold text-xl text-slate-900 leading-tight mb-2">{title}</div>
-                    <div className="text-slate-500 text-base mb-3 font-normal">{description}</div>
-                    <button
-                      className="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base rounded transition-colors w-fit"
-                      onClick={e => {
-                        e.stopPropagation();
-                        router.push(`/dashboard/challenges/${challenge.id}`);
-                      }}
-                    >
-                      View Sprint
-                    </button>
-                  </div>
-                );
-              })}
+                    View Sprint
+                  </button>
+                </div>
+              ))}
             </div>
-          </section>
-        ))}
+          )}
+        </div>
+
+        {/* ...existing grouped sprint cards (if any) can go here... */}
       </div>
     </div>
   );
