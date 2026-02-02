@@ -81,8 +81,7 @@ export default function ReflectionsHome() {
     <div className="w-full min-h-screen bg-slate-50 px-0 py-8 relative">
       <div className="mx-auto w-full max-w-4xl flex flex-col gap-6 px-2 sm:px-4 lg:px-0">
         <div className="mb-2 text-left">
-          <h1 className="text-3xl font-bold text-slate-900 mb-1 text-left">Reflections</h1>
-          <p className="text-slate-600 text-base text-left">Real experiences from people navigating their financial journey.</p>
+          <p className="text-slate-600 text-base text-left">Leave your financial readiness footprints and learn from others who’ve walked the path.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7 justify-center items-stretch">
           {feed.map(story => (
@@ -98,7 +97,7 @@ export default function ReflectionsHome() {
                   className="mt-auto text-emerald-700 font-semibold text-base rounded-full px-0 py-1 transition hover:underline text-left"
                   onClick={() => viewStory(story.id)}
                   style={{alignSelf:'flex-start'}}
-                >Read reflection &rarr;</button>
+                >View &rarr;</button>
               </div>
             </div>
           ))}

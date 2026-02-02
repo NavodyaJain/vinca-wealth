@@ -7,8 +7,6 @@ import BlogCard from "@/components/investorHub/resources/BlogCard";
 
 
 const TABS = [
-  { key: "video-series", label: "Video Series" },
-  { key: "blogs", label: "Blogs" },
 ];
 
 export default function ResourcesPage() {
@@ -29,6 +27,9 @@ export default function ResourcesPage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Concepts that leads to financial readiness</h2>
         </div>
         {tab === "video-series" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

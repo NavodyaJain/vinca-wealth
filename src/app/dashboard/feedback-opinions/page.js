@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { MessageSquare, Star } from 'lucide-react';
+import { MessageSquare, Star, Heart } from 'lucide-react';
 
 const FEATURES = [
   'Sprints',
@@ -882,14 +882,28 @@ function OpinionCard({ opinion, handleVote }) {
     <div className="opinion-card">
       <div className="opinion-header">
         <span className="opinion-title">{opinion.title}</span>
-        <button
-          className={`vote-btn${opinion.userVoted ? ' voted' : ''}`}
-          onClick={() => handleVote(opinion.id)}
-          aria-pressed={opinion.userVoted}
-        >
-          <span className="vote-count">{opinion.votes}</span>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={opinion.userVoted ? '#2563eb' : '#64748b'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/></svg>
-        </button>
+        <div className="vote-section">
+          <button
+            className="like-btn"
+            onClick={() => handleVote(opinion.id)}
+            aria-pressed={opinion.userVoted}
+            title="Like this feedback"
+          >
+            <Heart
+              size={16}
+              fill={opinion.userVoted ? '#ef4444' : 'none'}
+              stroke={opinion.userVoted ? '#ef4444' : '#cbd5e1'}
+            />
+          </button>
+          <button
+            className={`vote-btn${opinion.userVoted ? ' voted' : ''}`}
+            onClick={() => handleVote(opinion.id)}
+            aria-pressed={opinion.userVoted}
+          >
+            <span className="vote-count">{opinion.votes}</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={opinion.userVoted ? '#2563eb' : '#64748b'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V6M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
       </div>
       <div className="opinion-desc">{opinion.description}</div>
         {/* Removed timestamp from display as requested */}
@@ -916,6 +930,33 @@ function OpinionCard({ opinion, handleVote }) {
           display: flex;
           align-items: center;
           gap: 10px;
+          justify-content: space-between;
+        }
+        .vote-section {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-left: auto;
+        }
+        .like-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          opacity: 0.5;
+          flex-shrink: 0;
+        }
+        .like-btn:hover {
+          opacity: 0.8;
+          background: rgba(239, 68, 68, 0.08);
+        }
+        .like-btn[aria-pressed="true"] {
+          opacity: 1;
         }
         .opinion-title {
           font-weight: 600;

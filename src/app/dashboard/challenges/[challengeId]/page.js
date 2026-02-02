@@ -18,6 +18,68 @@ import {
   createChallengeCompletionEntry
 } from "@/lib/journal/journalStore";
 
+// ComboBoxField Component for custom input with predefined options
+function ComboBoxField({ label, value, options, optionLabels, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState(value || "");
+
+  const handleSelectOption = (optValue) => {
+    setInput(optValue);
+    onChange(optValue);
+    setIsOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    onChange(val);
+  };
+
+  return (
+    <div>
+      <label className="text-slate-700 text-sm block mb-2">{label}</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type or choose from options"
+          className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-emerald-600"
+        />
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 whitespace-nowrap"
+        >
+          Choose prompt
+        </button>
+      </div>
+      
+      {/* Simple Dropdown Popover */}
+      {isOpen && (
+        <div className="absolute mt-2 bg-white border border-slate-300 rounded-lg shadow-lg z-50 w-80">
+          <div className="p-2 max-h-64 overflow-y-auto">
+            {options.map(opt => (
+              <button
+                key={opt}
+                type="button"
+                className={`w-full text-left px-3 py-2 rounded text-sm transition ${ 
+                  input === opt
+                    ? "bg-emerald-600 text-white font-medium"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+                onClick={() => handleSelectOption(opt)}
+              >
+                {optionLabels[opt]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ChallengeDetailPage() {
   // --- Annual challenge: monthly reflections state ---
   const [reflections, setReflections] = useState(() => Array(12).fill({}));
@@ -183,17 +245,26 @@ export default function ChallengeDetailPage() {
 
     function updateUnit(unitIdx, patch) {
       setUnits(prev => {
-        const next = { ...prev, [unitIdx]: { ...prev[unitIdx], ...patch, isDirty: true } };
+        const next = { ...prev, [unitIdx]: { ...prev[unitIdx], ...patch, isDirty: true, isOpen: prev[unitIdx]?.isOpen ?? true } };
         return next;
       });
     }
 
     function saveUnit(unitIdx) {
       setUnits(prev => {
-        const next = { ...prev, [unitIdx]: { ...prev[unitIdx], isSaved: true, isCompleted: true, isDirty: false } };
+        const unit = prev[unitIdx] || {};
+        const isNoSIP = unit.form?.completed === "no";
+        const next = { ...prev, [unitIdx]: { ...unit, isSaved: true, isCompleted: true, isDirty: false } };
         // Persist
         const state = getChallengeState();
         state.progress[challengeId].units = next;
+        // If SIP not completed, stop the sprint
+        if (isNoSIP) {
+          state.progress[challengeId].status = "stopped";
+          setStatus("stopped");
+        } else {
+          saveChallengeState(state);
+        }
         saveChallengeState(state);
         return next;
       });
@@ -295,18 +366,30 @@ export default function ChallengeDetailPage() {
                                 <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
                               ))}
                             </div>
-                            <div className="text-slate-700 text-sm mt-2">Comfort level</div>
-                            <div className="flex gap-2">
-                              {["comfortable","slightly_stretched","difficult"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
-                              ))}
-                            </div>
-                            <div className="text-slate-700 text-sm mt-2">Challenge faced</div>
-                            <div className="flex flex-wrap gap-2">
-                              {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
-                              ))}
-                            </div>
+                            <ComboBoxField
+                              label="Comfort level"
+                              value={form.comfort || ""}
+                              options={["comfortable","slightly_stretched","difficult"]}
+                              optionLabels={{
+                                comfortable: "Comfortable",
+                                slightly_stretched: "Slightly stretched",
+                                difficult: "Difficult"
+                              }}
+                              onChange={(val) => updateUnit(0, { form: { ...form, comfort: val } })}
+                            />
+                            <ComboBoxField
+                              label="Challenge faced"
+                              value={form.challenge || ""}
+                              options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
+                              optionLabels={{
+                                forgot_sip: "Forgot SIP",
+                                emergency_expense: "Emergency expense",
+                                cash_flow: "Cash flow issue",
+                                market_fear: "Market fear",
+                                other: "Other"
+                              }}
+                              onChange={(val) => updateUnit(0, { form: { ...form, challenge: val } })}
+                            />
                             <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(0, { form: { ...form, notes: e.target.value } })}></textarea>
                             <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(0)}>[ Save Progress ]</button>
                             {isSaved && (
@@ -365,18 +448,30 @@ export default function ChallengeDetailPage() {
                                 <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
                               ))}
                             </div>
-                            <div className="text-slate-700 text-sm mt-2">Comfort level</div>
-                            <div className="flex gap-2">
-                              {["comfortable","slightly_stretched","difficult"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
-                              ))}
-                            </div>
-                            <div className="text-slate-700 text-sm mt-2">Challenge faced</div>
-                            <div className="flex flex-wrap gap-2">
-                              {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
-                              ))}
-                            </div>
+                            <ComboBoxField
+                              label="Comfort level"
+                              value={current.form.comfort || ""}
+                              options={["comfortable","slightly_stretched","difficult"]}
+                              optionLabels={{
+                                comfortable: "Comfortable",
+                                slightly_stretched: "Slightly stretched",
+                                difficult: "Difficult"
+                              }}
+                              onChange={(val) => updateUnit(current.idx, { form: { ...current.form, comfort: val } })}
+                            />
+                            <ComboBoxField
+                              label="Challenge faced"
+                              value={current.form.challenge || ""}
+                              options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
+                              optionLabels={{
+                                forgot_sip: "Forgot SIP",
+                                emergency_expense: "Emergency expense",
+                                cash_flow: "Cash flow issue",
+                                market_fear: "Market fear",
+                                other: "Other"
+                              }}
+                              onChange={(val) => updateUnit(current.idx, { form: { ...current.form, challenge: val } })}
+                            />
                             <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={current.form.notes || ""} onChange={e => updateUnit(current.idx, { form: { ...current.form, notes: e.target.value } })}></textarea>
                             <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!current.canSave} onClick={() => saveUnit(current.idx)}>[ Save Progress ]</button>
                             {current.isSaved && (
@@ -465,18 +560,30 @@ export default function ChallengeDetailPage() {
                                       <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
                                     ))}
                                   </div>
-                                  <div className="text-slate-700 text-xs mt-2">Comfort level</div>
-                                  <div className="flex gap-2">
-                                    {["comfortable","slightly_stretched","difficult"].map(val => (
-                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.comfort === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, comfort: val } })}>{val === "comfortable" ? "Comfortable" : val === "slightly_stretched" ? "Slightly stretched" : "Difficult"}</button>
-                                    ))}
-                                  </div>
-                                  <div className="text-slate-700 text-xs mt-2">Challenge faced</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {["forgot_sip","emergency_expense","cash_flow","market_fear","other"].map(val => (
-                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.challenge === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, challenge: val } })}>{val === "forgot_sip" ? "Forgot SIP" : val === "emergency_expense" ? "Emergency expense" : val === "cash_flow" ? "Cash flow issue" : val === "market_fear" ? "Market fear" : "Other"}</button>
-                                    ))}
-                                  </div>
+                                  <ComboBoxField
+                                    label="Comfort level"
+                                    value={currentMonth.form.comfort || ""}
+                                    options={["comfortable","slightly_stretched","difficult"]}
+                                    optionLabels={{
+                                      comfortable: "Comfortable",
+                                      slightly_stretched: "Slightly stretched",
+                                      difficult: "Difficult"
+                                    }}
+                                    onChange={(val) => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, comfort: val } })}
+                                  />
+                                  <ComboBoxField
+                                    label="Challenge faced"
+                                    value={currentMonth.form.challenge || ""}
+                                    options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
+                                    optionLabels={{
+                                      forgot_sip: "Forgot SIP",
+                                      emergency_expense: "Emergency expense",
+                                      cash_flow: "Cash flow issue",
+                                      market_fear: "Market fear",
+                                      other: "Other"
+                                    }}
+                                    onChange={(val) => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, challenge: val } })}
+                                  />
                                   <textarea className="w-full mt-2 p-2 border rounded text-xs" rows={2} placeholder="Anything you want to remember? (optional)" value={currentMonth.form.notes || ""} onChange={e => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, notes: e.target.value } })}></textarea>
                                   <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!currentMonth.canSave} onClick={() => saveUnit(currentMonth.monthIdx)}>[ Save Progress ]</button>
                                   {currentMonth.isSaved && (
@@ -530,7 +637,7 @@ export default function ChallengeDetailPage() {
         </button>
       )}
 
-      {/* 7️⃣ CHALLENGE COMPLETION STATE */}
+      {/* 7️⃣ CHALLENGE COMPLETION OR STOPPED STATE */}
       {/* Completion UI: Monthly always, Quarterly only if 3/3, Annual only if 4/4 */}
       {(status === "completed" && (
         (challenge.id === "monthly_sip_kickstart") ||
@@ -631,6 +738,108 @@ export default function ChallengeDetailPage() {
             </button>
             <button className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
               Switch Sprint Mindset
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Oops UI for stopped sprint */}
+      {status === "stopped" && (
+        <div className="w-full bg-red-50 border border-red-200 rounded-3xl shadow p-8 flex flex-col gap-4 items-center">
+          <div className="text-2xl font-bold text-red-700 mb-2">Oops, your sprint got stopped</div>
+          <div className="text-base text-slate-900 mb-2">You can continue from the next period or choose a new date to start your sprint.</div>
+          <div className="flex gap-4 mt-2">
+            <button
+              className="px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+              onClick={() => {
+                // Always start from next month, regardless of sprint type
+                const base = new Date(startDate);
+                base.setMonth(base.getMonth() + 1);
+                const newStartDate = base.toISOString().slice(0, 10);
+                
+                let newEndDate = newStartDate;
+                let phaseLen = 1;
+                let newPlan = null;
+                if (challenge.type === "monthly") {
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 1)).toISOString().slice(0, 10);
+                  phaseLen = 1;
+                } else if (challenge.type === "quarterly") {
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 3)).toISOString().slice(0, 10);
+                  phaseLen = 3;
+                } else if (challenge.type === "yearly") {
+                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 12)).toISOString().slice(0, 10);
+                  phaseLen = 4;
+                }
+                if (challenge.getPlan) {
+                  newPlan = challenge.getPlan({ ...plan, startDate: newStartDate, endDate: newEndDate });
+                }
+                const state = getChallengeState();
+                state.activeChallengeId = challenge.id;
+                state.progress = state.progress || {};
+                state.progress[challenge.id] = {
+                  startedAt: newStartDate,
+                  startDate: newStartDate,
+                  endDate: newEndDate,
+                  status: "active",
+                  plan: newPlan,
+                  phaseStatus: Array(phaseLen).fill("pending")
+                };
+                saveChallengeState(state);
+                setStatus("active");
+                setStartDate(newStartDate);
+                setEndDate(newEndDate);
+                setPhaseStatus(Array(phaseLen).fill("pending"));
+                setShowSuccess(false);
+                setUnits({});
+                setPlan(newPlan);
+              }}
+            >
+              Continue from next month
+            </button>
+            <button
+              className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50"
+              onClick={() => {
+                const dateInput = prompt("Enter start date (YYYY-MM-DD):");
+                if (dateInput) {
+                  let newEndDate = dateInput;
+                  let phaseLen = 1;
+                  let newPlan = null;
+                  if (challenge.type === "monthly") {
+                    newEndDate = new Date(new Date(dateInput).setMonth(new Date(dateInput).getMonth() + 1)).toISOString().slice(0, 10);
+                    phaseLen = 1;
+                  } else if (challenge.type === "quarterly") {
+                    newEndDate = new Date(new Date(dateInput).setMonth(new Date(dateInput).getMonth() + 3)).toISOString().slice(0, 10);
+                    phaseLen = 3;
+                  } else if (challenge.type === "yearly") {
+                    newEndDate = new Date(new Date(dateInput).setMonth(new Date(dateInput).getMonth() + 12)).toISOString().slice(0, 10);
+                    phaseLen = 4;
+                  }
+                  if (challenge.getPlan) {
+                    newPlan = challenge.getPlan({ ...plan, startDate: dateInput, endDate: newEndDate });
+                  }
+                  const state = getChallengeState();
+                  state.activeChallengeId = challenge.id;
+                  state.progress = state.progress || {};
+                  state.progress[challenge.id] = {
+                    startedAt: dateInput,
+                    startDate: dateInput,
+                    endDate: newEndDate,
+                    status: "active",
+                    plan: newPlan,
+                    phaseStatus: Array(phaseLen).fill("pending")
+                  };
+                  saveChallengeState(state);
+                  setStatus("active");
+                  setStartDate(dateInput);
+                  setEndDate(newEndDate);
+                  setPhaseStatus(Array(phaseLen).fill("pending"));
+                  setShowSuccess(false);
+                  setUnits({});
+                  setPlan(newPlan);
+                }
+              }}
+            >
+              Pick a start date
             </button>
           </div>
         </div>

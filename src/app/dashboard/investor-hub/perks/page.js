@@ -40,27 +40,20 @@ const PRODUCTS = [
     category: "Books",
     icon: "📘"
   },
-  // Tools
+  // Companions
   {
     title: "What My Family Should Know – Planner & Organizer (2026 Edition)",
     purpose: "Helps organise important personal and financial information for family awareness.",
     link: "https://www.amazon.in/dp/B0CQZK6J8B",
-    category: "Tools",
-    icon: "🛠"
-  },
-  {
-    title: "COI Brown Leather 2026 Dated Travel Journal with Pen",
-    purpose: "A structured journal for reflection, planning, and documenting life experiences.",
-    link: "https://www.amazon.in/dp/B0CQZK6J8B",
-    category: "Tools",
-    icon: "🛠"
+    category: "Companions",
+    icon: "📓"
   },
   {
     title: "TinyChange Undated Classic Life Planner (A5)",
     purpose: "Supports goal-setting, habit tracking, and mindful daily planning.",
     link: "https://www.amazon.in/dp/B09V7YQJ6B",
-    category: "Tools",
-    icon: "🛠"
+    category: "Companions",
+    icon: "📓"
   },
   // Games
   {
@@ -118,7 +111,7 @@ const PRODUCTS = [
 const FILTERS = [
   { label: "All", value: "All" },
   { label: "Books", value: "Books" },
-  { label: "Tools", value: "Tools" },
+  { label: "Companions", value: "Companions" },
   { label: "Games", value: "Games" },
   { label: "Retirement Gifts", value: "Retirement Gifts" },
 ];
@@ -152,7 +145,6 @@ export default function VincaCurationsPage() {
       <div className="mx-auto w-full max-w-2xl lg:max-w-[900px] flex flex-col gap-6 px-2 sm:px-4 lg:px-6">
         {/* HEADER */}
         <div className="flex flex-col gap-2 mb-2">
-          <h1 className="text-3xl font-bold text-slate-900 text-left">Vinca Curations</h1>
           <div className="text-base text-slate-600 max-w-2xl mt-2 text-left">
             Thoughtfully selected set of products to support and simplify your financial readiness journey.
           </div>

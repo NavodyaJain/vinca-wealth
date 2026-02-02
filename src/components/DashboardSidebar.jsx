@@ -17,6 +17,7 @@ import {
   FastForward,
   ChevronDown,
   Timer,
+  Footprints,
   MessageSquare
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
@@ -66,9 +67,9 @@ export default function DashboardSidebar({ onNav }) {
     },
     {
       id: 'templates',
-      label: 'Reflections',
+      label: 'Footprints',
       path: '/dashboard/reflections',
-      icon: <FileSearch className="h-5 w-5" />
+      icon: <Footprints className="h-5 w-5" />
     },
     {
       id: 'perks',
@@ -78,13 +79,13 @@ export default function DashboardSidebar({ onNav }) {
     },
         {
           id: 'resources',
-          label: 'Resources',
+          label: 'Learning',
           path: '/dashboard/investor-hub/resources',
           icon: <BookOpen className="h-5 w-5" />
         },
         {
           id: 'feedback-opinions',
-          label: 'Feedback & Opinions',
+          label: 'Reflections',
           path: '/dashboard/feedback-opinions',
           icon: <MessageSquare className="h-5 w-5" />
         },

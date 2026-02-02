@@ -107,19 +107,6 @@ export default function InvestorHubPage() {
   const renderDiscussions = () => (
     <div className="mt-6 max-w-2xl mx-auto">
       <div className="mb-4 text-xs text-slate-500">This is an educational community. Not investment advice.</div>
-      <div className="mb-4 flex gap-2">
-        <input
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-          placeholder="Post a question (local only)"
-          value={discussionInput}
-          onChange={e => setDiscussionInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handlePostDiscussion()}
-        />
-        <button
-          className="rounded-lg bg-green-600 text-white px-4 py-2 font-semibold text-sm hover:bg-green-700"
-          onClick={handlePostDiscussion}
-        >Post</button>
-      </div>
       <div className="space-y-4">
         {discussionFeed.map((d, i) => (
           <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-1 shadow-sm">
