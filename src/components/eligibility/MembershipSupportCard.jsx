@@ -1,31 +1,31 @@
 // src/components/eligibility/MembershipSupportCard.jsx
-import { Calendar, BookOpen, Gift, FileText, UserCheck } from 'lucide-react';
+import { Calendar, BookOpen, Gift, FileText, UserCheck, Zap } from 'lucide-react';
 
 const SUPPORT_ITEMS = [
   {
-    icon: <Calendar className="h-5 w-5 text-emerald-500" />,
-    label: 'Events',
-    description: 'Live educational sessions & archived events',
+    icon: <Zap className="h-5 w-5 text-emerald-500" />,
+    label: 'Sprints',
+    description: 'Structured execution journeys. Time-bound financial readiness sprints that help users take consistent action—monthly, quarterly, or yearly—without overwhelming decisions.',
   },
   {
     icon: <BookOpen className="h-5 w-5 text-emerald-500" />,
-    label: 'Resources',
-    description: 'Curated blogs + video series in modules (Udemy style)',
-  },
-  {
-    icon: <Gift className="h-5 w-5 text-emerald-500" />,
-    label: 'Perks',
-    description: 'Partner discounts & redeemable coupons',
-  },
-  {
-    icon: <UserCheck className="h-5 w-5 text-emerald-500" />,
-    label: 'Elevate',
-    description: '1:1 wealth manager session booking (education-only)',
+    label: 'Footprints',
+    description: 'Real experiences from real journeys. Learn from how others navigated financial readiness—their challenges, discipline, and mindset—so users don\'t feel alone.',
   },
   {
     icon: <FileText className="h-5 w-5 text-emerald-500" />,
-    label: 'Portfolio Review',
-    description: 'Upload portfolio for structured review workflow',
+    label: 'Learning',
+    description: 'Financial awareness before financial readiness. Short, focused videos that build clarity on money, risks, and long-term planning—designed to inform decisions, not push products.',
+  },
+  {
+    icon: <Calendar className="h-5 w-5 text-emerald-500" />,
+    label: 'Community & Events',
+    description: 'Learn together, grow with confidence. Expert-led sessions and discussions focused on awareness, discipline, and long-term thinking.',
+  },
+  {
+    icon: <UserCheck className="h-5 w-5 text-emerald-500" />,
+    label: 'Curations',
+    description: 'Tools that make the journey easier. Handpicked books, planners, and resources to support consistency and reflection.',
   },
 ];
 

@@ -11,12 +11,13 @@ export default function EligibilityHeroCard({ score, verdict, onJoin, reasons })
       {/* Left: Score + CTA */}
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-emerald-900 mb-2">Membership Fit Analysis</h1>
-          <p className="text-slate-700 text-base md:text-lg mb-4">Based on your latest retirement readings (education-only).</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-emerald-900 mb-2">Your Financial Readiness Fit</h1>
+          <p className="text-slate-600 text-base md:text-lg mb-4">A quantified view of how well Vinca supports your current stage.</p>
         </div>
-        <div className={`rounded-xl px-8 py-6 flex flex-col items-center ${scoreBg} border border-slate-100 mb-2`}>
-          <div className="text-4xl font-bold mb-1 text-emerald-700">{score ?? '--'}</div>
-          <div className={`text-lg font-semibold mb-2 ${verdictColor}`}>{verdict}</div>
+        <div className={`rounded-xl px-8 py-6 flex flex-col items-center ${scoreBg} border border-slate-200 mb-2`}>
+          <div className="text-5xl font-bold mb-2 text-emerald-700">{score ?? '--'}%</div>
+          <div className={`text-base font-medium mb-4 ${verdictColor}`}>{verdict}</div>
+          <p className="text-xs text-slate-600 text-center leading-relaxed">This score reflects how closely Vinca's tools align with your current financial readiness needs.</p>
         </div>
         <button
           className="w-full md:w-auto px-8 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-lg hover:bg-emerald-700 transition"

@@ -171,7 +171,7 @@ export default function DashboardSidebar({ onNav }) {
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
         >
           <CheckCircle className="h-5 w-5" />
-          <span className="flex-1 text-left">Check Eligibility</span>
+          <span className="flex-1 text-left">Readiness Fit</span>
         </button>
         <button
           onClick={() => handleNavigation('/dashboard/profile')}

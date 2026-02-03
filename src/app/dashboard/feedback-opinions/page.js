@@ -14,8 +14,8 @@ const FEATURES = [
 const initialOpinions = [
   {
     id: 1,
-    title: 'Mobile App Development',
-    description: 'Native iOS and Android applications',
+    title: 'Community-Driven Investor Groups',
+    description: 'Learn and grow alongside investors with similar retirement goals. Share experiences, discuss challenges, and stay motivated through structured community groups—without advice or recommendations.',
     votes: 42,
     userVoted: false,
     type: 'product',
@@ -23,8 +23,8 @@ const initialOpinions = [
   },
   {
     id: 2,
-    title: 'Real-time Portfolio Analytics',
-    description: 'Live tracking of investment performance',
+    title: 'Expert-Led Events & Masterclasses',
+    description: 'Participate in curated sessions, AMAs, and workshops focused on financial readiness, discipline, and long-term planning. Designed for learning and clarity, not stock tips.',
     votes: 38,
     userVoted: false,
     type: 'product',
@@ -32,8 +32,8 @@ const initialOpinions = [
   },
   {
     id: 3,
-    title: 'AI Financial Assistant',
-    description: '24/7 personalized financial guidance',
+    title: 'Blind Spot & Risk Awareness',
+    description: 'Identify gaps in your retirement plan—lifestyle risks, health shocks, and sustainability blind spots—before they turn into problems. Built to surface what calculators usually miss.',
     votes: 31,
     userVoted: false,
     type: 'product',
@@ -169,6 +169,7 @@ const FeedbackOpinionsPage = () => {
   // --- UI Components ---
   return (
     <div className="feedback-opinions-root">
+      <h1 className="page-header">Your reflection helps us strengthen the financial readiness experience we're building for you.</h1>
       <div className="tabs-bar">
         <button
           className={`tab-btn${state.activeTab === 'feedback' ? ' active' : ''}`}
@@ -219,6 +220,13 @@ const FeedbackOpinionsPage = () => {
           margin: 0 auto;
           padding: 32px 16px 48px 16px;
           font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+        }
+        .page-header {
+          margin: 0 0 32px 0;
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: var(--grey-dark);
+          line-height: 1.4;
         }
         .tabs-bar {
           display: flex;

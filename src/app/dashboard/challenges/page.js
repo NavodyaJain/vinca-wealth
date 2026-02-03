@@ -44,7 +44,6 @@ export default function ChallengesHome() {
     <div className="w-full min-h-screen bg-slate-50">
       <div className="max-w-5xl mx-auto px-2 sm:px-6 pt-12 pb-16">
         {/* Header Update */}
-        <h1 className="text-4xl font-bold text-slate-900 mb-3 tracking-tight leading-tight">Retirement Sprints</h1>
         <div className="mb-8 text-lg text-slate-600 font-normal max-w-2xl">Break long-term retirement investing into focused sprints and track your real progress.</div>
 
         {/* KPI Cards Section */}
