@@ -17,8 +17,8 @@ const PROMPTS = [
 function PageIntro() {
   return (
     <header className="w-full mb-4">
-      <h1 className="text-xl font-bold text-gray-800 tracking-tight mb-1">Share a Reflection</h1>
-      <p className="text-sm text-gray-400 font-medium">A personal moment, lesson, or insight from your financial journey.</p>
+
+      <p className="text-sm text-gray-400 font-medium">Leave your financial readiness footprint here</p>
     </header>
   );
 }
@@ -151,7 +151,7 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
         </div>
                 {/* Body */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400 font-medium mb-1">Reflection</label>
+                  <label className="text-xs text-gray-400 font-medium mb-1">Your Journey</label>
                   <textarea
                     className="w-full h-24 px-3 py-2 text-base border border-gray-100 rounded-lg resize-none focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
                     placeholder="Write freely. This is your experience — not advice."
@@ -170,7 +170,7 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
                     </span>
                     <div className="flex flex-col flex-grow min-w-0">
                       <span className="text-xs font-semibold text-gray-700">Generate from Sprint</span>
-                      <span className="text-xs text-gray-400 leading-tight">Turn your recent sprint progress into a reflection draft. You can edit it freely.</span>
+                      <span className="text-xs text-gray-400 leading-tight">Turn your recent sprint progress into a journey draft. You can edit it freely.</span>
                     </div>
                     <button
                       type="button"
@@ -206,7 +206,7 @@ function SubmitSection({ isFormValid }) {
         type="submit"
         disabled={!isFormValid}
       >
-        Post Reflection
+        Post
       </button>
       <div className="text-xs text-gray-300 mt-2 font-medium">Shared as a personal reflection. Not financial advice.</div>
     </footer>

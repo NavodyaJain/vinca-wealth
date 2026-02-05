@@ -167,7 +167,7 @@ export default function DashboardSidebar({ onNav }) {
       {/* Zone 3: Bottom Fixed Area */}
       <div className="flex-none mt-auto flex flex-col gap-2 px-2 pb-4 border-t border-slate-200 pt-3">
         <button
-          onClick={() => handleNavigation('/dashboard/check-eligibility')}
+          onClick={() => handleNavigation('/dashboard/readiness-fit')}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
         >
           <CheckCircle className="h-5 w-5" />

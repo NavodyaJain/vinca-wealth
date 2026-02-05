@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { MessageSquare, Star, Heart } from 'lucide-react';
+import { MessageSquare, Star, Heart, Send } from 'lucide-react';
 
 const FEATURES = [
   'Sprints',
@@ -11,35 +11,7 @@ const FEATURES = [
   'Others'
 ];
 
-const initialOpinions = [
-  {
-    id: 1,
-    title: 'Community-Driven Investor Groups',
-    description: 'Learn and grow alongside investors with similar retirement goals. Share experiences, discuss challenges, and stay motivated through structured community groups—without advice or recommendations.',
-    votes: 42,
-    userVoted: false,
-    type: 'product',
-    createdAt: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    title: 'Expert-Led Events & Masterclasses',
-    description: 'Participate in curated sessions, AMAs, and workshops focused on financial readiness, discipline, and long-term planning. Designed for learning and clarity, not stock tips.',
-    votes: 38,
-    userVoted: false,
-    type: 'product',
-    createdAt: '2024-01-20T14:45:00Z'
-  },
-  {
-    id: 3,
-    title: 'Blind Spot & Risk Awareness',
-    description: 'Identify gaps in your retirement plan—lifestyle risks, health shocks, and sustainability blind spots—before they turn into problems. Built to surface what calculators usually miss.',
-    votes: 31,
-    userVoted: false,
-    type: 'product',
-    createdAt: '2024-01-25T09:15:00Z'
-  }
-];
+const initialOpinions = [];
 
 const sortOpinions = (items) => {
   return [...items].sort((a, b) => {
@@ -169,19 +141,19 @@ const FeedbackOpinionsPage = () => {
   // --- UI Components ---
   return (
     <div className="feedback-opinions-root">
-      <h1 className="page-header">Your reflection helps us strengthen the financial readiness experience we're building for you.</h1>
+      <h3 className="page-header">Your reflection helps us strengthen the financial readiness experience we're building for you.</h3>
       <div className="tabs-bar">
         <button
           className={`tab-btn${state.activeTab === 'feedback' ? ' active' : ''}`}
           onClick={() => handleTabChange('feedback')}
         >
-          Feedback
+          Review
         </button>
         <button
           className={`tab-btn${state.activeTab === 'opinions' ? ' active' : ''}`}
           onClick={() => handleTabChange('opinions')}
         >
-          Opinions
+          Raise
         </button>
       </div>
       <div className="tab-content">
@@ -266,43 +238,67 @@ const FeedbackOpinionsPage = () => {
 
 // --- Feedback Section ---
 function FeedbackSection({ state, setState, handleStarClick, handleFeedbackSubmit }) {
+  const [likedFeedback, setLikedFeedback] = useState(new Set());
+  const [feedbackLikes, setFeedbackLikes] = useState({});
+  const [showThankYou, setShowThankYou] = useState(false);
+
+  const handleLike = (feedbackId) => {
+    if (likedFeedback.has(feedbackId)) return;
+    
+    setLikedFeedback(prev => new Set([...prev, feedbackId]));
+    setFeedbackLikes(prev => ({
+      ...prev,
+      [feedbackId]: (prev[feedbackId] || 0) + 1
+    }));
+  };
+
+  const handleSubmitWithPopup = (type) => {
+    const originalSubmit = handleFeedbackSubmit;
+    handleFeedbackSubmit(type);
+    if (type === 'overall' && state.overallRating > 0) {
+      setTimeout(() => setShowThankYou(true), 1000);
+    }
+  };
+
   return (
     <div className="feedback-section">
-      <div className="feedback-cards">
-        <OverallFeedbackCard
-          rating={state.overallRating}
-          comment={state.overallComment}
-          setState={setState}
-          handleStarClick={handleStarClick}
-          handleSubmit={() => handleFeedbackSubmit('overall')}
-          loading={state.feedbackLoading}
-          success={state.feedbackSuccess}
-        />
-        <FeatureFeedbackCard
-          selectedFeature={state.selectedFeature}
-          rating={state.featureRating}
-          comment={state.featureComment}
-          setState={setState}
-          handleStarClick={handleStarClick}
-          handleSubmit={() => handleFeedbackSubmit('feature')}
-          loading={state.feedbackLoading}
-          success={state.feedbackSuccess}
-        />
-      </div>
-      <FeedbackHistory feedbacks={state.allFeedbacks} />
+      <OverallFeedbackCard
+        rating={state.overallRating}
+        comment={state.overallComment}
+        setState={setState}
+        handleStarClick={handleStarClick}
+        handleSubmit={() => handleSubmitWithPopup('overall')}
+        loading={state.feedbackLoading}
+        success={state.feedbackSuccess}
+      />
+
+      <FeedbackHistory 
+        feedbacks={state.allFeedbacks} 
+        onLike={handleLike}
+        likedFeedback={likedFeedback}
+        feedbackLikes={feedbackLikes}
+      />
+      
+      <FeatureFeedbackCard
+        selectedFeature={state.selectedFeature}
+        rating={state.featureRating}
+        comment={state.featureComment}
+        setState={setState}
+        handleStarClick={handleStarClick}
+        handleSubmit={() => handleFeedbackSubmit('feature')}
+        loading={state.feedbackLoading}
+        success={state.feedbackSuccess}
+      />
+
+      {showThankYou && (
+        <ThankYouModal onClose={() => setShowThankYou(false)} />
+      )}
+
       <style>{`
         .feedback-section {
           display: flex;
           flex-direction: column;
           gap: 24px;
-        }
-        .feedback-cards {
-          display: flex;
-          gap: 24px;
-          flex-wrap: wrap;
-        }
-        @media (max-width: 900px) {
-          .feedback-cards { flex-direction: column; gap: 18px; }
         }
       `}</style>
     </div>
@@ -310,70 +306,101 @@ function FeedbackSection({ state, setState, handleStarClick, handleFeedbackSubmi
 }
 
 function OverallFeedbackCard({ rating, comment, setState, handleStarClick, handleSubmit, loading, success }) {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !loading && rating > 0) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
-    <div className="feedback-card">
-      <h3>Overall Experience</h3>
+    <div className="feedback-input-card">
       <StarRating
         value={rating}
         onChange={(val) => handleStarClick(val, 'overall')}
       />
-      <textarea
-        className="feedback-textarea"
-        placeholder="Share your overall experience (optional)"
-        maxLength={1500}
-        value={comment}
-        onChange={e => setState(prev => ({ ...prev, overallComment: e.target.value }))}
-        disabled={loading}
-      />
-      <button
-        className="submit-btn"
-        onClick={handleSubmit}
-        disabled={loading || rating === 0}
-      >
-        {loading ? 'Submitting...' : success ? 'Submitted!' : 'Submit Feedback'}
-      </button>
+      <div className="feedback-input-wrapper">
+        <input
+          type="text"
+          className="feedback-input"
+          placeholder="Share your experience with Vinca so far…"
+          maxLength={500}
+          value={comment}
+          onChange={e => setState(prev => ({ ...prev, overallComment: e.target.value }))}
+          onKeyDown={handleKeyDown}
+          disabled={loading}
+        />
+        <button
+          className="feedback-send-btn"
+          onClick={handleSubmit}
+          disabled={loading || rating === 0 || !comment.trim()}
+          title="Send feedback"
+          aria-label="Send"
+        >
+          <Send size={18} />
+        </button>
+      </div>
       <style>{`
-        .feedback-card {
-          flex: 1;
-          min-width: 320px;
-          background: var(--grey-light);
+        .feedback-input-card {
+          background: #fff;
           border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-          padding: 20px 24px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          padding: 12px 16px;
           display: flex;
           flex-direction: column;
           gap: 16px;
-          margin-bottom: 16px;
         }
-        .feedback-card h3 {
-          margin: 0 0 8px 0;
-          font-size: 1.15rem;
-          color: var(--grey-dark);
+        .feedback-input-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          position: relative;
         }
-        .feedback-textarea {
-          min-height: 64px;
+        .feedback-input {
+          flex: 1;
+          border: 1px solid #e5e7eb;
           border-radius: 8px;
-          border: 1px solid var(--grey-medium);
-          padding: 10px 12px;
-          font-size: 1rem;
-          resize: vertical;
+          padding: 10px 14px;
+          font-size: 0.95rem;
+          background: #fafbfc;
+          font-family: inherit;
+          transition: all 0.2s ease;
+          color: #374151;
+        }
+        .feedback-input::placeholder {
+          color: #9ca3af;
+        }
+        .feedback-input:focus {
+          outline: none;
+          border-color: #10b981;
           background: #fff;
         }
-        .submit-btn {
-          align-self: flex-end;
-          background: var(--vinca-green);
-          color: #fff;
-          border: none;
-          border-radius: 8px;
-          padding: 10px 24px;
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-        .submit-btn:disabled {
-          background: var(--inactive);
+        .feedback-input:disabled {
+          background: #f3f4f6;
           cursor: not-allowed;
+        }
+        .feedback-send-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          color: #9ca3af;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+        .feedback-send-btn:hover:not(:disabled) {
+          color: #10b981;
+        }
+        .feedback-send-btn:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+        .feedback-send-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
         }
       `}</style>
     </div>
@@ -381,51 +408,7 @@ function OverallFeedbackCard({ rating, comment, setState, handleStarClick, handl
 }
 
 function FeatureFeedbackCard({ selectedFeature, rating, comment, setState, handleStarClick, handleSubmit, loading, success }) {
-  return (
-    <div className="feedback-card">
-      <h3>Feature Feedback</h3>
-      <select
-        className="feature-select"
-        value={selectedFeature}
-        onChange={e => setState(prev => ({ ...prev, selectedFeature: e.target.value }))}
-        disabled={loading}
-      >
-        <option value="">Select Feature</option>
-        {FEATURES.map(f => (
-          <option key={f} value={f}>{f}</option>
-        ))}
-      </select>
-      <StarRating
-        value={rating}
-        onChange={(val) => handleStarClick(val, 'feature')}
-      />
-      <textarea
-        className="feedback-textarea"
-        placeholder="Share your thoughts on this feature (optional)"
-        maxLength={1500}
-        value={comment}
-        onChange={e => setState(prev => ({ ...prev, featureComment: e.target.value }))}
-        disabled={loading}
-      />
-      <button
-        className="submit-btn"
-        onClick={handleSubmit}
-        disabled={loading || rating === 0 || !selectedFeature}
-      >
-        {loading ? 'Submitting...' : success ? 'Submitted!' : 'Submit Feedback'}
-      </button>
-      <style>{`
-        .feature-select {
-          border-radius: 8px;
-          border: 1px solid #dbeafe;
-          padding: 8px 12px;
-          font-size: 1rem;
-          background: #fff;
-          margin-bottom: 4px;
-        }
-      `}</style>
-    </div>
-  );
+  return null;
 }
 
 function StarRating({ value, onChange }) {
@@ -469,7 +452,7 @@ function StarRating({ value, onChange }) {
   );
 }
 
-function FeedbackHistory({ feedbacks }) {
+function FeedbackHistory({ feedbacks, onLike, likedFeedback, feedbackLikes }) {
   if (!feedbacks.length) {
     return (
       <div className="empty-state">
@@ -495,51 +478,115 @@ function FeedbackHistory({ feedbacks }) {
     <div className="feedback-history">
       {feedbacks.map(fb => (
         <div className="feedback-item" key={fb.id}>
-          <div className="feedback-meta">
+          <div className="feedback-left">
             <StarRatingStatic value={fb.rating} />
+            {fb.comment && <div className="feedback-comment">{fb.comment}</div>}
             {fb.type === 'feature' && (
               <span className="feature-label">{fb.feature}</span>
             )}
-            <span className="timestamp">{new Date(fb.createdAt).toLocaleString()}</span>
           </div>
-          {fb.comment && <div className="feedback-comment">{fb.comment}</div>}
+          <div className="feedback-right">
+            <span className="timestamp">{new Date(fb.createdAt).toLocaleString()}</span>
+            <button 
+              className={`like-btn ${likedFeedback && likedFeedback.has(fb.id) ? 'liked' : ''}`}
+              onClick={() => onLike && onLike(fb.id)}
+              disabled={likedFeedback && likedFeedback.has(fb.id)}
+              title="Like this feedback"
+            >
+              <Heart size={16} />
+              <span className="like-count">{(feedbackLikes && feedbackLikes[fb.id]) || 0}</span>
+            </button>
+          </div>
         </div>
       ))}
       <style>{`
         .feedback-history {
-          margin-top: 32px;
           display: flex;
           flex-direction: column;
           gap: 18px;
         }
         .feedback-item {
-          background: #f4f7fa;
+          background: #fff;
           border-radius: 12px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-          padding: 18px 16px 12px 16px;
-        }
-        .feedback-meta {
+          padding: 20px 24px;
           display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 6px;
+          gap: 20px;
+          align-items: flex-start;
+        }
+        .feedback-item:nth-child(odd) {
+          background: linear-gradient(135deg, #f0fdf9 0%, #d1fae5 100%);
+        }
+        .feedback-item:nth-child(even) {
+          background: linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%);
+        }
+        .feedback-left {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .feedback-right {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 10px;
+          min-width: 120px;
         }
         .feature-label {
           background: #2563eb;
           color: #fff;
           border-radius: 6px;
-          padding: 2px 10px;
-          font-size: 0.92rem;
+          padding: 4px 10px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          align-self: flex-start;
         }
         .timestamp {
-          color: #64748b;
-          font-size: 0.92rem;
-          margin-left: auto;
+          color: #9ca3af;
+          font-size: 0.8rem;
+          white-space: nowrap;
         }
         .feedback-comment {
-          color: #1a2540;
-          font-size: 1.01rem;
-          margin-top: 2px;
+          color: #4b5563;
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        .like-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: #fff;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          padding: 6px 10px;
+          cursor: pointer;
+          color: #6b7280;
+          font-size: 0.8rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .like-btn:hover:not(:disabled) {
+          border-color: #ef4444;
+          color: #ef4444;
+          background: #fef2f2;
+        }
+        .like-btn.liked {
+          background: #fee2e2;
+          border-color: #ef4444;
+          color: #ef4444;
+        }
+        .like-btn.liked svg {
+          fill: #ef4444;
+        }
+        .like-btn:disabled {
+          cursor: not-allowed;
+        }
+        .like-count {
+          font-size: 0.75rem;
+          font-weight: 600;
         }
       `}</style>
     </div>
@@ -550,10 +597,13 @@ function StarRatingStatic({ value }) {
   return (
     <span className="star-static">
       {[1,2,3,4,5].map(i => (
-        <Star key={i} size={20} color={i <= value ? '#2563eb' : '#b6c2d9'} fill={i <= value ? '#2563eb' : 'none'} />
+        <Star key={i} size={20} color={i <= value ? '#10b981' : '#d1d5db'} fill={i <= value ? '#10b981' : 'none'} />
       ))}
       <style>{`
-        .star-static { display: flex; gap: 2px; }
+        .star-static { 
+          display: flex; 
+          gap: 3px;
+        }
         .star-static svg {
           color: var(--vinca-green);
         }
@@ -562,213 +612,426 @@ function StarRatingStatic({ value }) {
   );
 }
 
-// --- Opinions Section ---
-function OpinionsSection({ state, setState, handleVote, handleProblemSubmit }) {
-  // Floating button handler uses existing modal logic
-  const handleSuggestClick = () => setState(prev => ({ ...prev, isModalOpen: true }));
-  const pipelineFeatures = state.opinions.filter(o => o.type === 'product');
-  const userSuggestions = state.opinions.filter(o => o.type === 'user-suggested');
+function ThankYouModal({ onClose }) {
+  React.useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
-    <div className="opinions-layout-container">
-      <div className="opinions-header">
-        <h1>Opinions</h1>
-      </div>
-      <div className="opinions-grid-wrapper">
-        <div className="opinions-grid">
-          {/* LEFT COLUMN: Pipeline Features */}
-          <div className="grid-column pipeline-column">
-            <div className="section-header">
-              <h2 className="section-title">What We're Working On</h2>
-              <p className="section-subtitle">Vote to influence our development priorities</p>
-            </div>
-            <div className="pipeline-cards">
-              {pipelineFeatures.map(op => (
-                <OpinionCard key={op.id} opinion={op} handleVote={handleVote} />
-              ))}
-            </div>
-          </div>
-          {/* RIGHT COLUMN: User Suggestions */}
-          <div className="grid-column suggestions-column">
-            <div className="section-header">
-              <h2 className="section-title">User Suggestions</h2>
-              <p className="section-subtitle">Community-driven problem ideas</p>
-            </div>
-            {userSuggestions.length === 0 ? (
-              <div className="empty-state-card">
-                <div className="empty-state-icon">💡</div>
-                <h3 className="empty-state-title">No suggestions yet</h3>
-                <p className="empty-state-message">
-                  Be the first to suggest a problem we should solve
-                </p>
-              </div>
-            ) : (
-              <div className="suggestion-cards">
-                {userSuggestions.map(op => (
-                  <OpinionCard key={op.id} opinion={op} handleVote={handleVote} />
-                ))}
-              </div>
-            )}
-          </div>
+    <>
+      <div className="thank-you-overlay" onClick={onClose} />
+      <div className="thank-you-modal">
+        <div className="thank-you-content">
+          <div className="thank-you-emoji">🙏</div>
+          <h2>Thank You!</h2>
+          <p>We truly appreciate your valuable feedback. Vinca will take this seriously.</p>
+          <button className="thank-you-btn" onClick={onClose}>
+            Welcome
+          </button>
         </div>
       </div>
-      {/* Floating Action Button for Suggest a Problem */}
-      <FloatingSuggestButton onClick={handleSuggestClick} />
-      {/* Modal remains unchanged */}
-      <ProblemSuggestionModal
-        open={state.isModalOpen}
-        onClose={() => setState(prev => ({ ...prev, isModalOpen: false }))}
-        title={state.problemTitle}
-        description={state.problemDescription}
-        setState={setState}
-        loading={state.loading}
-        handleSubmit={handleProblemSubmit}
-      />
       <style>{`
-        .opinions-layout-container {
-          width: 100%;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 20px;
+        .thank-you-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+          animation: fadeIn 0.3s ease;
         }
-        .opinions-header {
-          display: flex;
-          align-items: center;
-          margin-bottom: 8px;
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-        .opinions-header h1 {
-          margin: 0;
-          color: #374151;
-          font-size: 1.75rem;
-          font-weight: 700;
+        .thank-you-modal {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 1000;
+          animation: slideUp 0.4s ease;
         }
-        .opinions-grid-wrapper {
-          border: 1px solid #E5E7EB;
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -45%);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+          }
+        }
+        .thank-you-content {
+          background: #fff;
           border-radius: 16px;
-          background-color: #FFFFFF;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-          padding: 24px;
-          margin-top: 20px;
-        }
-        .opinions-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 32px;
-          align-items: start;
-        }
-        .grid-column {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          min-width: 0;
-        }
-        .section-header {
-          margin-bottom: 20px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid #F3F4F6;
-        }
-        .section-title {
-          color: #374151;
-          font-size: 1.25rem;
-          font-weight: 600;
-          margin: 0 0 4px 0;
-        }
-        .section-subtitle {
-          color: #6B7280;
-          font-size: 0.875rem;
-          margin: 0;
-          line-height: 1.4;
-        }
-        .pipeline-cards,
-        .suggestion-cards {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          flex: 1;
-        }
-        .pipeline-cards .feature-card,
-        .suggestion-cards .suggestion-card {
-          border: 1px solid #F3F4F6;
-          border-radius: 12px;
-          padding: 20px;
-          background-color: #FFFFFF;
-          transition: all 0.2s ease;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-        }
-        .pipeline-cards .feature-card:hover,
-        .suggestion-cards .suggestion-card:hover {
-          border-color: #D1FAE5;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-        }
-        @media (min-width: 769px) {
-          .grid-column.pipeline-column {
-            border-right: 1px solid #F3F4F6;
-            padding-right: 32px;
-          }
-          .grid-column.suggestions-column {
-            padding-left: 32px;
-          }
-        }
-        @media (max-width: 1024px) {
-          .opinions-grid {
-            gap: 24px;
-          }
-          .opinions-grid-wrapper {
-            padding: 20px;
-          }
-        }
-        @media (max-width: 768px) {
-          .opinions-grid {
-            grid-template-columns: 1fr;
-            gap: 32px;
-          }
-          .opinions-layout-container {
-            padding: 0 16px;
-          }
-          .floating-suggest-btn {
-            bottom: 80px;
-          }
-          .grid-column.pipeline-column {
-            border-right: none;
-            padding-right: 0;
-          }
-          .grid-column.suggestions-column {
-            padding-left: 0;
-          }
-        }
-        .empty-state-card {
-          border: 1px solid #F3F4F6;
-          border-radius: 12px;
-          padding: 40px 24px;
-          background-color: #F9FAFB;
+          padding: 40px 36px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          max-width: 360px;
+          width: 90vw;
           text-align: center;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          min-height: 200px;
+          gap: 16px;
         }
-        .empty-state-icon {
-          font-size: 2rem;
-          margin-bottom: 16px;
-          opacity: 0.6;
+        .thank-you-emoji {
+          font-size: 3.5rem;
+          line-height: 1;
+          margin-bottom: 8px;
         }
-        .empty-state-title {
-          color: #374151;
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin: 0 0 8px 0;
-        }
-        .empty-state-message {
-          color: #6B7280;
-          font-size: 0.875rem;
-          max-width: 300px;
+        .thank-you-content h2 {
           margin: 0;
+          font-size: 1.5rem;
+          color: #1a2540;
+          font-weight: 700;
+        }
+        .thank-you-content p {
+          margin: 0;
+          font-size: 1rem;
+          color: #6b7280;
           line-height: 1.5;
+        }
+        .thank-you-btn {
+          background: var(--vinca-green);
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 12px 32px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s ease;
+          margin-top: 8px;
+          min-width: 120px;
+        }
+        .thank-you-btn:hover {
+          background: #059669;
+        }
+        .thank-you-btn:active {
+          transform: scale(0.98);
+        }
+      `}</style>
+    </>
+  );
+}
+
+// --- Opinions Section ---
+function OpinionsSection({ state, setState, handleVote, handleProblemSubmit }) {
+  const [opinionText, setOpinionText] = useState('');
+  const [likedOpinions, setLikedOpinions] = useState(new Set());
+  const [opinionLikes, setOpinionLikes] = useState({});
+  const [newlySubmittedId, setNewlySubmittedId] = useState(null);
+
+  const handleLikeOpinion = (opinionId) => {
+    if (likedOpinions.has(opinionId)) return;
+    
+    setLikedOpinions(prev => new Set([...prev, opinionId]));
+    setOpinionLikes(prev => ({
+      ...prev,
+      [opinionId]: (prev[opinionId] || 0) + 1
+    }));
+    handleVote(opinionId);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmitOpinion();
+    }
+  };
+
+  const handleSubmitOpinion = () => {
+    if (!opinionText.trim()) return;
+    
+    setState((prev) => ({
+      ...prev,
+      problemTitle: opinionText,
+      problemDescription: opinionText,
+      loading: true
+    }));
+
+    setTimeout(() => {
+      const newOpinion = {
+        id: Date.now(),
+        title: opinionText,
+        description: opinionText,
+        votes: 0,
+        userVoted: false,
+        type: 'user-suggested',
+        createdAt: new Date().toISOString()
+      };
+      
+      setNewlySubmittedId(newOpinion.id);
+      setOpinionText('');
+      
+      setState((prev) => ({
+        ...prev,
+        opinions: [newOpinion, ...prev.opinions],
+        loading: false,
+        opinionSuccess: true
+      }));
+
+      setTimeout(() => {
+        setState((prev) => ({ ...prev, opinionSuccess: false }));
+        setNewlySubmittedId(null);
+      }, 2000);
+    }, 600);
+  };
+
+  // Sort opinions by likes (descending), with newly submitted at top
+  const sortedOpinions = [...state.opinions].sort((a, b) => {
+    // Newly submitted opinion stays at top temporarily
+    if (newlySubmittedId) {
+      if (a.id === newlySubmittedId) return -1;
+      if (b.id === newlySubmittedId) return 1;
+    }
+    
+    // Then sort by likes
+    const likesA = (opinionLikes[a.id] || 0) + (a.votes || 0);
+    const likesB = (opinionLikes[b.id] || 0) + (b.votes || 0);
+    return likesB - likesA;
+  });
+
+  return (
+    <div className="opinions-section">
+      <div className="opinions-header-block">
+        <p className="opinions-subtext">Raise the next blocker in your financial readiness journey.</p>
+      </div>
+
+      <div className="opinion-input-card">
+        <div className="opinion-input-wrapper">
+          <input
+            type="text"
+            className="opinion-input"
+            maxLength={500}
+            value={opinionText}
+            onChange={e => setOpinionText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={state.loading}
+          />
+          <button
+            className="opinion-send-btn"
+            onClick={handleSubmitOpinion}
+            disabled={!opinionText.trim() || state.loading}
+            title="Send opinion"
+            aria-label="Send"
+          >
+            <Send size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="opinions-list">
+        {sortedOpinions.length === 0 ? (
+          <div className="opinions-empty">
+            <p>No opinions yet. Be the first to share what's on your mind.</p>
+          </div>
+        ) : (
+          sortedOpinions.map(opinion => (
+            <div className={`opinion-item ${newlySubmittedId === opinion.id ? 'newly-submitted' : ''}`} key={opinion.id}>
+              <div className="opinion-left">
+                <div className="opinion-text">{opinion.title}</div>
+                <div className="opinion-timestamp">{new Date(opinion.createdAt).toLocaleString()}</div>
+              </div>
+              <div className="opinion-right">
+                <button
+                  className={`opinion-like-btn ${likedOpinions && likedOpinions.has(opinion.id) ? 'liked' : ''}`}
+                  onClick={() => handleLikeOpinion(opinion.id)}
+                  disabled={likedOpinions && likedOpinions.has(opinion.id)}
+                  title="Like this opinion"
+                >
+                  <Heart size={16} />
+                  <span className="like-count">{(opinionLikes && opinionLikes[opinion.id]) || 0}</span>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <style>{`
+        .opinions-section {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        .opinions-header-block {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .opinions-main-question {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1a2540;
+          line-height: 1.4;
+        }
+        .opinions-subtext {
+          margin: 0;
+          font-size: 0.95rem;
+          color: #6b7280;
+          line-height: 1.5;
+        }
+        .opinion-input-card {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+        }
+        .opinion-input-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          position: relative;
+        }
+        .opinion-input {
+          flex: 1;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 10px 14px;
+          font-size: 0.95rem;
+          background: #fafbfc;
+          font-family: inherit;
+          transition: all 0.2s ease;
+          color: #374151;
+        }
+        .opinion-input::placeholder {
+          color: #9ca3af;
+        }
+        .opinion-input:focus {
+          outline: none;
+          border-color: #10b981;
+          background: #fff;
+        }
+        .opinion-input:disabled {
+          background: #f3f4f6;
+          cursor: not-allowed;
+        }
+        .opinion-send-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          color: #9ca3af;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+        .opinion-send-btn:hover:not(:disabled) {
+          color: #10b981;
+        }
+        .opinion-send-btn:active:not(:disabled) {
+          transform: scale(0.95);
+        }
+        .opinion-send-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.5;
+        }
+        .opinions-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .opinions-empty {
+          text-align: center;
+          padding: 40px 24px;
+          color: #6b7280;
+          font-size: 0.95rem;
+        }
+        .opinion-item {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          padding: 18px 24px;
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+          justify-content: space-between;
+          transition: all 0.3s ease;
+        }
+        .opinion-item:nth-child(odd) {
+          background: linear-gradient(135deg, #f0fdf9 0%, #d1fae5 100%);
+        }
+        .opinion-item:nth-child(even) {
+          background: linear-gradient(135deg, #ecfdf5 0%, #bbf7d0 100%);
+        }
+        .opinion-item.newly-submitted {
+          border-left: 4px solid #10b981;
+        }
+        .opinion-left {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .opinion-text {
+          color: #4b5563;
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 0;
+        }
+        .opinion-timestamp {
+          color: #9ca3af;
+          font-size: 0.75rem;
+          margin: 0;
+        }
+        .opinion-right {
+          display: flex;
+          align-items: center;
+          min-width: 100px;
+        }
+        .opinion-like-btn {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          background: #fff;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          padding: 6px 10px;
+          cursor: pointer;
+          color: #6b7280;
+          font-size: 0.8rem;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .opinion-like-btn:hover:not(:disabled) {
+          border-color: #ef4444;
+          color: #ef4444;
+          background: #fef2f2;
+        }
+        .opinion-like-btn.liked {
+          background: #fee2e2;
+          border-color: #ef4444;
+          color: #ef4444;
+        }
+        .opinion-like-btn.liked svg {
+          fill: #ef4444;
+        }
+        .opinion-like-btn:disabled {
+          cursor: not-allowed;
+        }
+        .like-count {
+          font-size: 0.75rem;
+          font-weight: 600;
         }
       `}</style>
     </div>
   );
 }
+
 // Floating Action Button for Suggest a Problem
 function FloatingSuggestButton({ onClick }) {
   return (
