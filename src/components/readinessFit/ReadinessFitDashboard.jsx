@@ -52,7 +52,6 @@ export default function ReadinessFitDashboard({ result = null, loading = true })
       {/* Section 1: Header */}
       <div className="fit-header">
         <h1 className="fit-title">How well does Vinca support your financial readiness?</h1>
-        <p className="fit-subtitle">Based on your actual retirement data (education-only)</p>
       </div>
 
       {/* Section 2 & 3: Unified Score + Why This Score Card */}
@@ -93,6 +92,9 @@ export default function ReadinessFitDashboard({ result = null, loading = true })
           <CheckCircle size={32} />
         </div>
         <p>{fitResult.closingMessage}</p>
+        <a href="/dashboard/investor-hub" className="join-membership-btn">
+          Join Membership
+        </a>
       </div>
 
       <style>{`
@@ -138,6 +140,7 @@ export default function ReadinessFitDashboard({ result = null, loading = true })
           font-size: 1.75rem;
           font-weight: 700;
           line-height: 1.4;
+          text-align: left;
         }
 
         .fit-subtitle {
@@ -303,12 +306,15 @@ export default function ReadinessFitDashboard({ result = null, loading = true })
           padding: 32px 24px;
           text-align: center;
           border: 1px solid #d1fae5;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
         }
 
         .message-icon {
           display: flex;
           justify-content: center;
-          margin-bottom: 12px;
           color: #10b981;
         }
 
@@ -317,6 +323,31 @@ export default function ReadinessFitDashboard({ result = null, loading = true })
           font-size: 1rem;
           line-height: 1.6;
           color: #374151;
+        }
+
+        .join-membership-btn {
+          display: inline-block;
+          padding: 12px 32px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          text-decoration: none;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-top: 8px;
+        }
+
+        .join-membership-btn:hover {
+          background: linear-gradient(135deg, #059669, #047857);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .join-membership-btn:active {
+          transform: translateY(0);
         }
 
         /* Responsive */

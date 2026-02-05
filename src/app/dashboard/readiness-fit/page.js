@@ -7,7 +7,8 @@ import { calculateReadinessFitScore } from '@/lib/readinessFit';
 /**
  * Readiness Fit Page
  * Diagnoses how well Vinca's features support the user's financial readiness needs
- * Integrates data from Financial Readiness, Lifestyle Planner, Health Stress Test, and Sprints
+ * Uses ONLY calculator outputs: Financial Readiness, Lifestyle Planner, Health Stress Test
+ * (No sprint, guidance, or engagement data)
  */
 export default function ReadinessFitPage() {
   const [readinessResult, setReadinessResult] = useState(null);
@@ -29,21 +30,11 @@ export default function ReadinessFitPage() {
         const healthData = localStorage.getItem('healthStressResults');
         const health = healthData ? JSON.parse(healthData) : {};
 
-        // Sprints data
-        const sprintsData = localStorage.getItem('sprintsProgress');
-        const sprints = sprintsData ? JSON.parse(sprintsData) : {};
-
-        // Preferences
-        const preferencesData = localStorage.getItem('userPreferences');
-        const preferences = preferencesData ? JSON.parse(preferencesData) : {};
-
-        // Normalize into single input object
+        // Normalize into single input object (ONLY calculator outputs)
         const readinessInput = {
           financialReadiness,
           lifestyle,
           health,
-          sprints,
-          preferences,
         };
 
         // SINGLE SOURCE OF TRUTH: Call engine once, store result
