@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { calculateReadinessFitScore, getScoreDisplay } from '@/lib/readinessFit';
+import React, { useState, useEffect } from 'react';
+import { getScoreDisplay } from '@/lib/readinessFit';
 import { CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 
-export default function ReadinessFitDashboard({ data = {} }) {
-  const [fitResult, setFitResult] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function ReadinessFitDashboard({ result = null, loading = true }) {
+  const [fitResult, setFitResult] = useState(result);
 
   useEffect(() => {
-    // Calculate fit score when data changes
-    const result = calculateReadinessFitScore(data);
+    // Result comes from page.js (engine called once there)
     setFitResult(result);
-    setLoading(false);
-  }, [data]);
+  }, [result]);
 
   if (loading || !fitResult) {
     return (
@@ -26,7 +23,15 @@ export default function ReadinessFitDashboard({ data = {} }) {
     );
   }
 
-  const scoreDisplay = getScoreDisplay(fitResult.totalScore);
+  // SINGLE SOURCE OF TRUTH: Use result directly
+  const scoreDisplay = getScoreDisplay(fitResult.score);
+
+  // Debug: Confirm binding
+  console.log('SCORE CARD BINDING', {
+    score: fitResult.score,
+    fitLevel: fitResult.fitLevel,
+    color: scoreDisplay.color,
+  });
 
   // Helper function to get gradient based on score color
   const getGradient = (color) => {
@@ -61,17 +66,20 @@ export default function ReadinessFitDashboard({ data = {} }) {
           </div>
         </div>
 
-        {/* RIGHT: Why This Score Reasoning */}
-        {fitResult.signals && fitResult.signals.length > 0 && (
+        {/* RIGHT: Why This Score Reasoning - from actual data */}
+        {fitResult.reasons && fitResult.reasons.length > 0 && (
           <div className="why-score-content">
-            <h2 className="why-score-title">Why this score</h2>
+            <h2 className="why-score-title">Where your plan needs support</h2>
+            <p className="why-score-subtitle">Based on gaps identified in your retirement data (education-only)</p>
             <div className="reasons-stack">
-              {fitResult.signals.map((signal, idx) => (
+              {fitResult.reasons.map((item, idx) => (
                 <div key={idx} className="reason-item">
                   <div className="reason-icon">
                     <AlertCircle size={18} />
                   </div>
-                  <div className="reason-text">{signal}</div>
+                  <div className="reason-text">
+                    <span className="reason-source">{item.source}</span> — {item.reason}
+                  </div>
                 </div>
               ))}
             </div>
@@ -79,19 +87,7 @@ export default function ReadinessFitDashboard({ data = {} }) {
         )}
       </div>
 
-      {/* Section 4: How Vinca Helps You */}
-      {fitResult.recommendedFeatures && fitResult.recommendedFeatures.length > 0 && (
-        <div className="features-section">
-          <h2>How Vinca Helps You</h2>
-          <div className="features-grid">
-            {fitResult.recommendedFeatures.map((feature, idx) => (
-              <FeatureCard key={idx} feature={feature} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Section 5: Closing Message */}
+      {/* Section 4: Closing Message */}
       <div className="closing-message">
         <div className="message-icon">
           <CheckCircle size={32} />
@@ -226,6 +222,14 @@ export default function ReadinessFitDashboard({ data = {} }) {
           letter-spacing: 0.3px;
         }
 
+        .why-score-subtitle {
+          margin: 0;
+          font-size: 0.85rem;
+          color: #6b7280;
+          font-weight: 400;
+          margin-bottom: 12px;
+        }
+
         .reasons-stack {
           display: flex;
           flex-direction: column;
@@ -259,6 +263,11 @@ export default function ReadinessFitDashboard({ data = {} }) {
           line-height: 1.6;
           color: #4b5563;
           flex: 1;
+        }
+
+        .reason-source {
+          font-weight: 600;
+          color: #374151;
         }
 
         /* Old styles cleanup */
@@ -341,16 +350,14 @@ export default function ReadinessFitDashboard({ data = {} }) {
 }
 
 /**
- * Individual feature card component
+ * Individual feature card component - renders data-driven recommendations
  */
 function FeatureCard({ feature }) {
   return (
     <div className="feature-card">
-      <div className="feature-icon">{feature.icon}</div>
-      <h4 className="feature-name">{feature.name}</h4>
-      <p className="feature-description">{feature.description}</p>
-      <p className="feature-reason">
-        <strong>This helps you because</strong>: {feature.reason}
+      <h4 className="feature-name">{feature.feature}</h4>
+      <p className="feature-why">
+        <strong>This helps because</strong>: {feature.why}
       </p>
 
       <style>{`
@@ -371,11 +378,6 @@ function FeatureCard({ feature }) {
           box-shadow: 0 4px 16px rgba(16, 185, 129, 0.1);
         }
 
-        .feature-icon {
-          font-size: 2rem;
-          line-height: 1;
-        }
-
         .feature-name {
           margin: 0;
           font-size: 1.1rem;
@@ -383,25 +385,18 @@ function FeatureCard({ feature }) {
           color: #1a2540;
         }
 
-        .feature-description {
+        .feature-why {
           margin: 0;
           font-size: 0.9rem;
-          color: #6b7280;
-          line-height: 1.5;
-        }
-
-        .feature-reason {
-          margin: 0;
-          font-size: 0.85rem;
           line-height: 1.6;
           color: #4b5563;
           background: #f9fafb;
-          padding: 8px 12px;
+          padding: 12px 12px;
           border-radius: 6px;
-          border-left: 2px solid #10b981;
+          border-left: 3px solid #10b981;
         }
 
-        .feature-reason strong {
+        .feature-why strong {
           color: #1a2540;
         }
       `}</style>

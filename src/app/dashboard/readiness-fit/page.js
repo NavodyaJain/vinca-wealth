@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ReadinessFitDashboard from '@/components/readinessFit/ReadinessFitDashboard';
+import { calculateReadinessFitScore } from '@/lib/readinessFit';
 
 /**
  * Readiness Fit Page
@@ -9,58 +10,62 @@ import ReadinessFitDashboard from '@/components/readinessFit/ReadinessFitDashboa
  * Integrates data from Financial Readiness, Lifestyle Planner, Health Stress Test, and Sprints
  */
 export default function ReadinessFitPage() {
-  const [aggregatedData, setAggregatedData] = useState({
-    financialReadiness: {},
-    lifestyle: {},
-    health: {},
-    sprints: {},
-    preferences: {},
-  });
+  const [readinessResult, setReadinessResult] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, this would fetch from the user's saved results
-    // For now, we'll attempt to retrieve from localStorage or use defaults
-    const retrieveData = () => {
+    // Retrieve data from localStorage and calculate fit score ONCE
+    const calculateFit = () => {
       try {
         // Financial Readiness data
         const financialReadinessData = localStorage.getItem('financialReadinessResults');
-        const parsed = financialReadinessData ? JSON.parse(financialReadinessData) : {};
+        const financialReadiness = financialReadinessData ? JSON.parse(financialReadinessData) : {};
 
         // Lifestyle Planner data
         const lifestyleData = localStorage.getItem('lifestylePlannerResults');
-        const lifestyleParsed = lifestyleData ? JSON.parse(lifestyleData) : {};
+        const lifestyle = lifestyleData ? JSON.parse(lifestyleData) : {};
 
         // Health Stress Test data
         const healthData = localStorage.getItem('healthStressResults');
-        const healthParsed = healthData ? JSON.parse(healthData) : {};
+        const health = healthData ? JSON.parse(healthData) : {};
 
         // Sprints data
         const sprintsData = localStorage.getItem('sprintsProgress');
-        const sprintsParsed = sprintsData ? JSON.parse(sprintsData) : {};
+        const sprints = sprintsData ? JSON.parse(sprintsData) : {};
 
         // Preferences
         const preferencesData = localStorage.getItem('userPreferences');
-        const preferencesParsed = preferencesData ? JSON.parse(preferencesData) : {};
+        const preferences = preferencesData ? JSON.parse(preferencesData) : {};
 
-        setAggregatedData({
-          financialReadiness: parsed,
-          lifestyle: lifestyleParsed,
-          health: healthParsed,
-          sprints: sprintsParsed,
-          preferences: preferencesParsed,
-        });
+        // Normalize into single input object
+        const readinessInput = {
+          financialReadiness,
+          lifestyle,
+          health,
+          sprints,
+          preferences,
+        };
+
+        // SINGLE SOURCE OF TRUTH: Call engine once, store result
+        const result = calculateReadinessFitScore(readinessInput);
+        console.log('READINESS FIT ENGINE RESULT (page.js)', result);
+        
+        setReadinessResult(result);
+        setLoading(false);
       } catch (error) {
-        console.error('Error retrieving readiness fit data:', error);
-        // Use empty defaults
+        console.error('Error calculating readiness fit:', error);
+        // Use empty result on error
+        setReadinessResult(null);
+        setLoading(false);
       }
     };
 
-    retrieveData();
+    calculateFit();
   }, []);
 
   return (
     <div>
-      <ReadinessFitDashboard data={aggregatedData} />
+      <ReadinessFitDashboard result={readinessResult} loading={loading} />
     </div>
   );
 }

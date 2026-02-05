@@ -63,18 +63,14 @@ export function calculateReadinessFitScore(data) {
   if (totalScore >= 80) fitLevel = 'strong';
   else if (totalScore >= 50) fitLevel = 'moderate';
 
+  // Generate DYNAMIC reasons from actual data (not static)
+  const reasons = generateDynamicReasons(safeData, categoryA, categoryB, categoryC, categoryD, categoryE);
+
   return {
-    totalScore,
-    fitLevel,
-    categories: {
-      retirementClarity: categoryA,
-      lifestyleConfidence: categoryB,
-      healthRobustness: categoryC,
-      executionDiscipline: categoryD,
-      guidanceNeed: categoryE,
-    },
-    signals: generateSignals(safeData, categoryA, categoryB, categoryC, categoryD, categoryE),
-    recommendedFeatures: recommendFeatures(safeData, categoryA, categoryB, categoryC, categoryD, categoryE),
+    score: totalScore,
+    fitLevel: fitLevel === 'strong' ? 'Strong Fit' : fitLevel === 'moderate' ? 'Moderate Fit' : 'Limited Fit',
+    reasons,
+    relevantFeatures: recommendFeatures(safeData, categoryA, categoryB, categoryC, categoryD, categoryE),
     closingMessage: generateClosingMessage(fitLevel, safeData),
   };
 }
@@ -239,55 +235,127 @@ function calculateGuidanceNeed(data) {
 }
 
 /**
- * Generate user-facing signal bullets explaining the score
+ * Generate DYNAMIC reasons from real user data and calculator outputs
+ * Focuses on GAPS and WHERE VINCA IS RELEVANT (not validation of plan strength)
+ * Returns only top-scoring reasons (2-4 most relevant)
  */
-function generateSignals(data, catA, catB, catC, catD, catE) {
-  const allSignals = [];
+function generateDynamicReasons(data, catA, catB, catC, catD, catE) {
+  const allReasons = [];
 
-  // Collect top signals from each category
-  if (catA.signals && catA.signals.length > 0) {
-    allSignals.push(...catA.signals);
-  }
-  if (catB.signals && catB.signals.length > 0) {
-    allSignals.push(...catB.signals);
-  }
-  if (catC.signals && catC.signals.length > 0) {
-    allSignals.push(...catC.signals);
-  }
-  if (catD.signals && catD.signals.length > 0) {
-    allSignals.push(...catD.signals);
-  }
-  if (catE.signals && catE.signals.length > 0) {
-    allSignals.push(...catE.signals);
+  // Financial Readiness reasons (only if data shows uncertainty)
+  if (data.isReady !== null && catA.score > 0) {
+    if (data.isReady === false) {
+      allReasons.push({
+        source: 'Financial Readiness Calculator',
+        reason: 'Your plan does not yet achieve your retirement goal at your target age. Vinca helps validate if adjustments to savings, timeline, or spending are needed.',
+        score: catA.score,
+      });
+    } else if (data.isReady === true && data.lifespanSustainability === false) {
+      allReasons.push({
+        source: 'Financial Readiness Calculator',
+        reason: 'Your plan reaches retirement, but its ability to sustain your full lifespan is uncertain. Vinca helps stress-test longevity risk and validate sustainability.',
+        score: catA.score,
+      });
+    }
   }
 
-  // Return top 2-4 signals
-  return allSignals.slice(0, 4);
+  // Lifestyle Planner reasons (only if gap exists)
+  if ((data.targetLifestyleTier || data.affordableLifestyleTier) && catB.score > 0) {
+    if (data.targetLifestyleTier && data.affordableLifestyleTier && data.targetLifestyleTier > data.affordableLifestyleTier) {
+      allReasons.push({
+        source: 'Lifestyle Planner',
+        reason: `Your desired lifestyle (Tier ${data.targetLifestyleTier}) may exceed what your plan can support (Tier ${data.affordableLifestyleTier}). Vinca helps clarify this gap and explore lifestyle-income tradeoffs.`,
+        score: catB.score,
+      });
+    } else if (data.monthlyIncomeRequired > 0 && data.monthlyIncomeSupported > 0 && data.monthlyIncomeRequired > data.monthlyIncomeSupported * 1.1) {
+      allReasons.push({
+        source: 'Lifestyle Planner',
+        reason: `Your monthly retirement lifestyle needs (₹${Math.round(data.monthlyIncomeRequired)}) may exceed projected income (₹${Math.round(data.monthlyIncomeSupported)}). Vinca helps translate lifestyle choices into realistic corpus and income requirements.`,
+        score: catB.score,
+      });
+    }
+  }
+
+  // Health Stress Test reasons (only if uncertainty exists)
+  if ((data.healthRiskLevel || data.monthlyHealthGap > 0 || data.survivalAge) && catC.score > 0) {
+    if (data.healthRiskLevel === 'high') {
+      allReasons.push({
+        source: 'Health Stress Test',
+        reason: 'Your health scenario creates significant uncertainty around retirement corpus impact. Vinca helps stress-test your plan against medical costs and longevity risks.',
+        score: catC.score,
+      });
+    } else if (data.monthlyHealthGap > 0) {
+      allReasons.push({
+        source: 'Health Stress Test',
+        reason: `Healthcare costs (₹${Math.round(data.monthlyHealthGap)}/month) introduce material uncertainty into your corpus sustainability. Vinca helps model this impact across different health scenarios.`,
+        score: catC.score,
+      });
+    } else if (data.healthRiskLevel === 'medium') {
+      allReasons.push({
+        source: 'Health Stress Test',
+        reason: 'Moderate healthcare risk introduces uncertainty into your long-term corpus. Vinca helps clarify this risk and validate your plan against it.',
+        score: catC.score,
+      });
+    }
+  }
+
+  // Sprints/Execution reasons (only if action gap exists)
+  if (data.hasStartedSprint !== null && catD.score > 0) {
+    if (data.hasStartedSprint === false) {
+      allReasons.push({
+        source: 'Retirement Sprints',
+        reason: 'Long-term financial goals are difficult to track without structure, which can lead to loss of focus and discipline. Vinca helps convert long-term goals into structured, trackable action sprints.',
+        score: catD.score,
+      });
+    } else if (data.hasStartedSprint === true && data.completedSprintsCount === 0) {
+      allReasons.push({
+        source: 'Retirement Sprints',
+        reason: 'Consistency is challenging without structured tracking. Vinca helps you complete planning sprints to move from awareness to sustained action.',
+        score: catD.score,
+      });
+    }
+  }
+
+  // Guidance/Prioritisation reasons (only if uncertainty exists across multiple areas)
+  if (catE.score > 0) {
+    const hasMultipleGaps = [catA.score, catB.score, catC.score, catD.score].filter(s => s > 5).length > 1;
+    if (hasMultipleGaps || (data.desiredRetirementAge && data.retirementAgeAchievable && data.desiredRetirementAge < data.retirementAgeAchievable)) {
+      allReasons.push({
+        source: 'Elevate (Guidance)',
+        reason: 'Multiple moving parts—retirement age, lifestyle, health, and investments—create decision uncertainty. Vinca helps prioritise which areas need focus most.',
+        score: catE.score,
+      });
+    }
+  }
+
+  // Sort by score (highest first) and return top 2-4 most relevant
+  const sorted = allReasons.sort((a, b) => b.score - a.score);
+  return sorted.slice(0, 4).map(({ score, ...rest }) => rest);
 }
 
 /**
  * Recommend features based on highest-scoring categories
- * Each recommendation includes a reason tied to actual data
+ * Only recommends features for actual data gaps (never invents)
  */
 function recommendFeatures(data, catA, catB, catC, catD, catE) {
   const features = [];
   const categoryScores = [
-    { name: 'financial-readiness', score: catA.score, reason: 'Retirement uncertainty' },
-    { name: 'lifestyle-planner', score: catB.score, reason: 'Lifestyle sustainability' },
-    { name: 'health-stress-test', score: catC.score, reason: 'Health impact analysis' },
-    { name: 'retirement-sprints', score: catD.score, reason: 'Execution planning' },
-    { name: 'elevate-manager', score: catE.score, reason: 'Guidance & optimization' },
+    { name: 'Financial Readiness Calculator', key: 'financial-readiness', score: catA.score },
+    { name: 'Lifestyle Planner', key: 'lifestyle-planner', score: catB.score },
+    { name: 'Health Stress Test', key: 'health-stress-test', score: catC.score },
+    { name: 'Retirement Sprints', key: 'retirement-sprints', score: catD.score },
+    { name: 'Elevate (Manager)', key: 'elevate-manager', score: catE.score },
   ];
 
   // Sort by score descending
   const sorted = categoryScores.sort((a, b) => b.score - a.score);
 
-  // Add top 2-3 features with actual reasoning
+  // Add top 2-3 features with actual data-driven reasoning
   for (let i = 0; i < Math.min(3, sorted.length); i++) {
     if (sorted[i].score > 0) {
-      const feature = createFeatureCard(sorted[i].name, data, sorted[i].score);
-      if (feature) {
-        features.push(feature);
+      const featureData = createFeatureData(sorted[i].key, data);
+      if (featureData) {
+        features.push(featureData);
       }
     }
   }
@@ -296,59 +364,51 @@ function recommendFeatures(data, catA, catB, catC, catD, catE) {
 }
 
 /**
- * Create a feature recommendation card with data-driven reasoning
+ * Create feature recommendation with data-driven "why" explanation
+ * Focus on GAPS, not validation. Explain why Vinca is relevant.
+ * Returns {feature: string, why: string}
  */
-function createFeatureCard(featureName, data, score) {
-  const cards = {
+function createFeatureData(featureKey, data) {
+  const features = {
     'financial-readiness': {
-      name: 'Financial Readiness',
-      icon: '📊',
-      description: 'See if your retirement plan can sustain your expected lifespan',
-      reason: data.isReady === false
-        ? 'Your current plan does not achieve your retirement goal at the target age.'
+      feature: 'Financial Readiness Calculator',
+      why: data.isReady === false
+        ? 'Your plan does not yet achieve your retirement goal. Vinca helps validate if adjustments are needed to savings, timeline, or spending.'
         : data.lifespanSustainability === false
-        ? 'Your plan reaches retirement, but may not sustain through your expected lifespan.'
-        : 'Verify your retirement plan is on track and sustainable.',
+        ? 'Your plan reaches retirement, but sustaining your full lifespan is uncertain. Vinca helps stress-test longevity risk.'
+        : 'Vinca helps validate your plan is on track and sustainable through your expected lifespan.',
     },
     'lifestyle-planner': {
-      name: 'Lifestyle Planner',
-      icon: '🏠',
-      description: 'Understand what lifestyle your plan can actually support',
-      reason: data.targetLifestyleTier && data.affordableLifestyleTier
-        ? `Your desired lifestyle (Tier ${data.targetLifestyleTier}) exceeds what your plan can sustain (Tier ${data.affordableLifestyleTier}).`
-        : 'Clarify the gap between your desired and affordable retirement lifestyle.',
+      feature: 'Lifestyle Planner',
+      why: data.targetLifestyleTier && data.affordableLifestyleTier && data.targetLifestyleTier > data.affordableLifestyleTier
+        ? `Your desired lifestyle (Tier ${data.targetLifestyleTier}) may exceed what your plan supports (Tier ${data.affordableLifestyleTier}). Vinca helps clarify this gap.`
+        : 'Vinca helps you translate lifestyle choices into realistic income and corpus requirements, reducing retirement guesswork.',
     },
     'health-stress-test': {
-      name: 'Health Stress Test',
-      icon: '💪',
-      description: 'See how healthcare costs impact your retirement corpus',
-      reason: data.healthRiskLevel === 'high'
-        ? 'Healthcare costs create significant uncertainty in your retirement plan.'
+      feature: 'Health Stress Test',
+      why: data.healthRiskLevel === 'high'
+        ? 'Healthcare costs create significant uncertainty in your retirement corpus. Vinca helps stress-test your plan against medical risks.'
         : data.monthlyHealthGap > 0
-        ? `Monthly healthcare costs (₹${Math.round(data.monthlyHealthGap)}) reduce your retirement sustainability.`
-        : 'Understand the healthcare cost impact on your long-term plan.',
+        ? `Healthcare costs (₹${Math.round(data.monthlyHealthGap)}/month) introduce material uncertainty. Vinca helps model this impact.`
+        : 'Vinca helps you understand and model healthcare cost impact across different longevity scenarios.',
     },
     'retirement-sprints': {
-      name: 'Retirement Sprints',
-      icon: '🎯',
-      description: 'Create structured, actionable plans to improve readiness',
-      reason: data.hasStartedSprint
-        ? `You've started ${data.completedSprintsCount > 0 ? 'and completed' : 'but not yet completed'} planning sprints. Continue building discipline.`
-        : 'Structured planning helps you close gaps and take consistent action.',
+      feature: 'Retirement Sprints',
+      why: data.hasStartedSprint === false
+        ? 'Long-term goals without structure lead to loss of focus over time. Vinca helps convert goals into structured, trackable action sprints.'
+        : data.completedSprintsCount > 0
+        ? 'Consistency is key to long-term discipline. Vinca helps you complete planning sprints to sustain action.'
+        : 'Vinca helps you move from awareness to action with structured planning sprints.',
     },
     'elevate-manager': {
-      name: 'Elevate (Manager)',
-      icon: '👤',
-      description: 'Get guidance from a financial wellness manager',
-      reason: data.desiredRetirementAge && data.retirementAgeAchievable && data.desiredRetirementAge < data.retirementAgeAchievable
-        ? 'A manager can help optimize your plan to achieve early retirement.'
-        : data.requiredSIP > data.currentSIP
-        ? 'Expert guidance can help you navigate SIP increases and optimize savings.'
-        : 'A manager can help prioritize and optimize your readiness plan.',
+      feature: 'Elevate (Manager)',
+      why: data.desiredRetirementAge && data.retirementAgeAchievable && data.desiredRetirementAge < data.retirementAgeAchievable
+        ? 'Achieving early retirement requires optimisation across multiple areas. A manager helps prioritise and optimise your plan.'
+        : 'Multiple moving parts create decision uncertainty. A manager helps prioritise which gaps need focus most.',
     },
   };
 
-  return cards[featureName] || null;
+  return features[featureKey] || null;
 }
 
 /**
