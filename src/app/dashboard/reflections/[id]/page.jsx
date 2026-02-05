@@ -308,7 +308,7 @@ export default function ReflectionDetailPage() {
           <div className="space-y-4">
             {comments.length === 0 ? (
               <div className="text-center py-12 text-slate-500">
-                <p>No reflections yet. Share your thoughts!</p>
+                <p>No remarks yet. Share your thoughts!</p>
               </div>
             ) : (
               comments.map((comment) => (
