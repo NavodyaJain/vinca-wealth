@@ -22,6 +22,9 @@ export default function ReflectionDetailPage() {
   const [likedComments, setLikedComments] = useState({});
   const [isOwner, setIsOwner] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -57,6 +60,49 @@ export default function ReflectionDetailPage() {
     const filtered = all.filter(r => r.id !== id);
     localStorage.setItem("vinca_reflections", JSON.stringify(filtered));
     router.push("/dashboard/reflections");
+  };
+
+  const handleEditClick = () => {
+    setEditData({
+      title: reflection.title || '',
+      journey: {
+        context: reflection.journey?.context || { visibleFields: [] },
+        challenges: reflection.journey?.challenges || [],
+        howTheyHandled: reflection.journey?.howTheyHandled || '',
+        reflection: reflection.journey?.reflection || ''
+      }
+    });
+    setIsEditMode(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editData.title.trim()) {
+      alert('Please enter a title');
+      return;
+    }
+
+    const all = JSON.parse(localStorage.getItem("vinca_reflections") || "[]");
+    const updated = all.map(r => {
+      if (r.id === id) {
+        return {
+          ...r,
+          title: editData.title.trim(),
+          journey: editData.journey
+        };
+      }
+      return r;
+    });
+    
+    localStorage.setItem("vinca_reflections", JSON.stringify(updated));
+    setReflection(updated.find(r => r.id === id));
+    setIsEditMode(false);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditData(null);
   };
 
   useEffect(() => {
@@ -305,28 +351,69 @@ export default function ReflectionDetailPage() {
         {/* Owner Controls - Edit/Delete */}
         {isOwner && (
           <div className="flex justify-end gap-2 px-8 pt-6 pb-2">
-            <button
-              onClick={() => router.push(`/dashboard/reflections/${id}/edit`)}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
-              title="Edit post"
-            >
-              ✏️ Edit
-            </button>
-            <button
-              onClick={handleDelete}
-              className="bg-slate-100 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
-              title="Delete post"
-            >
-              🗑 Delete
-            </button>
+            {!isEditMode ? (
+              <>
+                <button
+                  onClick={handleEditClick}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                  title="Edit post"
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="bg-slate-100 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+                  title="Delete post"
+                >
+                  🗑 Delete
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleSaveEdit}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm font-medium"
+                  title="Save changes"
+                >
+                  ✅ Save
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition text-sm"
+                  title="Cancel editing"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Save Success Message */}
+        {saveSuccess && (
+          <div className="mx-8 mt-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+            ✅ Changes saved successfully
           </div>
         )}
         
         {/* Content - Structured Journal Format */}
         <div className="flex flex-col gap-8 p-8">
           {/* Title */}
-          {reflection.title && (
-            <h1 className="text-3xl font-bold text-slate-900">{reflection.title}</h1>
+          {isEditMode && editData ? (
+            <div>
+              <label className="text-xs text-slate-500 font-semibold mb-2 block">Title</label>
+              <input
+                type="text"
+                value={editData.title}
+                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-bold"
+                placeholder="Enter title"
+              />
+            </div>
+          ) : (
+            reflection.title && (
+              <h1 className="text-3xl font-bold text-slate-900">{reflection.title}</h1>
+            )
           )}
           
           {/* SECTION 1: INTRODUCTION - Conditional based on visible fields */}
@@ -350,34 +437,121 @@ export default function ReflectionDetailPage() {
           )}
           
           {/* SECTION 2: CHALLENGES */}
-          {reflection.journey?.challenges && reflection.journey.challenges.length > 0 && (
+          {isEditMode && editData ? (
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">Challenges I Faced</h2>
-              <ul className="space-y-2 text-slate-800 text-base leading-relaxed">
-                {reflection.journey.challenges.map((challenge, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <span className="text-slate-400">•</span>
-                    <span>{challenge}</span>
-                  </li>
+              <label className="text-sm font-semibold text-slate-900 mb-3 block">Challenges I Faced</label>
+              <div className="space-y-2">
+                {editData.journey.challenges.map((challenge, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={challenge}
+                      onChange={(e) => {
+                        const updated = [...editData.journey.challenges];
+                        updated[idx] = e.target.value;
+                        setEditData({
+                          ...editData,
+                          journey: { ...editData.journey, challenges: updated }
+                        });
+                      }}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      placeholder="Challenge"
+                    />
+                    {editData.journey.challenges.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = editData.journey.challenges.filter((_, i) => i !== idx);
+                          setEditData({
+                            ...editData,
+                            journey: { ...editData.journey, challenges: updated }
+                          });
+                        }}
+                        className="text-red-600 hover:text-red-700 px-2"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 ))}
-              </ul>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditData({
+                      ...editData,
+                      journey: { ...editData.journey, challenges: [...editData.journey.challenges, ''] }
+                    });
+                  }}
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium mt-2"
+                >
+                  + Add challenge
+                </button>
+              </div>
             </div>
+          ) : (
+            reflection.journey?.challenges && reflection.journey.challenges.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Challenges I Faced</h2>
+                <ul className="space-y-2 text-slate-800 text-base leading-relaxed">
+                  {reflection.journey.challenges.map((challenge, idx) => (
+                    <li key={idx} className="flex gap-3">
+                      <span className="text-slate-400">•</span>
+                      <span>{challenge}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
           )}
           
           {/* SECTION 3: HOW I WORKED THROUGH THEM */}
-          {reflection.journey?.howTheyHandled && (
+          {isEditMode && editData ? (
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">How I Worked Through Them</h2>
-              <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.howTheyHandled}</p>
+              <label className="text-sm font-semibold text-slate-900 mb-2 block">How I Worked Through Them</label>
+              <textarea
+                value={editData.journey.howTheyHandled}
+                onChange={(e) => {
+                  setEditData({
+                    ...editData,
+                    journey: { ...editData.journey, howTheyHandled: e.target.value }
+                  });
+                }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none h-24"
+                placeholder="How you dealt with these challenges..."
+              />
             </div>
+          ) : (
+            reflection.journey?.howTheyHandled && (
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">How I Worked Through Them</h2>
+                <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.howTheyHandled}</p>
+              </div>
+            )
           )}
           
           {/* SECTION 4: LEARNINGS */}
-          {reflection.journey?.reflection && (
+          {isEditMode && editData ? (
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-4">What This Journey Taught Me</h2>
-              <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.reflection}</p>
+              <label className="text-sm font-semibold text-slate-900 mb-2 block">What This Journey Taught Me</label>
+              <textarea
+                value={editData.journey.reflection}
+                onChange={(e) => {
+                  setEditData({
+                    ...editData,
+                    journey: { ...editData.journey, reflection: e.target.value }
+                  });
+                }}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm resize-none h-24"
+                placeholder="What you learned from this journey..."
+              />
             </div>
+          ) : (
+            reflection.journey?.reflection && (
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">What This Journey Taught Me</h2>
+                <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.reflection}</p>
+              </div>
+            )
           )}
           
           {/* Fallback to legacy format if no journey data */}
@@ -390,17 +564,18 @@ export default function ReflectionDetailPage() {
           )}
         </div>
 
-        {/* Comments Section */}
+        {/* Remarks Section - Hidden in edit mode */}
+        {!isEditMode && (
         <div className="mt-12 px-8 pb-8 border-t border-slate-200">
           <h3 className="text-xl font-bold text-slate-900 mb-6 mt-8">Remarks</h3>
           
-          {/* Comment Input */}
+          {/* REMARKS INPUT CONTAINER - Always visible */}
           <form onSubmit={handleAddComment} className="mb-8">
             <div className="comment-input-wrapper">
               <input
                 type="text"
                 className="comment-input"
-                placeholder="Share your thoughts…"
+                placeholder="Add a thought or question…"
                 maxLength={500}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
@@ -424,14 +599,10 @@ export default function ReflectionDetailPage() {
             </div>
           </form>
 
-          {/* Comments List */}
-          <div className="space-y-4">
-            {comments.length === 0 ? (
-              <div className="text-center py-12 text-slate-500">
-                <p>No remarks yet. Share your thoughts!</p>
-              </div>
-            ) : (
-              comments.map((comment) => (
+          {/* REMARKS LIST CONTAINER - Render only when remarks exist */}
+          {comments.length > 0 && (
+            <div className="space-y-4">
+              {comments.map((comment) => (
                 <div key={comment.id} className="comment-card">
                   {/* Comment */}
                   <div className="comment-content">
@@ -528,9 +699,9 @@ export default function ReflectionDetailPage() {
                     </div>
                   )}
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Styles */}
           <style>{`
@@ -727,6 +898,7 @@ export default function ReflectionDetailPage() {
             }
           `}</style>
         </div>
+        )}
       </div>
       
       {/* Delete Confirmation Modal */}
