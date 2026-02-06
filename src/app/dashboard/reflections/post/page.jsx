@@ -4,6 +4,59 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+// --- DATA FETCHING UTILITY ---
+function fetchExistingData() {
+  const data = {};
+  
+  try {
+    // Fetch Financial Readiness Calculator data
+    const calcReading = JSON.parse(localStorage.getItem('calculatorReading') || '{}');
+    if (calcReading) {
+      data.retirementGoalAge = calcReading.targetRetirementAge;
+      
+      // Convert SIP to range
+      const sip = calcReading.currentSIP || 0;
+      if (sip < 25000) data.monthlySip = '< ₹25K';
+      else if (sip < 50000) data.monthlySip = '₹25–50K';
+      else if (sip < 75000) data.monthlySip = '₹50–75K';
+      else if (sip < 100000) data.monthlySip = '₹75–100K';
+      else data.monthlySip = '> ₹100K';
+    }
+    
+    // Fetch Lifestyle Planner data
+    const lifestyleReading = JSON.parse(localStorage.getItem('lifestylePlannerReading') || '{}');
+    if (lifestyleReading) {
+      data.familyStatus = lifestyleReading.familyStatus;
+      data.careerStage = lifestyleReading.careerStage;
+    }
+    
+    // Fetch user profile
+    const userProfile = JSON.parse(localStorage.getItem('userProfile') || '{}');
+    if (userProfile) {
+      const firstName = userProfile.firstName || '';
+      const lastName = userProfile.lastName || '';
+      data.name = `${firstName} ${lastName}`.trim();
+    }
+    
+    // Calculate age from DOB if available
+    if (userProfile?.dateOfBirth) {
+      const dob = new Date(userProfile.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+      
+      if (age >= 30 && age < 36) data.ageRange = '30–35';
+      else if (age >= 36 && age < 41) data.ageRange = '36–40';
+      else if (age >= 41 && age < 46) data.ageRange = '41–45';
+      else if (age >= 46 && age < 51) data.ageRange = '46–50';
+      else if (age >= 51 && age < 56) data.ageRange = '51–55';
+      else if (age >= 56 && age < 61) data.ageRange = '56–60';
+    }
+  } catch (err) {
+    console.error('Error fetching existing data:', err);
+  }
+  
+  return data;
+}
 
 // --- UI Subcomponents (Tailwind only, strict constraints) ---
 const PROMPTS = [
@@ -72,13 +125,17 @@ function PhotoMomentsSection({ photos, setPhotos }) {
   );
 }
 
-function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, setWordCount, tags, setTags }) {
-  // Generate from Sprint UI state
-  const [genLoading, setGenLoading] = useState(false);
+function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, setWordCount, tags, setTags, journey, setJourney, existingData }) {
   // Rotating prompt logic
   const [promptIdx, setPromptIdx] = useState(0);
   const [showPromptDropdown, setShowPromptDropdown] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [isHydrated, setIsHydrated] = useState(false);
+  
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+  
   useEffect(() => {
     if (showPromptDropdown) return;
     const interval = setInterval(() => {
@@ -98,20 +155,30 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
     }
   };
   const handleRemoveTag = (idx) => setTags(tags.filter((_, i) => i !== idx));
-  // Word count
-  const handleStoryChange = (e) => {
-    setStory(e.target.value);
-    setWordCount(e.target.value.length);
+
+  // Visibility toggles for context fields
+  const toggleVisibility = (field) => {
+    setJourney(prev => ({
+      ...prev,
+      context: {
+        ...prev.context,
+        visibleFields: prev.context.visibleFields.includes(field)
+          ? prev.context.visibleFields.filter(f => f !== field)
+          : [...prev.context.visibleFields, field]
+      }
+    }));
   };
-  // Prompt select
-  const handlePromptSelect = (idx) => {
-    setTitle(PROMPTS[idx]);
-    setPromptIdx(idx);
-    setShowPromptDropdown(false);
-  };
+
+  // Define fixed context fields (3 tags only, label-only, no values)
+  const contextFields = [
+    { id: 'name', label: 'Name' },
+    { id: 'monthlySip', label: 'Monthly SIP' },
+    { id: 'retirementGoal', label: 'Retirement Goal' }
+  ];
+  
   return (
-    <div className="flex flex-col gap-4 max-h-100 h-100 justify-start bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-5 transition-all duration-200 overflow-hidden">
-      <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-4 max-h-100 h-100 justify-start bg-white rounded-xl border border-gray-100 shadow-sm px-6 py-5 transition-all duration-200 overflow-y-auto">
+      <div className="flex flex-col gap-3 w-full flex-shrink-0">
         {/* Title + prompt */}
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-400 font-medium mb-1">Title</label>
@@ -139,7 +206,11 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
                     key={p}
                     type="button"
                     className="text-left text-xs px-2 py-1 rounded hover:bg-emerald-50 text-gray-700"
-                    onClick={() => handlePromptSelect(idx)}
+                    onClick={() => {
+                      setTitle(p);
+                      setPromptIdx(idx);
+                      setShowPromptDropdown(false);
+                    }}
                   >
                     {p}
                   </button>
@@ -149,50 +220,95 @@ function CompactReflectionForm({ title, setTitle, story, setStory, wordCount, se
             )}
           </div>
         </div>
-                {/* Body */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs text-gray-400 font-medium mb-1">Your Journey</label>
-                  <textarea
-                    className="w-full h-24 px-3 py-2 text-base border border-gray-100 rounded-lg resize-none focus:outline-none focus:border-emerald-300 bg-gray-50 placeholder:text-emerald-300 placeholder:font-normal placeholder:text-base transition-all duration-200"
-                    placeholder="Write freely. This is your experience — not advice."
-                    value={story}
-                    onChange={handleStoryChange}
-                    maxLength={500}
-                    required
+        {/* Body - Structured Journey Builder */}
+        <div className="flex flex-col gap-6">
+          <label className="text-xs text-gray-400 font-medium">Your Journey</label>
+
+          {/* SECTION 1: PERSONAL CONTEXT - VISIBILITY TOGGLES */}
+          <div className="border border-gray-100 rounded-lg p-4 bg-gray-50">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">What you're comfortable sharing</h3>
+            <p className="text-xs text-gray-400 mb-4">You control what others see.</p>
+
+            <div className="flex flex-wrap gap-2">
+              {contextFields.map((field) => (
+                <button
+                  key={field.id}
+                  type="button"
+                  onClick={() => toggleVisibility(field.id)}
+                  className={`text-xs px-3 py-2 rounded-full transition border ${
+                    journey.context.visibleFields.includes(field.id)
+                      ? "bg-emerald-100 text-emerald-700 border-emerald-300"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {journey.context.visibleFields.includes(field.id) ? '✓ ' : ''}{field.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 2: CHALLENGES FACED */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Challenges I faced</h3>
+            <div className="space-y-2">
+              {journey.challenges.map((challenge, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={challenge}
+                    onChange={(e) => {
+                      const newChallenges = [...journey.challenges];
+                      newChallenges[index] = e.target.value;
+                      setJourney(prev => ({ ...prev, challenges: newChallenges }));
+                    }}
+                    placeholder="Staying consistent during market volatility"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-200"
                   />
-                  <div className="flex justify-end text-[11px] text-gray-300 font-medium">{wordCount}/500</div>
-                </div>
-                {/* Generate from Sprint helper (UI only, 404-safe) - moved below reflection */}
-                <div className="flex flex-col gap-1 mt-2">
-                  <div className="flex items-center bg-emerald-50/40 border border-emerald-100 rounded-lg px-3 py-2 shadow-sm min-h-[48px] w-full transition-all duration-200">
-                    <span className="flex items-center justify-center mr-3 text-emerald-400 text-lg">
-                      <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path fill="currentColor" d="M10.75 2.5a.75.75 0 0 0-1.5 0v1.19A6.5 6.5 0 0 0 4.19 9.25H3a.75.75 0 0 0 0 1.5h1.19A6.5 6.5 0 0 0 9.25 16.31V17.5a.75.75 0 0 0 1.5 0v-1.19A6.5 6.5 0 0 0 15.81 10.75H17a.75.75 0 0 0 0-1.5h-1.19A6.5 6.5 0 0 0 10.75 3.69V2.5Zm-1.5 3.06V5.5a.75.75 0 0 0 1.5 0v-.06A5 5 0 0 1 14.44 9.25h-.06a.75.75 0 0 0 0 1.5h.06A5 5 0 0 1 10.75 14.44V14.5a.75.75 0 0 0-1.5 0v.06A5 5 0 0 1 5.56 10.75h.06a.75.75 0 0 0 0-1.5h-.06A5 5 0 0 1 9.25 5.56Z"/></svg>
-                    </span>
-                    <div className="flex flex-col flex-grow min-w-0">
-                      <span className="text-xs font-semibold text-gray-700">Generate from Sprint</span>
-                      <span className="text-xs text-gray-400 leading-tight">Turn your recent sprint progress into a journey draft. You can edit it freely.</span>
-                    </div>
+                  {index === journey.challenges.length - 1 && challenge.trim() && (
                     <button
                       type="button"
-                      className={`ml-3 text-xs px-3 py-1 rounded-md border border-emerald-200 bg-white text-emerald-500 font-medium shadow-sm transition-all duration-150 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1 ${genLoading ? 'pointer-events-none' : ''}`}
-                      disabled={genLoading}
-                      onClick={() => {
-                        setGenLoading(true);
-                        setTimeout(() => setGenLoading(false), 2000);
-                      }}
+                      onClick={() => setJourney(prev => ({ ...prev, challenges: [...prev.challenges, ""] }))}
+                      className="text-emerald-600 hover:text-emerald-700 text-lg font-light"
                     >
-                      {genLoading ? (
-                        <>
-                          <svg className="animate-spin mr-1" width="16" height="16" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"/></svg>
-                          Preparing draft...
-                        </>
-                      ) : (
-                        'Generate draft'
-                      )}
+                      ＋
                     </button>
-                  </div>
-                  <span className="text-xs text-gray-300 mt-1 ml-1">Available with Pro</span>
+                  )}
+                  {journey.challenges.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setJourney(prev => ({ ...prev, challenges: prev.challenges.filter((_, i) => i !== index) }))}
+                      className="text-gray-400 hover:text-gray-600 text-lg"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* SECTION 3: HOW I DEALT WITH THEM */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">How I dealt with these challenges</h3>
+            <textarea
+              value={journey.howTheyHandled}
+              onChange={(e) => setJourney(prev => ({ ...prev, howTheyHandled: e.target.value }))}
+              placeholder="What helped me stay on track (habits, mindset, structure, changes I made)"
+              className="w-full h-20 px-3 py-2 text-xs border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-gray-50"
+            />
+          </div>
+
+          {/* SECTION 4: REFLECTION / CONCLUSION */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Looking back</h3>
+            <textarea
+              value={journey.reflection}
+              onChange={(e) => setJourney(prev => ({ ...prev, reflection: e.target.value }))}
+              placeholder="What I learned from this phase, or what I'd remind myself during tough months"
+              className="w-full h-16 px-3 py-2 text-xs border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-emerald-200 bg-gray-50"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -216,26 +332,77 @@ function SubmitSection({ isFormValid }) {
 
 export default function PostReflectionPage() {
   // --- Single-screen state ---
-  const [photos, setPhotos] = useState([]); // max 2
+  const [photos, setPhotos] = useState([]);
   const [title, setTitle] = useState("");
   const [story, setStory] = useState("");
   const [tags, setTags] = useState([]);
   const [wordCount, setWordCount] = useState(0);
+  const [existingData, setExistingData] = useState({});
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [journey, setJourney] = useState({
+    context: {
+      visibleFields: []
+    },
+    challenges: [""],
+    howTheyHandled: "",
+    reflection: ""
+  });
   const router = useRouter();
 
-  // ...existing logic and UI components here (unchanged)...
+  // Fetch existing data on mount (client-side only)
+  useEffect(() => {
+    setIsHydrated(true);
+    const data = fetchExistingData();
+    setExistingData(data);
+  }, []);
 
   // --- Logic preserved ---
-  const isFormValid = story.trim().length > 0 && wordCount <= 500;
+  const isFormValid = (journey.challenges.some(c => c.trim()) || journey.howTheyHandled.trim() || journey.reflection.trim());
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!story.trim()) return;
+    const hasContent = journey.challenges.some(c => c.trim()) || journey.howTheyHandled.trim() || journey.reflection.trim();
+    if (!hasContent) return;
+    
+    // Build context object with values for visible fields
+    const contextData = {
+      visibleFields: journey.context.visibleFields
+    };
+    
+    // Add values for visible fields from existingData
+    if (journey.context.visibleFields.includes('name')) {
+      contextData.name = existingData.name || '';
+    }
+    if (journey.context.visibleFields.includes('ageRange')) {
+      contextData.ageRange = existingData.ageRange || '';
+    }
+    if (journey.context.visibleFields.includes('retirementGoal')) {
+      contextData.retirementGoal = existingData.retirementGoalAge || '';
+    }
+    if (journey.context.visibleFields.includes('monthlySip')) {
+      contextData.monthlySip = existingData.monthlySip || '';
+    }
+    
+    const cleanedJourney = {
+      context: contextData,
+      challenges: journey.challenges.filter(c => c.trim()),
+      howTheyHandled: journey.howTheyHandled.trim(),
+      reflection: journey.reflection.trim()
+    };
+    
     const prev = JSON.parse(localStorage.getItem("vinca_reflections") || "[]");
+    const fullText = [
+      ...cleanedJourney.challenges,
+      cleanedJourney.howTheyHandled,
+      cleanedJourney.reflection
+    ].filter(Boolean).join(" ");
+    
     const newReflection = {
       id: `reflection_${Date.now()}`,
       photo: photos[0] || "",
-      hook: story.split(". ")[0] || "A new reflection.",
-      full: story.split(/\n+/).map(p => p.trim()).filter(Boolean)
+      title: title.trim() || cleanedJourney.challenges[0] || "A retirement journey.",
+      hook: cleanedJourney.challenges[0] || "A retirement journey.",
+      full: fullText.split(/\n+/).map(p => p.trim()).filter(Boolean),
+      journey: cleanedJourney
     };
     try {
       localStorage.setItem("vinca_reflections", JSON.stringify([newReflection, ...prev]));
@@ -264,6 +431,9 @@ export default function PostReflectionPage() {
             setWordCount={setWordCount}
             tags={tags}
             setTags={setTags}
+            journey={journey}
+            setJourney={setJourney}
+            existingData={existingData}
           />
         </main>
         <SubmitSection isFormValid={isFormValid} />
@@ -271,4 +441,3 @@ export default function PostReflectionPage() {
     </div>
   );
 }
-  // ...see above for new return and styles...

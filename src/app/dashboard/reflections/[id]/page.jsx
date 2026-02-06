@@ -20,6 +20,44 @@ export default function ReflectionDetailPage() {
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [likedComments, setLikedComments] = useState({});
+  const [isOwner, setIsOwner] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const all = JSON.parse(localStorage.getItem("vinca_reflections") || "[]");
+      const found = all.find(r => r.id === id);
+      setReflection(found || null);
+      
+      // Check if current user is owner (for now, assume owner if data exists locally)
+      // In production, this would check against actual user auth
+      setIsOwner(!!found);
+      
+      // Initialize likes from localStorage
+      const storedLikes = JSON.parse(localStorage.getItem("reflection_likes") || "{}");
+      setLikes(storedLikes);
+
+      // Load comments for this post
+      if (id) {
+        const allComments = JSON.parse(localStorage.getItem('vinca_reflection_comments') || '{}');
+        setComments(allComments[id] || []);
+        
+        const allCommentLikes = JSON.parse(localStorage.getItem('vinca_reflection_comment_likes') || '{}');
+        setLikedComments(allCommentLikes[id] || {});
+      }
+    }
+  }, [id]);
+
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    const all = JSON.parse(localStorage.getItem("vinca_reflections") || "[]");
+    const filtered = all.filter(r => r.id !== id);
+    localStorage.setItem("vinca_reflections", JSON.stringify(filtered));
+    router.push("/dashboard/reflections");
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -264,10 +302,92 @@ export default function ReflectionDetailPage() {
           GRADIENT_PLACEHOLDER
         )}
         
-        <div className="flex flex-col gap-6 p-8">
-          {reflection.full.map((para, idx) => (
-            <p key={idx} className="text-slate-800 text-base leading-relaxed">{para}</p>
-          ))}
+        {/* Owner Controls - Edit/Delete */}
+        {isOwner && (
+          <div className="flex justify-end gap-2 px-8 pt-6 pb-2">
+            <button
+              onClick={() => router.push(`/dashboard/reflections/${id}/edit`)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+              title="Edit post"
+            >
+              ✏️ Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              className="bg-slate-100 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition flex items-center gap-2 text-sm"
+              title="Delete post"
+            >
+              🗑 Delete
+            </button>
+          </div>
+        )}
+        
+        {/* Content - Structured Journal Format */}
+        <div className="flex flex-col gap-8 p-8">
+          {/* Title */}
+          {reflection.title && (
+            <h1 className="text-3xl font-bold text-slate-900">{reflection.title}</h1>
+          )}
+          
+          {/* SECTION 1: INTRODUCTION - Conditional based on visible fields */}
+          {reflection.journey?.context?.visibleFields && reflection.journey.context.visibleFields.length > 0 && (
+            <div className="border-b border-slate-200 pb-6">
+              <div className="text-slate-800 text-base leading-relaxed space-y-2">
+                {reflection.journey.context.visibleFields.includes('name') && (
+                  <p>Hi, my name is {reflection.journey.context.name}.</p>
+                )}
+                {reflection.journey.context.visibleFields.includes('ageRange') && (
+                  <p>I am {reflection.journey.context.ageRange}.</p>
+                )}
+                {reflection.journey.context.visibleFields.includes('retirementGoal') && (
+                  <p>I want to retire by {reflection.journey.context.retirementGoal}.</p>
+                )}
+                {reflection.journey.context.visibleFields.includes('monthlySip') && (
+                  <p>I currently invest around {reflection.journey.context.monthlySip} every month.</p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* SECTION 2: CHALLENGES */}
+          {reflection.journey?.challenges && reflection.journey.challenges.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Challenges I Faced</h2>
+              <ul className="space-y-2 text-slate-800 text-base leading-relaxed">
+                {reflection.journey.challenges.map((challenge, idx) => (
+                  <li key={idx} className="flex gap-3">
+                    <span className="text-slate-400">•</span>
+                    <span>{challenge}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* SECTION 3: HOW I WORKED THROUGH THEM */}
+          {reflection.journey?.howTheyHandled && (
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">How I Worked Through Them</h2>
+              <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.howTheyHandled}</p>
+            </div>
+          )}
+          
+          {/* SECTION 4: LEARNINGS */}
+          {reflection.journey?.reflection && (
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">What This Journey Taught Me</h2>
+              <p className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">{reflection.journey.reflection}</p>
+            </div>
+          )}
+          
+          {/* Fallback to legacy format if no journey data */}
+          {!reflection.journey && reflection.full && (
+            <>
+              {reflection.full.map((para, idx) => (
+                <p key={idx} className="text-slate-800 text-base leading-relaxed">{para}</p>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Comments Section */}
@@ -608,7 +728,35 @@ export default function ReflectionDetailPage() {
           `}</style>
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full mx-4">
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">Delete Post?</h2>
+            <p className="text-slate-600 mb-6">
+              This action cannot be undone. Your post will be permanently deleted.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition font-medium"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <button className="mt-8 text-emerald-700 font-semibold" onClick={() => router.push('/dashboard/reflections')}>← Back to Footprints</button>
     </div>
   );
 }
+

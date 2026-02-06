@@ -92,7 +92,7 @@ export default function ReflectionsHome() {
                 GRADIENT_PLACEHOLDER
               )}
               <div className="flex flex-col gap-4 p-6 flex-1 justify-between">
-                <div className="text-slate-900 text-base font-medium leading-snug mb-2" style={{whiteSpace:'pre-line'}}>{story.hook}</div>
+                <div className="text-slate-900 text-base font-medium leading-snug mb-2" style={{whiteSpace:'pre-line'}}>{story.title || story.hook}</div>
                 <button
                   className="mt-auto text-emerald-700 font-semibold text-base rounded-full px-0 py-1 transition hover:underline text-left"
                   onClick={() => viewStory(story.id)}
