@@ -18,7 +18,8 @@ import {
   ChevronDown,
   Timer,
   Footprints,
-  MessageSquare
+  MessageSquare,
+  Zap
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
 import { getJoinedClubIds } from '@/lib/userJourneyStorage';
@@ -94,6 +95,12 @@ export default function DashboardSidebar({ onNav }) {
       label: 'Pricing',
       path: '/dashboard/investor-hub/pricing',
       icon: <BadgePercent className="h-5 w-5" />
+    },
+    {
+      id: 'elevate',
+      label: 'Elevate',
+      path: '/dashboard/investor-hub/elevate',
+      icon: <Zap className="h-5 w-5" />
     }
   ];
 

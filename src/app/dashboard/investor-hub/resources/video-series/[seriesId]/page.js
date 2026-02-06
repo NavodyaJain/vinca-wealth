@@ -6,6 +6,7 @@ import useLearningProgress from "@/hooks/useLearningProgress";
 import VideoSeriesModulesAccordionEnhanced from "@/components/investorHub/resources/VideoSeriesModulesAccordionEnhanced";
 import SeriesCompletionModal from "@/components/investorHub/resources/SeriesCompletionModal";
 import { useMemo, useEffect, useState, useCallback } from "react";
+import { Star } from "lucide-react";
 
 export default function VideoSeriesDetailsPage() {
   const params = useParams();
@@ -18,6 +19,7 @@ export default function VideoSeriesDetailsPage() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(-1);
+  const [seriesRating, setSeriesRating] = useState(0);
   
   useEffect(() => { 
     setMounted(true); 
@@ -267,6 +269,30 @@ export default function VideoSeriesDetailsPage() {
               >
                 Start Watching
               </button>
+            </div>
+
+            {/* Rate This Series */}
+            <div className="w-full mt-6 pt-6 border-t border-slate-200">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">Rate this series</h3>
+              <div className="flex gap-2 justify-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setSeriesRating(star)}
+                    className="transition-transform hover:scale-110 focus:outline-none"
+                    type="button"
+                    aria-label={`Rate ${star} stars`}
+                  >
+                    <Star
+                      className={`h-6 w-6 ${
+                        star <= seriesRating
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-slate-300 hover:text-amber-300'
+                      } transition-colors cursor-pointer`}
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

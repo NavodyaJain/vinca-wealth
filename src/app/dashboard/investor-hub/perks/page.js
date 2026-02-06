@@ -40,19 +40,19 @@ const PRODUCTS = [
     category: "Books",
     icon: "📘"
   },
-  // Companions
+  // Planning
   {
     title: "What My Family Should Know – Planner & Organizer (2026 Edition)",
     purpose: "Helps organise important personal and financial information for family awareness.",
     link: "https://www.amazon.in/dp/B0CQZK6J8B",
-    category: "Companions",
+    category: "Planning",
     icon: "📓"
   },
   {
     title: "TinyChange Undated Classic Life Planner (A5)",
     purpose: "Supports goal-setting, habit tracking, and mindful daily planning.",
     link: "https://www.amazon.in/dp/B09V7YQJ6B",
-    category: "Companions",
+    category: "Planning",
     icon: "📓"
   },
   // Games
@@ -111,28 +111,39 @@ const PRODUCTS = [
 const FILTERS = [
   { label: "All", value: "All" },
   { label: "Books", value: "Books" },
-  { label: "Companions", value: "Companions" },
+  { label: "Planning", value: "Planning" },
   { label: "Games", value: "Games" },
   { label: "Retirement Gifts", value: "Retirement Gifts" },
 ];
 
 function EditorialCard({ title, purpose, link, icon, category }) {
   return (
-    <a
-      href={link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group block bg-white border border-slate-200 rounded-xl px-6 py-6 flex items-center justify-between transition-all duration-200 shadow-sm hover:shadow-lg hover:bg-slate-50 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-emerald-200 min-h-[104px] h-full"
-      style={{ textDecoration: "none" }}
-    >
-      <div className="flex flex-col gap-2 text-left justify-center flex-1 min-w-0">
-        <div className="text-[1.08rem] text-slate-900 font-medium leading-snug whitespace-normal break-words">{title}</div>
-        <div className="text-xs text-slate-600 leading-tight truncate max-w-full mb-2">{purpose}</div>
-      </div>
-      <div className="flex items-center min-w-[70px] pl-4 justify-center h-full">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 h-full flex flex-col shadow-sm hover:shadow-md transition-all duration-200 hover:border-slate-300">
+      {/* Icon (Subtle corner) */}
+      <div className="flex justify-end mb-4 opacity-60">
         <span className="text-2xl select-none" aria-label={category}>{icon}</span>
       </div>
-    </a>
+
+      {/* Title */}
+      <h3 className="text-base md:text-lg font-semibold text-slate-900 mb-3 leading-snug">
+        {title}
+      </h3>
+
+      {/* Description - Full visible with auto wrap */}
+      <p className="text-sm text-slate-600 leading-relaxed mb-6 grow">
+        {purpose}
+      </p>
+
+      {/* Action Button - Bottom aligned */}
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-center text-sm"
+      >
+        View
+      </a>
+    </div>
   );
 }
 
@@ -142,7 +153,7 @@ export default function VincaCurationsPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 px-2 sm:px-4 lg:px-8 py-10">
-      <div className="mx-auto w-full max-w-2xl lg:max-w-[900px] flex flex-col gap-6 px-2 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full max-w-2xl lg:max-w-4xl flex flex-col gap-6 px-2 sm:px-4 lg:px-6">
         {/* HEADER */}
         <div className="flex flex-col gap-2 mb-2">
           <div className="text-base text-slate-600 max-w-2xl mt-2 text-left">
