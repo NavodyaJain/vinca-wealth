@@ -3,6 +3,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CHALLENGES, getChallengeById } from "@/lib/challenges/challengeCatalog";
 import ChallengeSummaryCardRow from "@/components/ChallengeSummaryCardRow";
+import ComfortLevelScale from "@/components/ComfortLevelScale";
 import {
   getChallengeState,
   saveChallengeState,
@@ -18,67 +19,7 @@ import {
   createChallengeCompletionEntry
 } from "@/lib/journal/journalStore";
 
-// ComboBoxField Component for custom input with predefined options
-function ComboBoxField({ label, value, options, optionLabels, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState(value || "");
-
-  const handleSelectOption = (optValue) => {
-    setInput(optValue);
-    onChange(optValue);
-    setIsOpen(false);
-  };
-
-  const handleInputChange = (e) => {
-    const val = e.target.value;
-    setInput(val);
-    onChange(val);
-  };
-
-  return (
-    <div>
-      <label className="text-slate-700 text-sm block mb-2">{label}</label>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={handleInputChange}
-          placeholder="Type or choose from options"
-          className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-emerald-600"
-        />
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 whitespace-nowrap"
-        >
-          Choose prompt
-        </button>
-      </div>
-      
-      {/* Simple Dropdown Popover */}
-      {isOpen && (
-        <div className="absolute mt-2 bg-white border border-slate-300 rounded-lg shadow-lg z-50 w-80">
-          <div className="p-2 max-h-64 overflow-y-auto">
-            {options.map(opt => (
-              <button
-                key={opt}
-                type="button"
-                className={`w-full text-left px-3 py-2 rounded text-sm transition ${ 
-                  input === opt
-                    ? "bg-emerald-600 text-white font-medium"
-                    : "text-slate-700 hover:bg-slate-100"
-                }`}
-                onClick={() => handleSelectOption(opt)}
-              >
-                {optionLabels[opt]}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// ComboBoxField Component has been removed - no longer used
 
 export default function ChallengeDetailPage() {
   // --- Annual challenge: monthly reflections state ---
@@ -254,7 +195,14 @@ export default function ChallengeDetailPage() {
       setUnits(prev => {
         const unit = prev[unitIdx] || {};
         const isNoSIP = unit.form?.completed === "no";
-        const next = { ...prev, [unitIdx]: { ...unit, isSaved: true, isCompleted: true, isDirty: false } };
+        // Only save sipCompleted and comfortLevel (if sipCompleted = true)
+        const savedForm = {
+          sipCompleted: unit.form?.completed === "yes",
+        };
+        if (unit.form?.completed === "yes") {
+          savedForm.comfortLevel = unit.form?.comfortLevel;
+        }
+        const next = { ...prev, [unitIdx]: { ...unit, form: savedForm, isSaved: true, isCompleted: true, isDirty: false } };
         // Persist
         const state = getChallengeState();
         state.progress[challengeId].units = next;
@@ -345,64 +293,78 @@ export default function ChallengeDetailPage() {
                 const { label, range } = getMonthRange(startDate, 0);
                 const unit = units[0] || { form: {}, isOpen: true, isDirty: false, isSaved: false, isCompleted: false };
                 const { form = {}, isOpen, isSaved, isCompleted } = unit;
-                // Required fields: completed, comfort, challenge
-                const canSave = form?.completed && form?.comfort && form?.challenge;
+                // Required fields: completed and comfortLevel (if completed = yes)
+                const canSave = form?.completed && (form?.completed === "no" || form?.comfortLevel);
+                const isCompleted_yes = form?.completed === "yes";
                 return (
-                  <div className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2">
+                  <div className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-4">
                     <div className="flex items-center gap-2">
-                      <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
+                      <div className="font-semibold text-slate-900 text-lg">{label}</div>
                       <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(0)}>{isOpen ? "Collapse" : "Expand"}</button>
                     </div>
-                    <div className="text-slate-500 text-sm mb-1">{range}</div>
-                    <div className="text-slate-600 text-sm mb-2">Status: {isCompleted ? "Completed" : "Current"}</div>
+                    <div className="text-slate-500 text-sm">{range}</div>
+                    <div className="text-slate-600 text-sm">Status: {isCompleted ? "Completed" : "Current"}</div>
                     {isOpen && (
                       <>
                         {/* Reflection Form */}
                         {!isCompleted ? (
-                          <div className="flex flex-col gap-3">
-                            <div className="text-slate-700 text-sm">SIP completed?</div>
-                            <div className="flex gap-2">
-                              {["yes","no"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(0, { form: { ...form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
-                              ))}
+                          <div className="flex flex-col gap-6 mt-4">
+                            {/* Card Title */}
+                            <div className="text-sm font-semibold text-slate-700">Monthly SIP Reflection</div>
+                            
+                            {/* Two-column layout */}
+                            <div className="grid grid-cols-1 gap-6">
+                              {/* Left: SIP Completed */}
+                              <div className="flex flex-col gap-3">
+                                <label className="text-slate-700 text-sm font-medium">Did I do my SIP?</label>
+                                <div className="flex gap-2">
+                                  {["yes","no"].map(val => (
+                                    <button 
+                                      key={val} 
+                                      className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                                        form.completed === val 
+                                          ? "bg-emerald-600 text-white border-emerald-600" 
+                                          : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-300"
+                                      }`} 
+                                      onClick={() => updateUnit(0, { form: { ...form, completed: val, comfortLevel: val === "no" ? null : form.comfortLevel } })}
+                                    >
+                                      {val === "yes" ? "Yes" : "No"}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Right: Comfort Level */}
+                              {isCompleted_yes && (
+                                <div className="flex flex-col gap-3">
+                                  <label className="text-slate-700 text-sm font-medium">How comfortable did it feel?</label>
+                                  <ComfortLevelScale 
+                                    value={form.comfortLevel || null} 
+                                    onChange={(val) => updateUnit(0, { form: { ...form, comfortLevel: val } })}
+                                    disabled={false}
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <ComboBoxField
-                              label="Comfort level"
-                              value={form.comfort || ""}
-                              options={["comfortable","slightly_stretched","difficult"]}
-                              optionLabels={{
-                                comfortable: "Comfortable",
-                                slightly_stretched: "Slightly stretched",
-                                difficult: "Difficult"
-                              }}
-                              onChange={(val) => updateUnit(0, { form: { ...form, comfort: val } })}
-                            />
-                            <ComboBoxField
-                              label="Challenge faced"
-                              value={form.challenge || ""}
-                              options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
-                              optionLabels={{
-                                forgot_sip: "Forgot SIP",
-                                emergency_expense: "Emergency expense",
-                                cash_flow: "Cash flow issue",
-                                market_fear: "Market fear",
-                                other: "Other"
-                              }}
-                              onChange={(val) => updateUnit(0, { form: { ...form, challenge: val } })}
-                            />
-                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={form.notes || ""} onChange={e => updateUnit(0, { form: { ...form, notes: e.target.value } })}></textarea>
-                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!canSave} onClick={() => saveUnit(0)}>[ Save Progress ]</button>
+
+                            <button 
+                              className="mt-4 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" 
+                              disabled={!canSave} 
+                              onClick={() => saveUnit(0)}
+                            >
+                              [ Save Progress ]
+                            </button>
                             {isSaved && (
-                              <div className="flex flex-col gap-2 mt-2">
+                              <div className="flex flex-col gap-3 mt-2 p-4 bg-emerald-50 rounded-lg">
                                 <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(0, { label, range })}>Log this into Journal</button>
+                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(0, { label, range })}>Log this into Journal</button>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-3">
                             <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
-                            <button className="mt-2 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(0, { label, range })}>View in Journal</button>
+                            <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(0, { label, range })}>View in Journal</button>
                           </div>
                         )}
                       </>
@@ -424,7 +386,7 @@ export default function ChallengeDetailPage() {
                   const prevCompleted = idx === 0 || (units[idx - 1] && units[idx - 1].isCompleted);
                   const isCurrent = !isCompleted && prevCompleted;
                   const isCompletedUnit = isCompleted;
-                  return { idx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && form?.comfort && form?.challenge };
+                  return { idx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && (form?.completed === "no" || form?.comfortLevel) };
                 });
                 // Sort descending by idx (monthIndex)
                 const sorted = [...monthObjs].sort((a, b) => b.idx - a.idx);
@@ -432,52 +394,65 @@ export default function ChallengeDetailPage() {
                 const completed = sorted.filter(m => m.isCompletedUnit);
                 return [
                   current && (
-                    <div key={current.idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4">
+                    <div key={current.idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-4 mb-4">
                       <div className="flex items-center gap-2">
-                        <div className="font-semibold text-slate-900 text-lg mb-1">{current.label}</div>
+                        <div className="font-semibold text-slate-900 text-lg">{current.label}</div>
                         <button className="ml-auto text-xs text-emerald-700 underline" onClick={() => toggleUnitOpen(current.idx)}>{current.isOpen ? "Collapse" : "Expand"}</button>
                       </div>
-                      <div className="text-slate-500 text-sm mb-1">{current.range}</div>
-                      <div className="text-slate-600 text-sm mb-2">Status: Current</div>
+                      <div className="text-slate-500 text-sm">{current.range}</div>
+                      <div className="text-slate-600 text-sm">Status: Current</div>
                       {current.isOpen && (
                         <>
-                          <div className="flex flex-col gap-3">
-                            <div className="text-slate-700 text-sm">SIP completed?</div>
-                            <div className="flex gap-2">
-                              {["yes","no"].map(val => (
-                                <button key={val} className={`px-3 py-1 rounded-full border text-sm ${current.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(current.idx, { form: { ...current.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
-                              ))}
+                          <div className="flex flex-col gap-6 mt-4">
+                            {/* Card Title */}
+                            <div className="text-sm font-semibold text-slate-700">Monthly SIP Reflection</div>
+                            
+                            {/* Two-column layout */}
+                            <div className="grid grid-cols-1 gap-6">
+                              {/* Left: SIP Completed */}
+                              <div className="flex flex-col gap-3">
+                                <label className="text-slate-700 text-sm font-medium">Did I do my SIP?</label>
+                                <div className="flex gap-2">
+                                  {["yes","no"].map(val => (
+                                    <button 
+                                      key={val} 
+                                      className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                                        current.form.completed === val 
+                                          ? "bg-emerald-600 text-white border-emerald-600" 
+                                          : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-300"
+                                      }`} 
+                                      onClick={() => updateUnit(current.idx, { form: { ...current.form, completed: val, comfortLevel: val === "no" ? null : current.form.comfortLevel } })}
+                                    >
+                                      {val === "yes" ? "Yes" : "No"}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Right: Comfort Level */}
+                              {current.form.completed === "yes" && (
+                                <div className="flex flex-col gap-3">
+                                  <label className="text-slate-700 text-sm font-medium">How comfortable did it feel?</label>
+                                  <ComfortLevelScale 
+                                    value={current.form.comfortLevel || null} 
+                                    onChange={(val) => updateUnit(current.idx, { form: { ...current.form, comfortLevel: val } })}
+                                    disabled={false}
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <ComboBoxField
-                              label="Comfort level"
-                              value={current.form.comfort || ""}
-                              options={["comfortable","slightly_stretched","difficult"]}
-                              optionLabels={{
-                                comfortable: "Comfortable",
-                                slightly_stretched: "Slightly stretched",
-                                difficult: "Difficult"
-                              }}
-                              onChange={(val) => updateUnit(current.idx, { form: { ...current.form, comfort: val } })}
-                            />
-                            <ComboBoxField
-                              label="Challenge faced"
-                              value={current.form.challenge || ""}
-                              options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
-                              optionLabels={{
-                                forgot_sip: "Forgot SIP",
-                                emergency_expense: "Emergency expense",
-                                cash_flow: "Cash flow issue",
-                                market_fear: "Market fear",
-                                other: "Other"
-                              }}
-                              onChange={(val) => updateUnit(current.idx, { form: { ...current.form, challenge: val } })}
-                            />
-                            <textarea className="w-full mt-2 p-2 border rounded text-sm" rows={2} placeholder="Anything you want to remember? (optional)" value={current.form.notes || ""} onChange={e => updateUnit(current.idx, { form: { ...current.form, notes: e.target.value } })}></textarea>
-                            <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!current.canSave} onClick={() => saveUnit(current.idx)}>[ Save Progress ]</button>
+
+                            <button 
+                              className="mt-4 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" 
+                              disabled={!current.canSave} 
+                              onClick={() => saveUnit(current.idx)}
+                            >
+                              [ Save Progress ]
+                            </button>
                             {current.isSaved && (
-                              <div className="flex flex-col gap-2 mt-2">
+                              <div className="flex flex-col gap-3 mt-2 p-4 bg-emerald-50 rounded-lg">
                                 <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(current.idx, { label: current.label, range: current.range })}>Log this into Journal</button>
+                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(current.idx, { label: current.label, range: current.range })}>Log this into Journal</button>
                               </div>
                             )}
                           </div>
@@ -488,11 +463,11 @@ export default function ChallengeDetailPage() {
                   ...completed.map(({ idx, label, range, form, isOpen, isSaved, isCompleted }) => (
                     <div key={idx} className="border border-slate-200 rounded-xl p-6 bg-white flex flex-col gap-2 mb-4 opacity-80">
                       <div className="flex items-center gap-2">
-                        <div className="font-semibold text-slate-900 text-lg mb-1">{label}</div>
+                        <div className="font-semibold text-slate-900 text-lg">{label}</div>
                         <span className="ml-auto text-xs text-slate-400">Completed</span>
                       </div>
-                      <div className="text-slate-500 text-sm mb-1">{range}</div>
-                      <div className="text-slate-600 text-sm mb-2">Status: Completed</div>
+                      <div className="text-slate-500 text-sm">{range}</div>
+                      <div className="text-slate-600 text-sm">Status: Completed</div>
                       {/* Collapsed by default, can expand if needed */}
                       {false && isOpen && (
                         <div className="flex flex-col gap-3"> ... </div>
@@ -533,7 +508,7 @@ export default function ChallengeDetailPage() {
                       const prevCompleted = mIdx === 0 || (units[quarterStartMonth + mIdx - 1] && units[quarterStartMonth + mIdx - 1].isCompleted);
                       const isCurrent = !isCompleted && prevCompleted;
                       const isCompletedUnit = isCompleted;
-                      return { mIdx, monthIdx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && form?.comfort && form?.challenge };
+                      return { mIdx, monthIdx, label, range, start, form, isOpen, isSaved, isCompleted, isCurrent, isCompletedUnit, canSave: form?.completed && (form?.completed === "no" || form?.comfortLevel) };
                     });
                     const sortedMonths = [...monthObjs].sort((a, b) => b.mIdx - a.mIdx);
                     const currentMonth = sortedMonths.find(m => m.isCurrent);
@@ -553,43 +528,56 @@ export default function ChallengeDetailPage() {
                             <div className="text-slate-600 text-xs mb-2">Status: Current</div>
                             {currentMonth.isOpen && (
                               <>
-                                <div className="flex flex-col gap-3">
-                                  <div className="text-slate-700 text-xs">SIP completed?</div>
-                                  <div className="flex gap-2">
-                                    {["yes","no"].map(val => (
-                                      <button key={val} className={`px-3 py-1 rounded-full border text-xs ${currentMonth.form.completed === val ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-emerald-700 border-emerald-200"}`} onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, completed: val } })}>{val === "yes" ? "Yes" : "No"}</button>
-                                    ))}
+                                <div className="flex flex-col gap-6 mt-4">
+                                  {/* Card Title */}
+                                  <div className="text-sm font-semibold text-slate-700">Monthly SIP Reflection</div>
+                                  
+                                  {/* Two-column layout */}
+                                  <div className="grid grid-cols-1 gap-6">
+                                    {/* Left: SIP Completed */}
+                                    <div className="flex flex-col gap-3">
+                                      <label className="text-slate-700 text-sm font-medium">Did I do my SIP?</label>
+                                      <div className="flex gap-2">
+                                        {["yes","no"].map(val => (
+                                          <button 
+                                            key={val} 
+                                            className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                                              currentMonth.form.completed === val 
+                                                ? "bg-emerald-600 text-white border-emerald-600" 
+                                                : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-300"
+                                            }`} 
+                                            onClick={() => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, completed: val, comfortLevel: val === "no" ? null : currentMonth.form.comfortLevel } })}
+                                          >
+                                            {val === "yes" ? "Yes" : "No"}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Right: Comfort Level */}
+                                    {currentMonth.form.completed === "yes" && (
+                                      <div className="flex flex-col gap-3">
+                                        <label className="text-slate-700 text-sm font-medium">How comfortable did it feel?</label>
+                                        <ComfortLevelScale 
+                                          value={currentMonth.form.comfortLevel || null} 
+                                          onChange={(val) => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, comfortLevel: val } })}
+                                          disabled={false}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
-                                  <ComboBoxField
-                                    label="Comfort level"
-                                    value={currentMonth.form.comfort || ""}
-                                    options={["comfortable","slightly_stretched","difficult"]}
-                                    optionLabels={{
-                                      comfortable: "Comfortable",
-                                      slightly_stretched: "Slightly stretched",
-                                      difficult: "Difficult"
-                                    }}
-                                    onChange={(val) => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, comfort: val } })}
-                                  />
-                                  <ComboBoxField
-                                    label="Challenge faced"
-                                    value={currentMonth.form.challenge || ""}
-                                    options={["forgot_sip","emergency_expense","cash_flow","market_fear","other"]}
-                                    optionLabels={{
-                                      forgot_sip: "Forgot SIP",
-                                      emergency_expense: "Emergency expense",
-                                      cash_flow: "Cash flow issue",
-                                      market_fear: "Market fear",
-                                      other: "Other"
-                                    }}
-                                    onChange={(val) => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, challenge: val } })}
-                                  />
-                                  <textarea className="w-full mt-2 p-2 border rounded text-xs" rows={2} placeholder="Anything you want to remember? (optional)" value={currentMonth.form.notes || ""} onChange={e => updateUnit(currentMonth.monthIdx, { form: { ...currentMonth.form, notes: e.target.value } })}></textarea>
-                                  <button className="mt-3 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" disabled={!currentMonth.canSave} onClick={() => saveUnit(currentMonth.monthIdx)}>[ Save Progress ]</button>
+
+                                  <button 
+                                    className="mt-4 px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold disabled:opacity-50" 
+                                    disabled={!currentMonth.canSave} 
+                                    onClick={() => saveUnit(currentMonth.monthIdx)}
+                                  >
+                                    [ Save Progress ]
+                                  </button>
                                   {currentMonth.isSaved && (
-                                    <div className="flex flex-col gap-2 mt-2">
+                                    <div className="flex flex-col gap-3 mt-2 p-4 bg-emerald-50 rounded-lg">
                                       <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                      <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold" onClick={() => logToJournal(currentMonth.monthIdx, { label: currentMonth.label, range: currentMonth.range, quarter: qLabel })}>Log this into Journal</button>
+                                      <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(currentMonth.monthIdx, { label: currentMonth.label, range: currentMonth.range, quarter: qLabel })}>Log this into Journal</button>
                                     </div>
                                   )}
                                 </div>

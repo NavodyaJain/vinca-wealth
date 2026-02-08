@@ -14,6 +14,38 @@ export default function ChallengesHome() {
     setChallengeState(getChallengeState());
   }, []);
 
+  // Calculate Comfort Score from all sprint progress
+  function calculateComfortScore() {
+    const comfortLevels = [];
+    
+    // Iterate through all challenge progress
+    if (challengeState.progress) {
+      Object.values(challengeState.progress).forEach(progress => {
+        // Get units from each challenge progress
+        if (progress.units && typeof progress.units === 'object') {
+          Object.values(progress.units).forEach(unit => {
+            // Only include entries where sipCompleted === true
+            if (unit.form && unit.form.sipCompleted === true && unit.form.comfortLevel) {
+              comfortLevels.push(unit.form.comfortLevel);
+            }
+          });
+        }
+      });
+    }
+
+    // Calculate average and round to whole number
+    if (comfortLevels.length === 0) {
+      return { score: null, percentage: null, count: 0 };
+    }
+
+    const avgComfort = comfortLevels.reduce((sum, level) => sum + level, 0) / comfortLevels.length;
+    const roundedScore = Math.round(avgComfort);
+
+    return { score: roundedScore, percentage: null, count: comfortLevels.length };
+  }
+
+  const comfortScoreData = calculateComfortScore();
+
   // Group challenges by cadence
   const cadenceOrder = ["monthly", "quarterly", "yearly"];
   const grouped = cadenceOrder.map(cadence => ({
@@ -50,64 +82,29 @@ export default function ChallengesHome() {
         <div className="w-full flex flex-col sm:flex-row gap-6 mb-14">
           {/* ...existing KPI cards... */}
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
-            <div className="mb-4 font-semibold text-slate-900 text-lg">Journey Completed</div>
-            <div className="relative flex items-center justify-center mb-3" style={{ width: 100, height: 100 }}>
-              <svg width="100" height="100" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="kpi1-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#10b981" />
-                    <stop offset="100%" stopColor="#14b8a6" />
-                  </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                <circle
-                  cx="50" cy="50" r="42"
-                  fill="none"
-                  stroke="url(#kpi1-gradient)"
-                  strokeWidth="12"
-                  strokeDasharray={2 * Math.PI * 42}
-                  strokeDashoffset={2 * Math.PI * 42 * 0.35}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 0.6s' }}
-                />
-                <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize="2em" fontWeight="bold" fill="#10b981">65%</text>
-              </svg>
-            </div>
-            <div className="text-sm text-slate-500 text-center leading-snug">From start of investing to retirement age</div>
+            <div className="text-sm text-slate-600 text-center mb-6 leading-snug">You have covered</div>
+            <div className="text-5xl font-bold text-emerald-600 mb-4">65%</div>
+            <div className="text-sm text-slate-500 text-center leading-snug">In your path from starting to invest until your retirement age.</div>
           </div>
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
-            <div className="mb-4 font-semibold text-slate-900 text-lg">Corpus Generated</div>
-            <div className="relative flex items-center justify-center mb-3" style={{ width: 100, height: 100 }}>
-              <svg width="100" height="100" viewBox="0 0 100 100">
-                <defs>
-                  <linearGradient id="kpi2-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#10b981" />
-                    <stop offset="100%" stopColor="#14b8a6" />
-                  </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="12" />
-                <circle
-                  cx="50" cy="50" r="42"
-                  fill="none"
-                  stroke="url(#kpi2-gradient)"
-                  strokeWidth="12"
-                  strokeDasharray={2 * Math.PI * 42}
-                  strokeDashoffset={2 * Math.PI * 42 * 0.35}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 0.6s' }}
-                />
-                <text x="50%" y="50%" textAnchor="middle" dy=".35em" fontSize="2em" fontWeight="bold" fill="#10b981">65%</text>
-              </svg>
-            </div>
-            <div className="text-sm text-slate-500 text-center leading-snug">Of target retirement corpus</div>
+            <div className="text-sm text-slate-600 text-center mb-6 leading-snug">You have built</div>
+            <div className="text-5xl font-bold text-emerald-600 mb-4">65%</div>
+            <div className="text-sm text-slate-500 text-center leading-snug">Of the total money your retirement plan requires.</div>
           </div>
           <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
-            <div className="mb-4 font-semibold text-slate-900 text-lg">Active Sprint</div>
-            <div className="flex flex-col items-center justify-center mb-3">
-              <div className="text-xl font-bold text-emerald-600 mb-1">Quarterly Sprint</div>
-              <div className="text-base text-slate-500">Jan 29, 2026 – Apr 29, 2026</div>
+            <div className="text-sm text-slate-600 text-center mb-6 leading-snug">You are currently focused on</div>
+            <div className="text-3xl font-bold text-emerald-600 mb-4">Quarterly Sprint</div>
+            <div className="text-sm text-slate-500 text-center leading-snug">Jan 29, 2026 – Apr 29, 2026</div>
+          </div>
+          <div className="flex-1 bg-white rounded-2xl shadow-lg flex flex-col items-center p-8 min-w-[220px]">
+            <div className="text-sm text-slate-600 text-center mb-6 leading-snug">You feel</div>
+            <div className="flex items-center justify-center mb-4">
+              <div className="text-5xl font-bold text-emerald-600">
+                {comfortScoreData.score !== null ? comfortScoreData.score : "—"}
+              </div>
+              <div className="text-2xl text-slate-400 ml-2">/ 5</div>
             </div>
-            <div className="text-sm text-slate-400 text-center">Sprint name and duration</div>
+            <div className="text-sm text-slate-500 text-center leading-snug">confident across your completed sprint.</div>
           </div>
         </div>
 
