@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { videoSeries, blogs } from "@/data/investorHub/resourcesData";
 import VideoSeriesCard from "@/components/investorHub/resources/VideoSeriesCard";
 import BlogCard from "@/components/investorHub/resources/BlogCard";
-import FinancialMaturityCard from "@/components/investorHub/resources/FinancialMaturityCard";
+import FinancialMaturityMeterSlim from "@/components/investorHub/resources/FinancialMaturityMeterSlim";
 import useLearningProgress from "@/hooks/useLearningProgress";
 
 const TABS = [
@@ -13,9 +13,9 @@ export default function ResourcesPage() {
   const [tab, setTab] = useState("video-series");
   const [mounted, setMounted] = useState(false);
   const {
-    getMaturityLevel,
-    getCompletedSeriesByLevel,
-    getAchievements
+    getMaturityScore,
+    getLatestAchievement,
+    getProgressToNextAchievementValue
   } = useLearningProgress();
 
   // Ensure client-side hydration completes before rendering maturity card
@@ -23,9 +23,9 @@ export default function ResourcesPage() {
     setMounted(true);
   }, []);
 
-  const maturityLevel = getMaturityLevel();
-  const completedSeriesByLevel = getCompletedSeriesByLevel();
-  const achievements = getAchievements();
+  const totalPoints = getMaturityScore();
+  const latestAchievement = getLatestAchievement();
+  const nextAchievementProgress = getProgressToNextAchievementValue();
 
   return (
     <div className="w-full px-6 lg:px-8 py-6">
@@ -51,13 +51,13 @@ export default function ResourcesPage() {
         {/* Motivation Cards - Always visible on video-series tab */}
         {tab === "video-series" && (
           <>
-            {/* Financial Maturity Card - Single primary card */}
+            {/* Financial Maturity Meter - Points-Based Card with 3 KPIs */}
             {mounted && (
               <div className="mb-6">
-                <FinancialMaturityCard
-                  maturityLevel={maturityLevel}
-                  completedSeriesByLevel={completedSeriesByLevel}
-                  achievements={achievements}
+                <FinancialMaturityMeterSlim
+                  totalPoints={totalPoints}
+                  latestAchievement={latestAchievement}
+                  nextAchievementProgress={nextAchievementProgress}
                 />
               </div>
             )}

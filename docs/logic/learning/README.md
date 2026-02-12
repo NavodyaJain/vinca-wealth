@@ -1,342 +1,123 @@
 # Learning
 
-## 1. Data Inputs
+---
 
-### Source: Learning progress tracking + Series/Content library
-- **User interaction**: 
-  - Series ID (series completed by user)
-  - Difficulty level: "beginner", "intermediate", "advanced"
-  - Completion status: completed vs. in-progress
+## 1. Feature Purpose
 
-### Series Metadata:
-- Series definitions with:
-  - ID: Unique identifier
-  - Difficulty: One of three levels
-  - Tags: Array of topic tags (e.g., "SIP", "Asset Allocation", "Tax")
-  - Content count: Number of articles/videos in series
-
-### Default Values:
-- Initial progress:
-  ```javascript
-  {
-    completedSeriesByLevel: {
-      beginner: 0,
-      intermediate: 0,
-      advanced: 0
-    },
-    completedSeries: []  // Array of completed series IDs
-  }
-  ```
+The Learning feature tracks user progress through financial education video series and awards points based on series completion. Points accumulate over time and unlock achievement levels that reflect learning consistency and depth. The system provides transparent feedback: watch videos → earn points → unlock achievements → see progress.
 
 ---
 
-## 2. Core Calculations
+## 2. What Inputs Are Used
 
-### A. Maturity Score Calculation
+**From User Actions**:
+- **Series completion** — User finishes all videos in a series
+- **Series difficulty** — One of three: Beginner, Intermediate, or Advanced
 
-**Goal**: Calculate financial maturity based on completed series.
-
-**Process**:
-
-#### 1. Count completed series by difficulty level
-```
-completedBeginner = count of completed series with level "beginner"
-completedIntermediate = count of completed series with level "intermediate"
-completedAdvanced = count of completed series with level "advanced"
-```
-
-#### 2. Calculate maturity score from completions
-```
-beginnerScore = completedBeginner × 10     (0–30+ points, scale flexible)
-intermediateScore = completedIntermediate × 15
-advancedScore = completedAdvanced × 25
-
-totalMaturityScore = beginnerScore + intermediateScore + advancedScore
-  capped at 100
-```
-
-Example: 
-- 2 beginner = 20 points
-- 1 intermediate = 15 points
-- 0 advanced = 0 points
-- Total = 35/100
-
-#### 3. Determine maturity level
-```
-if totalMaturityScore >= 80:
-  maturityLevel = "Expert"
-else if totalMaturityScore >= 50:
-  maturityLevel = "Intermediate"
-else if totalMaturityScore >= 20:
-  maturityLevel = "Beginner"
-else:
-  maturityLevel = "Novice"
-```
-
-### B. Tag-Based Weighting
-
-**Goal**: Track proficiency by topic area.
-
-**Process**:
-1. Aggregate tags from all completed series
-2. Count tag frequency:
-   ```javascript
-   tagCounts = {
-     "SIP": 3,
-     "Asset Allocation": 2,
-     "Tax Planning": 1,
-     ...
-   }
-   ```
-3. Weight by difficulty of series containing that tag:
-   ```
-   tagScore = (beginner_count × 1 + intermediate_count × 2 + advanced_count × 3)
-   ```
-4. Rank tags by weighted score
-
-**Result**: Topic proficiency order (most to least covered).
-
-### C. Completion Threshold Tracking
-
-**Goal**: Track series completion for deduplication and progression gates.
-
-**Process**:
-1. Maintain `completedSeries` array (series IDs only)
-2. On series completion:
-   - Add series ID to array
-   - Increment level-specific counter
-   - Recalculate maturity score
-3. Check for duplicates:
-   - If series ID already in array, don't double-count
-
-**Result**: `completedSeries` array with unique IDs; no duplicates.
+**From System**:
+- **Completed series tracking** — Array of series IDs already completed (prevents duplicate points)
+- **Total accumulated points** — Sum from all previously completed series
 
 ---
 
-## 3. Scoring Logic
+## 3. How the Score / Number Is Built
 
-**Multi-level scoring**:
+### Step 1: Award Points for Completed Series
 
-| Metric | Formula | Max Value |
-|--------|---------|-----------|
-| Beginner Score | completedBeginner × 10 | 30+ |
-| Intermediate Score | completedIntermediate × 15 | 45+ |
-| Advanced Score | completedAdvanced × 25 | 25 |
-| **Total Maturity** | Sum of above | **100** |
+When user completes all videos in a series, points are awarded based only on difficulty:
+- **Beginner series** → +10 points (awarded once per series)
+- **Intermediate series** → +20 points (awarded once per series)
+- **Advanced series** → +30 points (awarded once per series)
 
-**Maturity Levels** (finite progression):
-- **Getting Started**: 0 series completed
-- **Awareness Builder**: 1+ beginner series (25% progress meter)
-- **Decision Ready**: 1+ beginner AND 1+ intermediate (50% progress meter)
-- **Strategy Confident**: 2+ intermediate OR 1+ advanced (75% progress meter)
-- **Readiness Mature**: 1+ beginner AND 1+ intermediate AND 1+ advanced (100% progress meter)
+Example: User completes 1 beginner series = 10 points. User then completes 1 intermediate series = 20 additional points. Total = 30 points.
 
-**Maturity Meter**: Displays percentage based on maturity level name mapping (0%, 25%, 50%, 75%, 100%). Meter caps at 100% when user reaches "Readiness Mature".
+### Step 2: Accumulate Total Learning Points
 
-### Achievement System
+Sum all points from completed series (deduplication prevents counting same series twice):
+$$\text{Total Learning Points} = \sum \text{points from all unique completed series}$$
 
-**Purpose**: Unlock badges and recognition for continuous learning beyond base maturity levels. Provides incentive for users to continue learning even after reaching 100% maturity.
+Example: If user has completed 2 beginner (20 pts), 1 intermediate (20 pts), and 0 advanced (0 pts) = 40 total points.
 
-**Achievement Unlock Logic**:
+### Step 3: Unlock Achievements at Point Thresholds
 
-| Achievement | Emoji | Unlock Condition | Description |
-|---|---|---|---|
-| Bronze Learner | 🥉 | beginner >= 1 | Completed your first financial learning series |
-| Silver Scholar | 🥈 | intermediate >= 2 | Mastered 2 intermediate financial topics |
-| Gold Expert | 🥇 | advanced >= 3 | Achieved expertise in 3 advanced financial strategies |
-| Comprehensive Master | 🏅 | beginner >= 2 AND intermediate >= 2 AND advanced >= 2 | Mastered multiple topics across all difficulty levels |
-| Lifetime Learner | ⭐ | total >= 5 | Completed 5+ financial learning series |
-| Advanced Pioneer | 🚀 | advanced >= 3 | Ventured deep into advanced financial planning |
-| Knowledge Guardian | 👑 | total >= 10 | Completed 10+ financial learning series (you are a financial expert) |
+Achievements unlock automatically when total points reach defined thresholds (10 levels):
 
-**Achievements Array**: Multiple achievements can be unlocked simultaneously. Each achievement object contains:
-```javascript
-{
-  id: "unique-achievement-id",
-  name: "Achievement Name",
-  emoji: "🏆",
-  description: "Human-readable description",
-  unlockedAt: "condition-description"
-}
-```
+| Achievement Level | Points Required | Name |
+|---|---|---|
+| 1 | 10 | First Step |
+| 2 | 25 | Learning Starter |
+| 3 | 50 | Consistent Learner |
+| 4 | 75 | Knowledge Builder |
+| 5 | 100 | Awareness Strong |
+| 6 | 150 | Discipline Formed |
+| 7 | 200 | Strategy Mindset |
+| 8 | 275 | Financial Explorer |
+| 9 | 350 | Advanced Learner |
+| 10 | 450 | Financially Mature |
 
-**Calculation**: Achievements are derived from completion counts in `completedSeriesByLevel` at render time. No separate storage needed—purely computed from existing progress data.
+Once an achievement is unlocked at a point threshold, it remains unlocked permanently.
 
-**Tag Proficiency Ranking**: Topics ranked by completion frequency and difficulty, displayed as ordered list.
+### Step 4: Calculate Next Achievement Progress
+
+For users below level 10 (not all achievements unlocked):
+- Determine the next locked achievement threshold
+- Calculate progress: (Current Points / Next Threshold) × 100%
+
+Example: User has 120 points. Next achievement (Discipline Formed) requires 150 points. Progress = (120 / 150) × 100% = 80%.
 
 ---
 
-## 4. State Machine / Lifecycle
+## 4. What the Score Means
 
-### Lifecycle:
-1. **User accesses Learning page** → Load progress from localStorage
-2. **User completes series** → Trigger completion handler:
-   - Add series ID to `completedSeries`
-   - Increment level counter
-   - Recalculate maturity score
-3. **Score badge updated** → Display new maturity level
-4. **Progress persisted** → Save to `financialMaturity` localStorage key
+**Total Learning Points** (accumulating number):
+- Reflects the cumulative effort and breadth of financial learning
+- Higher points = more series completed at higher difficulty levels
+- No upper limit; points continue accumulating as more series are learned
 
-### Data Locked: 
-- Completed series IDs cannot be "un-completed" without clearing entire progress
-- Progress is cumulative; deduplication prevents double-counting same series
+**Achievement Level** (10 levels):
+- Marks milestone progress through learning journey
+- Each level represents increasing engagement and depth
+- Example: "Awareness Strong" (Level 5) = achieved 100+ points, indicating consistent learning across series
 
----
+**Latest Achievement** (most recent unlock):
+- Shows the highest achievement currently unlocked
+- Displayed with achievement name, milestone number, and emoji icon
+- Persists permanently once unlocked
 
-## 5. Persistence & Source of Truth
-
-### localStorage Key:
-- **`financialMaturity`**: Master learner progress object
-  ```javascript
-  {
-    completedSeriesByLevel: {
-      beginner: N,
-      intermediate: N,
-      advanced: N
-    },
-    completedSeries: ["series_1", "series_2", ...],
-    updatedAt: ISO timestamp
-  }
-  ```
-
-### File Ownership:
-- **[hooks/useLearningProgress.js](../../src/hooks/useLearningProgress.js)** ← **AUTHORITATIVE**
-  - Reading: `getInitialProgress()`
-  - Updating: `markSeriesAsComplete()`
-  - Calculating: Score derivation
-
-### Components:
-- Learning page/component (referenced in Investor Hub)
-  - Displays maturity score
-  - Shows completed series count
-  - Lists topic proficiency
+**Next Achievement Progress** (progress bar):
+- Shows how many more points needed to unlock next achievement
+- Displays both current and target points (e.g., "120 / 150 pts")
+- Includes thin linear progress bar for visual clarity
+- Auto-hides when all 10 achievements are unlocked
 
 ---
 
-## 6. Output Values
+## 5. What the Score Does NOT Mean
 
-### Primary Outputs:
-- **`maturityLevel`**: "Getting Started", "Awareness Builder", "Decision Ready", "Strategy Confident", or "Readiness Mature" (string, categorical)
-- **`maturityPercentage`**: 0, 25, 50, 75, or 100 (integer, based on maturity level)
-- **`completedByLevel`**: 
-  ```javascript
-  {
-    beginner: N,
-    intermediate: N,
-    advanced: N
-  }
-  ```
-
-### Secondary Outputs:
-- **`achievements`**: Array of unlocked achievement objects
-  ```javascript
-  [
-    {
-      id: "bronze-learner",
-      name: "Bronze Learner",
-      emoji: "🥉",
-      description: "Completed your first financial learning series",
-      unlockedAt: "beginner >= 1"
-    },
-    ...
-  ]
-  ```
-  - Length varies from 0 to 7 achievements depending on user progress
-  - Array is recalculated on each page load based on completion counts
-
-- **`topicProficiency`**: Array of topics ranked by competency
-  ```javascript
-  [
-    { topic: "SIP", frequency: 3, avgDifficulty: "intermediate" },
-    { topic: "Asset Allocation", frequency: 2, avgDifficulty: "beginner" },
-    ...
-  ]
-  ```
-- **`nextSuggestedTopics`**: Topics user hasn't covered yet, recommended based on level
-
-### Formatting Rules:
-- Level: Plain text (no abbreviations)
-- Percentage: 0–100 integer, displayed as "25%", "100%" etc.
-- Achievement emoji: Unicode emoji character (🥉, 🏆, etc.)
-- Achievement descriptions: Friendly, motivational tone
+- **Does NOT measure expertise** — Point totals reflect completion volume, not knowledge depth or competency
+- **Does NOT predict financial readiness** — Learning points are independent of retirement corpus, affordability, or financial security assess menus
+- **Does NOT measure understanding** — System counts series completion; does not assess comprehension or knowledge retention
+- **Does NOT rank users** — No leaderboards, comparisons, or ranking against other users
+- **Does NOT include time factor** — Old completions count equally with recent completions; no time-decay or recency weighting
+- **Does NOT require series sequence** — User can complete series in any order; no prerequisites or learning path enforced
+- **Does NOT gamify behavior** — Achievements are transparent progress milestones, not reward mechanics; no urgency, streaks, or competitive pressure
+- **Does NOT guarantee learning outcomes** — Completing series does not guarantee financial decision-making quality or positive outcomes
 
 ---
 
-## 7. Edge Conditions
+## 6. Boundaries & Constraints
 
-### Missing Data Behavior:
-- **No progress saved**: All counts = 0, maturity = "Getting Started", achievements array = []
-- **Corrupted localStorage**: Fallback to default state (no crash)
-
-### First-Time User Behavior:
-- **User hasn't completed any series**: 
-  - maturityLevel = "Getting Started"
-  - maturityPercentage = 0%
-  - achievements = [] (empty; no badge unlocks)
-  - Recommendations show all beginner topics
-
-### Partial Completion Behavior:
-- **User completes single beginner series**: 
-  - maturityLevel updates to "Awareness Builder" (25%)
-  - "Bronze Learner" achievement unlocks immediately
-- **User completes 5 total series**:
-  - "Lifetime Learner" achievement unlocks
-  - Maturity level may be capped at "Readiness Mature" (100%), but achievements continue accumulating
-
-### Known Limitations:
-- **No time-based decay**: Old progress never "expires"; always cumulative
-- **No module sequencing**: User can complete series in any order
-- **No prerequisites**: No gating based on previous series (linear progression not enforced)
-- **No difficulty adaptation**: Algorithm doesn't adjust recommendations based on user's recent completions
-- **Static weighting**: Achievement unlock conditions are hardcoded, not configurable
-- **No achievement persistence**: Achievements are computed on-demand from completion counts; not stored separately
+- **Points awarded once per series** — Same series cannot earn points twice; deduplication prevents duplicate rewards
+- **Fixed points per difficulty** — Beginner = 10 pts, Intermediate = 20 pts, Advanced = 30 pts; not customizable or variable
+- **10 fixed achievement levels** — Achievement thresholds are hardcoded: 10, 25, 50, 75, 100, 150, 200, 275, 350, 450 points
+- **No point decay or expiration** — Points never expire or decrease; cumulative only
+- **Local storage only** — All progress stored in browser; not synced to server or available across devices
+- **No partial series credit** — Series completion is binary (all-or-nothing); no credit for partially watched series
+- **No topic-based tracking** — System does not track which financial topics user has learned; only counts series completion
+- **Linear achievement progression** — Must reach point threshold to unlock; no alternative paths or bonus multipliers
+- **No catch-up mechanics** — Users who complete series late receive same points as those who completed early
 
 ---
 
-## 8. File Ownership
-
-### Logic / Hooks:
-- **[hooks/useLearningProgress.js](../../src/hooks/useLearningProgress.js)** ← **AUTHORITATIVE**
-  - `getInitialProgress()`
-  - `markSeriesAsComplete(seriesId, difficultyLevel)`
-  - `getMaturityLevel()` - returns level name (categorical)
-  - `getMaturityLevelIndex()` - returns numeric index 0-4
-  - `getMaturityDescription()` - returns friendly level description
-  - `getAchievements()` - returns array of unlocked achievement objects
-  - Score/achievement calculations
-
-### Storage / Persistence:
-- **localStorage key**: `financialMaturity`
-  - Stores: `completedSeriesByLevel` (beginner, intermediate, advanced counts) + `completedSeries` array
-  - Direct read/write from hook
-  - Achievements NOT stored (computed on-demand)
-
-### Pages/Components:
-- **[app/dashboard/investor-hub/resources/page.js](../../src/app/dashboard/investor-hub/resources/page.js)**
-  - Calls `getMaturityLevel()`, `getCompletedSeriesByLevel()`, `getAchievements()`
-  - Passes data to FinancialMaturityCard
-
-- **[components/investorHub/resources/FinancialMaturityCard.jsx](../../src/components/investorHub/resources/FinancialMaturityCard.jsx)**
-  - Displays maturity meter (percentage + level name + color badge)
-  - Accepts `maturityLevel`, `completedSeriesByLevel`, `achievements` props
-  - Imports and renders AchievementBadges component
-
-- **[components/investorHub/resources/AchievementBadges.jsx](../../src/components/investorHub/resources/AchievementBadges.jsx)** ← **NEW**
-  - Renders grid of achievement badges (emoji + name + description)
-  - Accepts `achievements` array prop
-  - Displays motivational message: "Keep learning to unlock more achievements!"
-  - Hover tooltips show full achievement descriptions
-
----
-
-## Implementation Notes
-
-**Pure accumulative scoring**: No subtraction or reset unless user manually clears progress.
-
-**Deduplication prevents gaming**: Series IDs tracked to avoid double-counting.
-
-**Achievement computation**: Achievements are derived from completion counts at render time—no separate persistence needed. This keeps localStorage lightweight and achievements always in sync with completion data.
-
-**Achievement unlocking is immediate**: User sees new badges upon page reload after completing a series (no delay, no batch processing).
-
-**Maturity meter caps at 100%**: Once user reaches "Readiness Mature", the percentage stays at 100% even if more series are completed. Achievements are the primary incentive for continued learning beyond this cap.
+**Document Version**: 1.0  
+**Last Updated**: February 2026

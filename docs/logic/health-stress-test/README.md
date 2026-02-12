@@ -1,255 +1,120 @@
 # Health Stress Test
 
-## 1. Data Inputs
+---
 
-### Source: Financial Readiness calculator output
-- `currentAge`: Current age (years)
-- `retirementAge`: Target retirement age (years)
-- `lifespan`: Expected lifespan (years)
-- `monthlyExpenses`: Current monthly expenses (₹)
-- `monthlySIP`: Current monthly SIP (₹)
-- `moneySaved`: Current corpus (₹)
-- `expectedReturns`: Annual returns during work phase (%)
-- `inflationRate`: General inflation rate (%)
-- `emergencyFund`: Optional emergency fund pool (₹)
+## 1. Feature Purpose
 
-### User-Selected Input:
-- `scenario`: One of three health scenarios:
-  - `everyday`: Ongoing manageable conditions (4% of annual expenses annually)
-  - `planned`: Single planned medical event (₹3L one-time + 5% post-recovery monthly cost)
-  - `high-impact`: Major health event (₹15L one-time + 10% ongoing recovery cost)
-
-### Constants:
-- **Medical inflation rate**: 9% annually (higher than general inflation)
-- **Hospital daily rate** (assumption): ₹20,000–₹30,000 depending on scenario
+The Health Stress Test measures the impact of health-related costs on a user's retirement corpus and lifespan sustainability. It models how different health scenarios (ongoing manageable conditions, single planned events, or major health events) reduce the expected retirement corpus and potentially shorten the period that savings can sustain withdrawals.
 
 ---
 
-## 2. Core Calculations
+## 2. What Inputs Are Used
 
-### A. Baseline Retirement Metrics (Without Health Impact)
+**From Financial Readiness Results**:
+- **Expected corpus at retirement** (₹)
+- **Current age, retirement age, expected lifespan** (years)
+- **Monthly expenses during retirement** (₹)
+- **Expected investment returns during retirement** (%)
+- **Inflation rate for expenses** (%)
 
-**Goal**: Calculate corpus depletion if no health costs occur.
+**User-Selected Health Scenario** (one of three):
+- **Everyday**: Ongoing manageable health conditions (adds 4% of annual expenses annually)
+- **Planned**: Single planned medical event (adds ₹3,00,000 one-time + 5% ongoing monthly recovery costs)
+- **High-Impact**: Major health event (adds ₹15,00,000 one-time + 10% ongoing monthly recovery costs)
 
-**Process**:
-1. Calculate corpus at retirement (same as Financial Readiness)
-2. Simulate monthly withdrawals in retirement with inflation
+**Optional Input**:
+- **Emergency fund available** (₹) — separate funds reserved for healthcare
+
+---
+
+## 3. How the Score / Number Is Built
+
+### Step 1: Establish Baseline (Without Health Costs)
+
+Using the Financial Readiness results, the calculator simulates retirement corpus depletion assuming no health costs:
+- Start with expected corpus at retirement
+- Each month: apply investment returns, deduct living expenses (adjusted annually for inflation)
+- Track the age at which corpus reaches zero
+
+Result: **Baseline depletion age** (used as reference point)
+
+### Step 2: Calculate Health Costs Over Retirement
+
+The calculator projects health-related costs based on the selected scenario:
+1. Calculate annual health cost:
+   - Everyday: 4% of current annual expenses
+   - Planned: ₹3,00,000 (one-time) + 5% of monthly expenses ongoing
+   - High-Impact: ₹15,00,000 (one-time) + 10% of monthly expenses ongoing
+2. Escalate these costs annually at 9% (medical inflation rate)
+3. Sum all health costs over the entire retirement period
+
+Result: **Total projected health costs** (₹)
+
+### Step 3: Apply Health Costs to Retirement Corpus
+
+Simulate retirement with health costs deducted:
+1. Start with expected corpus at retirement
+2. Each month:
+   - Apply investment returns
+   - Deduct living expenses (inflation-adjusted)
+   - Deduct health costs (if applicable that month)
 3. Track when corpus depletes
-4. Record: corpus at retirement, final corpus, depletion age
 
-**Result**: `baselineMetrics` with:
-- `corpusAtRetirement`: ₹ (before health costs)
-- `finalCorpus`: ₹ (at end of simulation or at depletion)
-- `depletionAge`: Age when corpus reaches 0
+Result: **Health-adjusted depletion age**
 
-### B. Health Cost Projection
+### Step 4: Calculate Impact
 
-**Goal**: Calculate cumulative health costs over retirement period.
-
-**Scenario-based multipliers**:
-| Scenario | Annual % | One-Time Cost | Recurrence |
-|----------|----------|---------------|-----------|
-| everyday | 4% of annual expenses | ₹0 | Annual |
-| planned | 2% of annual expenses | ₹3,00,000 | Event |
-| high-impact | 6% of annual expenses | ₹15,00,000 | Event + Ongoing |
-
-**Process**:
-1. Base annual health cost = `monthlyExpenses × 12 × multiplier`
-2. Project with medical inflation (9%) through retirement period
-3. Add one-time cost (assumed to occur once during retirement)
-4. Sum all costs
-
-**Formula**:
-$$\text{totalHealthCost} = \sum_{year=1}^{n} (\text{baseAnnualCost} \times (1.09)^{year}) + \text{oneTimeCost}$$
-
-**Result**: `healthCosts` with:
-- `annualCost`: Current annual cost (before inflation)
-- `totalCost`: Cumulative cost over entire retirement
-- `oneTimeCost`: ₹ amount from scenario definition
-
-### C. Health-Adjusted Corpus Simulation
-
-**Goal**: Apply health costs to retirement corpus and calculate new depletion age.
-
-**Process for each year**:
-1. Apply investment returns: `corpus × (1 + returns/100)`
-2. Withdraw living expenses (inflation-adjusted)
-3. **Apply health costs** (annual + one-time if year 1)
-4. Check if corpus depletes
-5. Escalate both expenses and health costs by inflation
-
-**Key difference from baseline**: Additional deduction for health costs.
-
-**Result**: `healthAdjustedMetrics` with:
-- `depletionAge`: Age when corpus runs out *with* health costs
-- `finalCorpus`: Remaining corpus at end (or 0 if depleted)
-- `yearsEarlier`: How many years sooner corpus depletes
-
-### D. Care Support Calculation
-
-**Goal**: Calculate how many days/months of hospitalization can be supported from emergency fund.
-
-**Process**:
-1. Daily hospital cost from scenario: ₹20,000–₹30,000/day
-2. Monthly recovery cost: % of monthly expenses
-3. Divide emergency fund by daily cost → days supported
-4. Or divide by monthly cost → months of recovery supported
-
-**Result**: `careSupport` with:
-- `daysSupported`: Days of hospitalization affordable
-- `monthsSupported`: Months of recovery at reduced capacity
-- `assumptions`: Assumptions used for calculation
+Compare baseline vs. health-adjusted outcomes:
+- **Corpus reduction**: Percentage difference between retirement corpus and health-adjusted corpus
+- **Years earlier**: Baseline depletion age minus health-adjusted depletion age
+- **Risk level**: Categorize as Low, Medium, or High based on corpus reduction
 
 ---
 
-## 3. Scoring Logic
+## 4. What the Score Means
 
-**Not applicable** — Health Stress Test produces health-adjusted metrics, not a score.
+**Baseline Depletion Age** — The age at which retirement corpus would be fully depleted if no health costs occur. This is the benchmark scenario.
 
-**Output flags**:
-- `healthRiskLevel`: "low", "medium", or "high"
-  - Derived from corpus reduction percentage and scenario
-  - High: >30% corpus reduction
-  - Medium: 15–30% reduction
-  - Low: <15% reduction
+**Health-Adjusted Depletion Age** — The age at which corpus would be depleted when health costs are included. If this is significantly earlier than baseline, health costs have a material impact.
 
----
+**Corpus Reduction** — The percentage of retirement corpus consumed by projected health costs. 
+- **Low impact (< 15%)** — Health costs are manageable relative to overall retirement savings
+- **Medium impact (15–30%)** — Health costs represent a meaningful reduction but plan remains sustainable with adjustments
+- **High impact (> 30%)** — Health costs significantly reduce retirement savings and may force earlier depletion
 
-## 4. State Machine / Lifecycle
-
-**Single-phase calculator** — No state machine.
-
-**Lifecycle**:
-1. **Financial Readiness results loaded** → baseline metrics calculated
-2. **User selects health scenario** (UI provides radio buttons)
-3. **User clicks "Calculate"** → `calculateHealthImpact()` executes with:
-   - Financial Readiness user inputs
-   - Selected scenario
-4. **Results displayed**:
-   - Baseline vs. health-adjusted comparison
-   - Depletion age difference
-   - Corpus reduction percentage
-   - Care support estimation
-5. **User clicks "Save Reading"** → Persisted to localStorage:
-   - `healthStressReading`
-   - Also saved to `vincaUserJourney.readings.healthStress`
-
-**No dynamic state**: Results remain constant until user selects different scenario or inputs change.
+**Years Earlier** — How many years sooner the corpus depletes when health costs are included. A larger gap indicates greater vulnerability to health expenses.
 
 ---
 
-## 5. Persistence & Source of Truth
+## 5. What the Score Does NOT Mean
 
-### localStorage Keys:
-- **`healthStressReading`**: Saved results including metrics, scenario selected (JSON)
-- **`vincaUserJourney`**: Master record with `readings.healthStress` sub-object
-
-### File Ownership:
-- **[lib/healthStressEngine.js](../../src/lib/healthStressEngine.js)** ← **AUTHORITATIVE**
-  - `calculateHealthImpact()`
-  - `calculateBaselineRetirement()`
-  - `calculateHealthCosts()`
-  - `applyHealthImpact()`
-
-### Storage / Persistence:
-- **[lib/userJourneyStorage.js](../../src/lib/userJourneyStorage.js)**
-  - `saveUserReading('healthStress', ...)`
-
-### Pages:
-- **[app/tools/health-stress/page.js](../../src/app/tools/health-stress/page.js)**
-
-### Components:
-- **[components/HealthStressTest.jsx](../../src/components/HealthStressTest.jsx)** ← Primary calculator UI
-- **[components/HealthStressTrends.jsx](../../src/components/HealthStressTrends.jsx)** ← Trend visualization
-- **[components/StressTestCharts.jsx](../../src/components/StressTestCharts.jsx)** ← Chart display
+- **Does NOT predict actual health events** — Only models three pre-defined scenarios; real health events may be different in timing, severity, or cost
+- **Does NOT account for insurance** — Assumes 100% out-of-pocket costs; does not deduct insurance coverage, reimbursement, or government assistance
+- **Does NOT model insurance claims timing** — Assumes all costs must be paid immediately; does not model claim processing, deductibles, or co-pays
+- **Does NOT predict actual medical inflation** — Uses 9% fixed medical inflation rate; actual inflation may vary or differ from general inflation
+- **Does NOT assess quality of healthcare** — Assumes standard hospital/clinic costs; does not model private vs. public care or healthcare quality trade-offs
+- **Does NOT evaluate care access** — Does not consider geographic location, healthcare availability, or quality of care
+- **Does NOT include dependent healthcare** — Models individual health costs only; does not include spouse, children, or parent care
+- **Does NOT account for preventive savings** — Does not credit healthy behaviors that might reduce costs or extend longevity
+- **Does NOT predict emergency fund usage** — Emergency fund is shown separately; impact on retirement corpus is not automatically deducted
 
 ---
 
-## 6. Output Values
+## 6. Boundaries & Constraints
 
-### Primary Outputs (from metrics object):
-- **`baselineCorpus`**: Corpus at retirement without health costs (₹)
-- **`healthAdjustedCorpus`**: Corpus at retirement with health costs (₹)
-- **`corpusReduction`**: Percentage reduction (0.0–1.0, e.g., 0.25 = 25%)
-- **`baselineDepletionAge`**: Depletion age without health costs (age)
-- **`depletionAge`**: Depletion age with health costs (age)
-- **`yearsEarlier`**: How many years sooner corpus depletes (integer)
-- **`annualHealthCost`**: Current annual health cost (₹)
-- **`totalHealthCost`**: Total over entire retirement (₹)
-- **`hospitalizationDays`**: Days of hospitalization supportable (integer)
-- **`recoveryMonths`**: Months of recovery supportable (decimal)
-
-### Secondary Outputs:
-- **`baselineMetrics`**: Year-by-year baseline simulation data
-- **`healthCosts`**: Breakdown of health cost calculation
-- **`careSupport`**: Hospitalization affordability analysis
-- **`scenarioImpact`**: Description of selected scenario
-
-### Formatting Rules:
-- Corpus amounts: Rounded to nearest rupee
-- Percentages: Displayed as whole numbers (e.g., "25% reduction")
-- Ages: Integer years
-- Days/Months: Whole numbers
+- **Three scenario types only** — Does not model custom health cost amounts or patterns; user must choose from pre-defined options
+- **Fixed medical inflation** — Always uses 9% annual escalation; not adjustable or varied by scenario
+- **One-time events occur once** — Planned and high-impact scenarios assume one major event during retirement; does not model recurring major events
+- **Hospital costs are standardized** — Uses fixed daily rates (₹20,000–₹30,000) as assumption; does not vary by location, hospital type, or treatment
+- **Recovery costs are percentage-based** — Ongoing costs calculated as % of monthly expenses; not flexible for different recovery timelines
+- **Baseline is same methodology as Financial Readiness** — Uses identical accumulation and withdrawal logic; no scenario variance in baseline
+- **Emergency fund is separate** — Does not automatically integrate emergency fund into retirement calculations; care support is informational only
+- **No insurance model** — Assumes self-pay; any insurance data is not integrated
+- **Retirement corpus does not rebuild** — Once health costs deplete corpus, no income sources replenish it (retirement phase only)
+- **Single person model** — Health costs for one individual only; does not model household scenarios
 
 ---
 
-## 7. Edge Conditions
+**Document Version**: 1.0  
+**Last Updated**: February 2026
 
-### Missing Data Behavior:
-- **No emergency fund**: careSupport calculates 0 days/months supported
-- **No scenario selected**: Impact assumed to be "everyday" (4%)
-- **Invalid inputs from Financial Readiness**: Calculation still proceeds with available data
-
-### First-Time User Behavior:
-- **User hasn't run Financial Readiness**: Defaults used for corpus
-- **User views without selecting scenario**: No calculation; UI shows prompt
-
-### Partial Completion Behavior:
-- **User changes Financial Readiness inputs**: Health Stress must be recalculated
-- **User changes only scenario**: Engine re-runs with same Financial Readiness data
-
-### Known Limitations:
-- **Medical inflation is fixed** (9%) — not customizable
-- **Hospital costs are assumptions** — not user-adjustable
-- **No insurance coverage modeled** — assumes 100% self-pay
-- **One-time events assumed to occur once** — no multi-event scenarios
-- **No family/dependent healthcare**: Individual health costs only
-- **Emergency fund separate from retirement corpus** — doesn't account for opportunity cost
-
----
-
-## 8. File Ownership
-
-### Logic / Engines:
-- **[lib/healthStressEngine.js](../../src/lib/healthStressEngine.js)** ← **AUTHORITATIVE**
-  - `calculateHealthImpact()`
-  - `calculateBaselineRetirement()`
-  - `calculateHealthCosts()`
-  - `applyHealthImpact()`
-  - `calculateCareSupport()`
-
-### Storage / Persistence:
-- **[lib/userJourneyStorage.js](../../src/lib/userJourneyStorage.js)**
-  - `saveUserReading('healthStress', ...)`
-
-### Pages:
-- **[app/tools/health-stress/page.js](../../src/app/tools/health-stress/page.js)**
-
-### Components:
-- **[components/HealthStressTest.jsx](../../src/components/HealthStressTest.jsx)** ← Primary UI
-- **[components/StressTestCharts.jsx](../../src/components/StressTestCharts.jsx)** ← Comparison charts
-- **[components/StressTestSummaryCards.jsx](../../src/components/StressTestSummaryCards.jsx)** ← Summary metrics
-
----
-
-## Implementation Notes
-
-**Medical inflation separate from general inflation**: 9% fixed rate reflecting healthcare cost trends.
-
-**Two-phase simulation**: Baseline first (for benchmark), then health-adjusted (for impact).
-
-**Care support is illustrative**: Emergency fund usage is separate from retirement corpus.
-
-**Scenario selection is binary**: User picks one scenario; no mixed scenarios.
-
-**Assumptions documented**: All costs and rates are clearly stated in code comments.

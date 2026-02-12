@@ -1,7 +1,7 @@
 // src/components/investorHub/resources/FinancialMaturityCard.jsx
 'use client';
 import React from 'react';
-import AchievementBadges from './AchievementBadges';
+import AchievementTracker from './AchievementTracker';
 
 export default function FinancialMaturityCard({
   maturityLevel,
@@ -135,6 +135,11 @@ export default function FinancialMaturityCard({
             <p className={`text-sm font-bold ${colors.badge} px-3 py-1 rounded-full inline-block`}>
               {maturityLevel}
             </p>
+            
+            {/* Maturity meter contribution clarity */}
+            <p className="text-xs text-slate-500 mt-3 max-w-xs mx-auto">
+              Your maturity reflects the breadth and depth of your completed learning across difficulty levels.
+            </p>
           </div>
         </div>
 
@@ -153,8 +158,8 @@ export default function FinancialMaturityCard({
             </p>
           </div>
 
-          {/* Achievements Section */}
-          <AchievementBadges achievements={achievements} />
+          {/* Learning Achievements Tracker - Transparent system showing all achievements & progress */}
+          <AchievementTracker achievements={achievements} />
         </div>
       </div>
     </div>

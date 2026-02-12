@@ -1,335 +1,110 @@
 # Readiness Fit
 
-## 1. Data Inputs
+---
 
-### Source: Three calculator outputs (Financial Readiness, Lifestyle Planner, Health Stress Test)
+## 1. Feature Purpose
 
-**From Financial Readiness**:
-- `isReady`: Boolean, whether retirement age target is achievable
-- `retirementAgeAchievable`: Age at which plan becomes ready (if not ready at target)
-- `earlyRetirementGapYears`: Years needed to reach readiness (if early retirement target)
-- `requiredSIP`: Monthly SIP needed (₹)
-- `currentSIP`: Current monthly SIP (₹)
-- `surplusAvailable`: Monthly surplus available to invest (₹)
-- `lifespanSustainability`: Boolean, whether corpus sustains full lifespan
-- `corpusAtRetirement`: Projected corpus (₹)
-- `requiredCorpus`: Target corpus (₹)
+The Readiness Fit assessment aggregates results from three separate calculators (Financial Readiness, Lifestyle Planner, Health Stress Test) into a single comprehensive score that measures how well a user's retirement plan aligns across multiple dimensions: financial sufficiency, lifestyle affordability, and health cost sustainability.
+
+---
+
+## 2. What Inputs Are Used
+
+**From Financial Readiness Calculator**:
+- Whether the plan achieves the target retirement age
+- Whether the retirement corpus sustains the full expected lifespan
+- The gap between required and current monthly SIP
 
 **From Lifestyle Planner**:
-- `targetLifestyleTier`: User's desired lifestyle (Basic=1, Comfortable=2, Premium=3)
-- `affordableLifestyleTier`: What plan can support (1, 2, or 3)
-- `monthlyIncomeRequired`: Target monthly withdrawal (₹)
-- `monthlyIncomeSupported`: Achievable monthly withdrawal (₹)
-- `lifestyleGap`: Monthly shortfall (₹)
+- The target retirement lifestyle tier (Basic, Comfortable, or Premium)
+- The retirement lifestyle tier the plan can actually support
+- The monthly income gap between desired and achievable withdrawals
 
 **From Health Stress Test**:
-- `healthAdjustedCorpus`: Corpus after health costs (₹)
-- `baselineCorpus`: Corpus without health costs (₹)
-- `depletionAge`: Age when corpus runs out with health costs (age)
-- `baselineDepletionAge`: Age when corpus runs out without health costs (age)
-- `healthRiskLevel`: "low", "medium", or "high" (inferred)
+- The selected health scenario (everyday, planned, high-impact)
+- The impact on retirement corpus duration with health costs included
+- The health risk level categorization (low, medium, high)
 
 ---
 
-## 2. Core Calculations
+## 3. How the Score / Number Is Built
 
-### A. Three-Category Gap Scoring (0–100 points total)
+### Three-Category Assessment
 
-**Goal**: Measure how much support user needs across three dimensions.
+The score aggregates three independent assessments, each contributing points:
 
-#### Category A: Financial Readiness Gap (0–33 points)
+**Category A: Financial Readiness Gap (0–33 points)**
+- **33 points**: Plan cannot achieve target retirement age (critical gap)
+- **22 points**: Plan reaches target age but cannot sustain full lifespan (moderate gap)
+- **11 points**: Plan achieves target age and sustains lifespan (low gap)
 
-**Logic**:
-```
-if isReady == FALSE:
-  score = 33  (critical: can't achieve target retirement age)
-  reason = "Your plan does not reach retirement goal at target age"
+**Category B: Lifestyle Gap (0–33 points)**
+- **33 points**: Desired retirement lifestyle exceeds what the plan affords (critical gap)
+- **22 points**: Plan generates income shortfall for desired lifestyle (moderate gap)
+- **11 points**: Plan supports desired lifestyle (low gap)
 
-else if isReady == TRUE and lifespanSustainability == FALSE:
-  score = 22  (moderate: reaches retirement but sustainability risk)
-  reason = "Your plan may not sustain your full expected lifespan"
+**Category C: Health Sustainability Gap (0–34 points)**
+- **34 points**: Health costs significantly reduce corpus duration or high health risk detected (critical gap)
+- **23 points**: Health costs create moderate reduction or uncertainty in corpus longevity (moderate gap)
+- **12 points**: Health costs have minimal impact (low gap)
 
-else if isReady == TRUE and lifespanSustainability == TRUE:
-  score = 11  (low: fully ready)
-  reason = "Your retirement plan is on track and sustainable"
+### Total Score Calculation
 
-else:
-  score = 11  (fallback)
-```
+**Formula**: Sum of all three categories, capped at 100 points
+- Minimum: 0 (no gaps across all categories)
+- Maximum: 100 (critical gaps in all categories)
 
-**Interpretation**: Higher score = larger gap = greater need for Vinca support.
+### Fit Level Classification
 
-#### Category B: Lifestyle Gap (0–33 points)
-
-**Logic**:
-```
-if targetLifestyleTier exists AND affordableLifestyleTier exists AND targetLifestyleTier > affordableLifestyleTier:
-  score = 33  (critical: desired lifestyle unaffordable)
-  reason = "Your desired lifestyle [tier] exceeds what your plan supports [tier]"
-
-else if monthlyIncomeRequired > 0 AND monthlyIncomeSupported > 0 AND monthlyIncomeRequired > monthlyIncomeSupported:
-  score = 22  (moderate: income shortfall)
-  reason = "Your lifestyle needs ₹X exceed projected income ₹Y"
-
-else:
-  score = 11  (low: lifestyle supported)
-  reason = "Your desired lifestyle is supported by your retirement income"
-```
-
-**Interpretation**: Planning gaps indicate need for Vinca guidance.
-
-#### Category C: Health Sustainability Gap (0–34 points)
-
-**Logic**:
-```
-if healthRiskLevel == "high" OR (depletionAge exists AND depletionAge < 85):
-  score = 34  (critical: health costs severely impact longevity)
-  reason = "Healthcare costs reduce corpus sustainability to age [age], creating uncertainty"
-
-else if healthRiskLevel == "medium":
-  score = 23  (moderate: some health uncertainty)
-  reason = "Moderate healthcare risk introduces uncertainty"
-
-else if healthAdjustedCorpus > 0 AND baselineCorpus > 0:
-  corpusReduction = 1 - (healthAdjustedCorpus / baselineCorpus)
-  if corpusReduction > 15%:
-    score = 23  (moderate: >15% corpus reduction)
-  else:
-    score = 12  (low: <15% reduction)
-
-else:
-  score = 12  (low: manageable health costs)
-```
-
-**Interpretation**: Healthcare uncertainty quantifies longevity risk.
-
-### B. Total Fit Score Calculation
-
-**Formula**:
-$$\text{totalScore} = \min(100, \max(0, categoryA + categoryB + categoryC))$$
-
-**Range**: 0–100
-
-**Thresholds**:
-```
-if totalScore >= 80:
-  fitLevel = "Strong Fit"      (multiple major gaps)
-else if totalScore >= 50:
-  fitLevel = "Moderate Fit"    (some gaps)
-else:
-  fitLevel = "Limited Fit"     (mostly on track)
-```
-
-### C. Dynamic Reasoning Generation
-
-**Goal**: Create personalized reasons from actual calculator outputs (not static templates).
-
-**Process**:
-1. Collect all signals from three categories (array of strings)
-2. Sort by score magnitude (highest score reason first)
-3. Return top 2–3 reasons (most impactful gaps)
-4. Include source tool in each reason (e.g., "Financial Readiness:")
-
-**Result**: 2–3 reason statements explaining gaps.
-
-### D. Feature Recommendation Engine
-
-**Goal**: Recommend Vinca features based on identified gaps.
-
-**Mapping**:
-```
-If Financial Gap high (score 33):
-  → Recommend "Early Retirement Optimizer"
-  → Recommend "SIP Increase Calculator"
-
-If Lifestyle Gap high (score 33):
-  → Recommend "Lifestyle Planner Premium"
-  → Recommend "Expense Optimization"
-
-If Health Gap high (score 34):
-  → Recommend "Health Stress Test Review"
-  → Recommend "Healthcare Planning"
-
-If no major gaps (all low):
-  → Recommend "Learning & Development"
-  → Recommend "Community & Mentoring"
-```
-
-**Result**: Array of 2–3 most relevant feature recommendations.
+- **80–100 points**: "Strong Fit" — Multiple critical gaps identified across categories
+- **50–79 points**: "Moderate Fit" — Some planning gaps present in one or two categories
+- **0–49 points**: "Limited Fit" — Plan mostly on track with minimal gaps
 
 ---
 
-## 3. Scoring Logic
+## 4. What the Score Means
 
-**Multi-category weighted sum**:
-- Category A: 0–33 points (financial readiness)
-- Category B: 0–33 points (lifestyle affordability)
-- Category C: 0–34 points (health sustainability)
-- **Total**: 0–100 points
+**High Score (80–100)** — Multiple significant gaps exist across financial, lifestyle, and health dimensions. The plan has multiple areas that need attention or adjustment.
 
-**Fit levels**:
-| Score Range | Fit Level | Interpretation |
-|------------|-----------|-----------------|
-| 80–100 | Strong Fit | Multiple critical gaps; high need for support |
-| 50–79 | Moderate Fit | Some gaps; targeted support helpful |
-| 0–49 | Limited Fit | Plan mostly on track; learning/growth focus |
+**Medium Score (50–79)** — The plan has gaps in one or two dimensions but is reasonable in others. Some targeted adjustments could improve alignment.
 
-**Logic is **additive**: Each gap independently contributes to total score.
+**Low Score (0–49)** — The plan is well-aligned across dimensions. Few gaps suggest the plan is reasonably structured.
+
+**Fit Level** — Communicates the overall readiness status: "Strong Fit" (gaps exist), "Moderate Fit" (some gaps), or "Limited Fit" (minimal gaps). 
+
+*Note*: "Fit" refers to planning alignment, not personal satisfaction or life readiness.
 
 ---
 
-## 4. State Machine / Lifecycle
+## 5. What the Score Does NOT Mean
 
-**Single-phase calculator** — No state machine.
-
-**Lifecycle**:
-1. **User completes Financial Readiness** → Store results to localStorage
-2. **User completes Lifestyle Planner** → Store results to localStorage
-3. **User completes Health Stress Test** → Store results to localStorage
-4. **Readiness Fit page loads** → Fetch all three readings → Calculate fit score
-5. **Results displayed** → Show score, fit level, reasons, feature recommendations
-6. **Optional: Save reading** → Persist fit score to localStorage (optional)
-
-**No dynamic updates**: Fit score static until user re-runs any of the three calculators.
+- **Does NOT measure life satisfaction** — A low gap score does not guarantee financial confidence or quality of life
+- **Does NOT account for user preferences** — The assessment uses standardized categories; does not incorporate personal values or priorities
+- **Does NOT provide recommendations** — The score identifies gaps but does not prescribe specific actions
+- **Does NOT predict market or life outcomes** — Based on calculator assumptions; does not account for volatility, unexpected events, or behavioral changes
+- **Does NOT evaluate plan quality** — A moderate score does not mean the plan is "bad" or "good," only that gaps exist relative to stated goals
+- **Does NOT consider inflation for specific lifestyle choices** — Uses general inflation rates; does not model custom expense categories
+- **Does NOT track changes over time** — Score is a point-in-time snapshot; does not show improvement/degradation trends
+- **Does NOT weight personal priorities** — All three categories (financial, lifestyle, health) are equally weighted regardless of user importance
+- **Does NOT evaluate financial advisor quality** — Score is independent of how the plan was constructed
 
 ---
 
-## 5. Persistence & Source of Truth
+## 6. Boundaries & Constraints
 
-### localStorage Keys (consumed):
-- **`financialReadinessResults`**: Financial Readiness output
-- **`lifestylePlannerReading`**: Lifestyle Planner output
-- **`healthStressReading`**: Health Stress Test output
-- **`vincaUserJourney`**: Master journey record with readings sub-object
-
-### Optional localStorage Key (written):
-- **`readinessFitReading`**: Optional saved Readiness Fit calculation
-
-### File Ownership:
-- **[lib/readinessFit.js](../../src/lib/readinessFit.js)** ← **AUTHORITATIVE**
-  - `calculateReadinessFitScore()`
-  - `calculateRetirementGap()`, `calculateLifestyleGap()`, `calculateHealthGap()`
-  - `generateDynamicReasons()`
-  - `recommendFeatures()`
-  - `generateClosingMessage()`
-
-### Storage / Persistence:
-- **[lib/userJourneyStorage.js](../../src/lib/userJourneyStorage.js)**
-  - Read readings from journey: `getUserJourney().readings.*`
-  - Optional save: `saveUserReading('readinessFit', ...)`
-
-### Pages:
-- **[app/dashboard/readiness-fit/page.js](../../src/app/dashboard/readiness-fit/page.js)** (if exists)
-
-### Components:
-- Readiness Fit score display component
-- Gap visualization component (3-part pie or stacked bar)
-- Reasons/signals list component
-- Feature recommendations component
+- **Depends on three calculators** — Readiness Fit cannot be calculated if Financial Readiness has not been completed; other calculators optional
+- **Equal category weighting** — Financial, lifestyle, and health gaps contribute equally (33/33/34 points) regardless of user priority
+- **Uses calculator assumptions** — Score inherits all assumptions from component calculators (fixed returns, inflation rates, etc.)
+- **No goal-setting** — Cannot set target fit level or track progress toward improved fit
+- **Fixed thresholds** — "Strong/Moderate/Limited" boundaries (80/50) are not adjustable
+- **No time dimension** — Does not track when gaps originated or how they've evolved
+- **Incomplete data handling** — If calculators not completed, assessment is based on available data only (proportionally rescored)
+- **Single household model** — Assesses individual or household as a unit; does not differentiate multi-generational planning
+- **No insurance integration** — Uses calculator outputs which assume full out-of-pocket costs; insurance optimization not modeled
+- **Snapshot, not trend** — Provides current status only; does not show historical fit scores or improvement trajectory
 
 ---
 
-## 6. Output Values
+**Document Version**: 1.0  
+**Last Updated**: February 2026
 
-### Primary Outputs:
-- **`score`**: 0–100 (numeric fit score)
-- **`fitLevel`**: "Strong Fit", "Moderate Fit", or "Limited Fit" (string)
-- **`reasons`**: Array of 2–3 reason statements (string array)
-  ```javascript
-  [
-    "Financial Readiness: Your plan does not reach retirement goal at target age",
-    "Lifestyle Planner: Your desired lifestyle exceeds what your plan supports",
-    ...
-  ]
-  ```
-- **`relevantFeatures`**: Array of recommended feature names (string array)
-  ```javascript
-  ["Premium Lifestyle Optimizer", "Health Stress Test Pro", ...]
-  ```
-
-### Secondary Outputs:
-- **`categoryScores`**: Breakdown of three categories
-  ```javascript
-  {
-    retirement: 33,
-    lifestyle: 22,
-    health: 12
-  }
-  ```
-- **`closingMessage`**: Personalized call-to-action based on fit level
-
-### Formatting Rules:
-- Score: Integer 0–100
-- Fit level: Title case ("Strong Fit", not "STRONG_FIT")
-- Reasons: Full sentences, action-oriented
-- Features: Feature names exact as defined in system
-
----
-
-## 7. Edge Conditions
-
-### Missing Data Behavior:
-- **Not all calculators completed**: Skip missing categories (use safe defaults)
-  - Example: No Health Stress Test → Skip Category C, score from A+B only
-  - Capped to 100 but scored proportionally
-- **Null values in inputs**: Treated as "unknown"; score conservatively (assume gap exists)
-
-### First-Time User Behavior:
-- **User hasn't run any calculator**: Readiness Fit page shows prompt to complete calculators first
-- **User completes only Financial Readiness**: Score based on 33% of total scale (Financial gap only)
-
-### Partial Completion Behavior:
-- **User modifies one calculator**: Fit score recalculates automatically on page load
-- **User ignores some calculators**: UI shows "incomplete data" warning with encouragement to complete all three
-
-### Known Limitations:
-- **No weighting customization**: All three categories equally weighted (can be parameterized)
-- **No user preference input**: Fit determination purely from calculator outputs
-- **No comparison**: No "before/after" tracking of fit score over time
-- **No goal setting**: Cannot set target fit level (aspiration-based goals not tracked)
-- **Static thresholds**: 80/50 boundaries hardcoded (not user-adjustable)
-
----
-
-## 8. File Ownership
-
-### Logic / Engines:
-- **[lib/readinessFit.js](../../src/lib/readinessFit.js)** ← **AUTHORITATIVE**
-  - `calculateReadinessFitScore(data)`
-  - `calculateRetirementGap(data)`
-  - `calculateLifestyleGap(data)`
-  - `calculateHealthGap(data)`
-  - `generateDynamicReasons(data, catA, catB, catC)`
-  - `recommendFeatures(data, catA, catB, catC)`
-  - `generateClosingMessage(fitLevel, data)`
-
-### Storage / Persistence:
-- **[lib/userJourneyStorage.js](../../src/lib/userJourneyStorage.js)**
-  - `getUserJourney()` (read all readings)
-  - `saveUserReading('readinessFit', ...)` (optional save)
-
-### Pages:
-- **Readiness Fit results page**
-  - Fetches from engine
-  - Displays score + reasons + recommendations
-
-### Components:
-- Fit score badge/card component
-- Category breakdown visualization
-- Reasons/signals list component
-- Feature recommendations component
-- Call-to-action component
-
----
-
-## Implementation Notes
-
-**Readiness Fit ≠ Each Calculator**: This feature aggregates and interprets three outputs; no independent calculations.
-
-**Dynamic reasons are key**: Personalized messaging sourced from actual user data, not templates.
-
-**Three calculators are independent**: Fit score depends on their completion; no circular dependencies.
-
-**Fit level is diagnostic, not prescriptive**: Identifies gaps but doesn't mandate solutions.
-
-**Feature recommendations are suggestions**: User can engage with Vinca features in any order.

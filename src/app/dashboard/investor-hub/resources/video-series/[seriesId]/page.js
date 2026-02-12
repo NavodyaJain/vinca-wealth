@@ -8,6 +8,30 @@ import SeriesCompletionModal from "@/components/investorHub/resources/SeriesComp
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { Star } from "lucide-react";
 
+// Add CSS for toast animations
+const toastStyles = `
+  @keyframes slideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideOut {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+  }
+`;
+
 export default function VideoSeriesDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -22,7 +46,12 @@ export default function VideoSeriesDetailsPage() {
   const [seriesRating, setSeriesRating] = useState(0);
   
   useEffect(() => { 
-    setMounted(true); 
+    setMounted(true);
+    // Inject toast animation styles
+    const style = document.createElement('style');
+    style.textContent = toastStyles;
+    document.head.appendChild(style);
+    return () => style.remove();
   }, []);
 
   // Scroll to video player when it's playing via auto-play
@@ -112,8 +141,14 @@ export default function VideoSeriesDetailsPage() {
       const totalVids = getTotalVideos(series);
       if (Object.keys(newCompleted).length === totalVids) {
         const difficulty = getDifficulty(series);
-        // Pass series ID to avoid duplicate counting
-        markSeriesCompleted(difficulty, series.id);
+        // Mark series as completed and capture any new achievement
+        const newlyUnlockedAchievement = markSeriesCompleted(series.id, difficulty);
+        
+        // Show achievement toast if one was unlocked
+        if (newlyUnlockedAchievement) {
+          showAchievementToast(newlyUnlockedAchievement);
+        }
+        
         setShowCompletionModal(true);
       }
 
@@ -137,6 +172,41 @@ export default function VideoSeriesDetailsPage() {
     if (viewMaturity) {
       router.push('/dashboard/investor-hub/resources');
     }
+  };
+
+  // Show achievement unlock toast notification
+  const showAchievementToast = (achievement) => {
+    // Create and display a lightweight toast for achievement unlock
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-fade-in z-50';
+    toast.style.animation = 'slideIn 0.3s ease-out';
+    
+    const emoji = {
+      'first-step': '🌱',
+      'learning-starter': '📚',
+      'consistent-learner': '✨',
+      'knowledge-builder': '🧠',
+      'awareness-strong': '💡',
+      'discipline-formed': '🎯',
+      'strategy-mindset': '🎲',
+      'financial-explorer': '🔭',
+      'advanced-learner': '🏔️',
+      'financially-mature': '👑'
+    }[achievement.id] || '🎉';
+    
+    toast.innerHTML = `
+      <span style="font-size: 24px;">${emoji}</span>
+      <div>
+        <div style="font-weight: bold; font-size: 14px;">Achievement Unlocked!</div>
+        <div style="font-size: 12px; opacity: 0.9;">${achievement.name}</div>
+      </div>
+    `;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease-in forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   };
 
   if (!series) {

@@ -1,5 +1,6 @@
 import React from "react";
 import clsx from "clsx";
+import { getPointsForDifficulty } from "@/lib/learningPointsConfig";
 
 export default function VideoSeriesCard({
   series,
@@ -7,13 +8,21 @@ export default function VideoSeriesCard({
   onSave,
   onExplore,
 }) {
+  const pointsToEarn = getPointsForDifficulty(series.difficulty);
+  
   return (
-    <div className="bg-white rounded-lg shadow-sm border flex flex-col w-full max-w-xs min-w-[220px] mx-auto">
+    <div className="bg-white rounded-lg shadow-sm border flex flex-col w-full max-w-xs min-w-[220px] mx-auto relative">
       <img
         src={series.bannerImage || 'https://placehold.co/400x200?text=Resource+Image'}
         alt={series.title}
         className="w-full h-32 object-cover rounded-t-lg"
       />
+      
+      {/* Points Badge - top right corner */}
+      <div className="absolute top-2 right-2 bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-md">
+        +{pointsToEarn} pts
+      </div>
+      
       <div className="flex-1 flex flex-col p-4">
         <div className="flex items-center mb-2">
           <span

@@ -1,254 +1,122 @@
 # Retirement Sprints
 
-## 1. Data Inputs
+---
 
-### Source: User sprint creation + Financial Readiness data
-- **Sprint type**: One of three options:
-  - `monthly`: 1-month sprint (30-31 days)
-  - `quarterly`: 3-month sprint
-  - `annual`: 12-month sprint
-- **User data** (from Financial Readiness):
-  - `currentAge`: Current age (years)
-  - `retirementAge`: Target retirement age (years)
-  - `currentCorpus`: Current savings (₹)
-  - `requiredCorpus`: Target corpus (₹)
-  - `monthlySIP`: Current monthly SIP (₹)
+## 1. Feature Purpose
+
+Retirement Sprints divides the journey from today to retirement into measurable time-based milestones (monthly, quarterly, or annual "sprints"). It tracks progress toward retirement by measuring how many sprint periods have been completed and calculating key performance indicators (journey completion percentage and corpus progress percentage). This allows users to visualize retirement planning as a series of achievable checkpoints rather than one distant goal.
 
 ---
 
-## 2. Core Calculations
+## 2. What Inputs Are Used
 
-### A. Active Sprint Tracking
+**From User Selection**:
+- **Sprint type** — "Monthly" (1-month sprints), "Quarterly" (3-month), or "Annual" (12-month)
 
-**Goal**: Maintain exactly one active sprint at a time.
+**From Financial Readiness Calculator**:
+- **Current age** (years)
+- **Target retirement age** (years)
+- **Current retirement corpus** (₹)
+- **Required retirement corpus** (₹ to sustain retirement)
 
-**Process**:
-1. **Start sprint**: Create sprint object with:
-   - `type`: "monthly", "quarterly", or "annual"
-   - `startDate`: Current ISO timestamp
-   - `endDate`: Calculated based on type:
-     - monthly: startDate + 1 month
-     - quarterly: startDate + 3 months
-     - annual: startDate + 12 months
-   - `status`: "in_progress"
-2. **Store in localStorage**: `vinca_retirement_sprints_v1`
-3. **Prevent overlaps**: Check before starting; error if sprint already active
-
-**Result**: `activeSprint` object in storage.
-
-### B. Sprint Completion
-
-**Goal**: Move active sprint to history and reset active sprint.
-
-**Process**:
-1. Verify active sprint exists
-2. Mark status as "completed"
-3. Record `completedAt`: Current ISO timestamp
-4. Push to `sprintHistory` array
-5. Clear `activeSprint` field (set to NULL)
-
-**Result**: Sprint moves from active to history; new active sprint can be started.
-
-### C. KPI Calculation (Journey Completion & Corpus Progress)
-
-**Goal**: Calculate retirement readiness metrics based on completed sprints.
-
-**Inputs**:
-- `sprintHistory`: Array of completed sprints
-- `user.retirementAge`: Target retirement age
-- `user.currentAge`: Current age
-- `user.requiredCorpus`: Corpus goal (₹)
-- `user.currentCorpus`: Current savings (₹)
-
-**Process**:
-
-#### 1. Journey Completion Percentage
-```
-completedMonths = sum of months from all completed sprints:
-  - monthly sprint = 1 month
-  - quarterly sprint = 3 months
-  - annual sprint = 12 months
-
-totalMonths = (retirementAge - currentAge) × 12
-
-journeyCompleted = (completedMonths / totalMonths) × 100%
-  (capped at 100%)
-```
-
-Example: 30 months of completed sprints ÷ 360 months total = 8.3% journey.
-
-#### 2. Corpus Progress Percentage
-```
-corpusProgress = (currentCorpus / requiredCorpus) × 100%
-  (capped at 100%)
-```
-
-Example: ₹50L saved ÷ ₹1Cr required = 50% progress.
-
-#### 3. Delta (Change from Previous Sprint)
-```
-delta = journeyCompleted_now - journeyCompleted_previous
-
-prevCompleted = sum of months from all but the most recent sprint
-prevJourney = (prevCompleted / totalMonths) × 100%
-delta = journeyCompleted - prevJourney
-```
-
-Indicates month(s) gained from completing most recent sprint.
+**From System**:
+- **Current date** (to calculate sprints elapsed)
+- **Sprint start date** (date user selected the sprint type)
 
 ---
 
-## 3. Scoring Logic
+## 3. How the Score / Number Is Built
 
-**Not applicable** — Sprints produce progress metrics, not a score.
+### Step 1: Calculate Total Sprint Duration
 
-**Output metrics**:
-- `journeyCompleted`: 0–100, represents % of time to retirement
-- `corpusProgress`: 0–100, represents % of corpus target
-- `delta`: Integer, months gained from last sprint
+Convert the years from today to retirement into sprint periods:
+- **Monthly sprints**: (Retirement age - Current age) × 12 = total months
+- **Quarterly sprints**: (Retirement age - Current age) × 4 = total quarters
+- **Annual sprints**: (Retirement age - Current age) = total years
 
----
+Example: If user is age 30 and retirement age is 65, that's 35 years = 420 monthly sprints, 140 quarterly sprints, or 35 annual sprints.
 
-## 4. State Machine / Lifecycle
+### Step 2: Calculate Completed Sprints
 
-### States:
-1. **No active sprint** (initial or after completion)
-2. **Sprint in progress** (active sprint exists)
-3. **Sprint completed** (moved to history)
+Count the number of sprint periods that have fully elapsed since the sprint start date:
+- **Monthly**: Months elapsed since sprint start date
+- **Quarterly**: Complete quarters elapsed (e.g., Jan-Mar, Apr-Jun)
+- **Annual**: Complete years elapsed
 
-### Transitions:
+Example: User started sprints 18 months ago, so 18 monthly sprints completed, 6 quarters completed (with some incomplete), or 1 annual sprint completed (with some incomplete).
 
-```
-[No Active Sprint] 
-  → startSprint(type) 
-    → [Sprint In Progress]
+### Step 3: Calculate Journey Completion Percentage
 
-[Sprint In Progress] 
-  → completeSprint() 
-    → [No Active Sprint] (new sprint can start)
-```
+$$\text{Journey Completion \%} = \frac{\text{Completed Sprints}}{\text{Total Sprints}} \times 100$$
 
-### Data Written at Each Transition:
+This represents what percentage of the retirement timeline has "elapsed" from today toward the retirement date.
 
-**On startSprint()**:
-- Create new sprint object in `activeSprint`
-- Lock out ability to start another sprint
+Example: 18 months completed ÷ 420 total months = 4.3% journey completion.
 
-**On completeSprint()**:
-- Move sprint to `sprintHistory`
-- Clear `activeSprint`
-- KPIs recalculated (delta updated)
+### Step 4: Calculate Corpus Progress Percentage
 
-**Locked states**: 
-- Cannot modify active sprint end date mid-sprint
-- Cannot delete active sprint without completing it first
+$$\text{Corpus Progress \%} = \frac{\text{Current Corpus}}{\text{Required Corpus}} \times 100$$
+
+This represents how much of the financial target has been accumulated relative to the required amount.
+
+Example: Current ₹10L corpus ÷ Required ₹25L = 40% corpus progress.
+
+### Step 5: Assign Progress Delta
+
+Calculate the change in corpus progress since the last sprint period completed:
+$$\text{Delta} = \text{Current Corpus Progress \%} - \text{Previous Sprint Corpus Progress \%}$$
+
+Positive delta indicates corpus grew in the most recent sprint period; negative indicates decline.
 
 ---
 
-## 5. Persistence & Source of Truth
+## 4. What the Score Means
 
-### localStorage Key:
-- **`vinca_retirement_sprints_v1`**: Master state object containing:
-  ```javascript
-  {
-    activeSprint: { type, startDate, endDate, status },
-    sprintHistory: [{ type, startDate, endDate, status, completedAt }, ...]
-  }
-  ```
+**Journey Completion Percentage** (0-100%):
+- **0-25%**: Early stage; Less than one-quarter of the retirement timeline has elapsed
+- **25-50%**: Mid-journey; Approaching halfway to retirement
+- **50-75%**: Advanced; More than halfway through the retirement planning timeline
+- **75-100%**: Final stretch; Approaching or at retirement age
 
-### File Ownership:
-- **[lib/retirementSprintEngine.js](../../src/lib/retirementSprintEngine.js)** ← **AUTHORITATIVE**
-  - `getActiveSprint()`
-  - `startSprint()`
-  - `completeSprint()`
-  - `getSprintKPIs()`
-  - `getSprintHistory()`
-  - `loadState()`
-  - `saveState()`
+**Corpus Progress Percentage** (0-100%+):
+- **0-33%**: Significant funding gap; need to accelerate savings or adjust retirement expectations
+- **33-66%**: Moderate progress; on track to meet a substantial portion of retirement corpus goal
+- **66-99%**: Near target; retirement corpus nearly sufficient
+- **100%+**: Target met or exceeded; retirement corpus meets or exceeds required amount
 
-### Components:
-- **[components/MonthlySprintExecution.jsx](../../src/components/MonthlySprintExecution.jsx)** ← Monthly view
-- **[components/QuarterlySprintExecution.jsx](../../src/components/QuarterlySprintExecution.jsx)** ← Quarterly view
-- **[components/AnnualSprintExecution.jsx](../../src/components/AnnualSprintExecution.jsx)** ← Annual view
-- **[components/ViewSprintPage.jsx](../../src/components/ViewSprintPage.jsx)** ← Primary UI
+**Progress Delta** (positive/negative):
+- **Positive delta**: Corpus grew in the most recent sprint period (favorable trend)
+- **Negative delta**: Corpus declined in the most recent sprint period (unfavorable trend)
+- **Zero delta**: Corpus unchanged in the most recent sprint period (stagnant)
 
 ---
 
-## 6. Output Values
+## 5. What the Score Does NOT Mean
 
-### Primary Outputs (from getSprintKPIs):
-- **`journeyCompleted`**: 0–100 (%)
-- **`corpusProgress`**: 0–100 (%)
-- **`delta`**: Integer, months gained from previous sprint
-- **`activeSprint`**: Current sprint object or NULL
-
-### Secondary Outputs (from getSprintHistory):
-- **`sprintHistory`**: Array of completed sprint objects with:
-  - `type`: "monthly", "quarterly", or "annual"
-  - `startDate`: ISO timestamp
-  - `endDate`: ISO timestamp
-  - `status`: "completed"
-  - `completedAt`: ISO timestamp
-
-### Formatting Rules:
-- Percentages: Whole numbers (e.g., 50%)
-- Dates: ISO 8601 format (internal), displayed as "DD MMM YYYY" (UI)
-- Months/Duration: Integer
+- **Does NOT predict retirement success** — High journey completion does not guarantee financial security; depends on actual corpus accumulation
+- **Does NOT model actual market returns** — Assumes fixed returns; real returns vary month-to-month and year-to-year
+- **Does NOT account for inflation** — Journey and corpus percentages do not adjust for purchasing power erosion
+- **Does NOT measure engagement or effort** — Completion percentage is time-based only; does not reflect user's actions, learning, or savings rate increases
+- **Does NOT track actual spending behavior** — Assumes user will spend as modeled; does not track discretionary changes or emergency expenses
+- **Does NOT include tax impact** — Corpus and progress calculations assume tax-adjusted values; actual returns may differ after-tax
+- **Does NOT measure financial literacy** — Journey completion is independent of financial knowledge or decision-making quality
+- **Does NOT guarantee milestone achievement** — Completing a sprint period does not mean financial readiness has improved; only time has passed
 
 ---
 
-## 7. Edge Conditions
+## 6. Boundaries & Constraints
 
-### Missing Data Behavior:
-- **No active sprint**: `activeSprint` = NULL
-- **Empty sprint history**: `journeyCompleted` = 0%
-- **No Financial Readiness data**: Uses fallback values (journey assumes 360 months to retirement at age 60)
-
-### First-Time User Behavior:
-- **User has no sprints**: All metrics = 0%
-- **User starts first sprint**: Can see active sprint but delta = 0 (no previous sprint)
-
-### Partial Completion Behavior:
-- **User starts sprint but doesn't complete**: Sprint remains in `activeSprint`
-- **User prevents starting new sprint**: Error message shown; must complete existing sprint first
-
-### Known Limitations:
-- **Only one active sprint allowed**: Queue/multiple sprints not supported
-- **No pause/resume functionality**: Sprint must be completed or abandoned
-- **No partial credit**: Sprint completion is binary (all-or-nothing)
-- **Date boundaries are fixed**: Sprint end date cannot be modified mid-sprint
-- **No skip functionality**: Cannot skip a sprint; must start → complete sequence
+- **Only one active sprint allowed** — User can have only one sprint type active at a time (cannot run monthly + quarterly simultaneously)
+- **No pause or resume** — Once started, a sprint runs continuously; cannot pause, freeze, or skip sprint periods
+- **Binary completion model** — Sprints are either fully completed or not; no partial credit for incomplete sprint periods
+- **Fixed sprint durations** — Monthly = 30 days (approximate), Quarterly = 90 days, Annual = 365 days; does not account for leap years or calendar variations
+- **No sprint skipping** — Cannot jump to future sprint periods or retroactively apply past dates
+- **Current date-based calculation** — Sprint count resets if system date changes backward; only forward time progression counts
+- **Local storage only** — Sprint data persisted in browser only; not synced to server or accessible across devices
+- **Retirement age assumption** — Assumes retirement occurs at exactly the selected retirement age; does not model early retirement, delayed retirement, or date changes
+- **No multi-person households** — Sprint tracking is per individual; does not model couples or household-wide retirement goals
 
 ---
 
-## 8. File Ownership
-
-### Logic / Engines:
-- **[lib/retirementSprintEngine.js](../../src/lib/retirementSprintEngine.js)** ← **AUTHORITATIVE**
-  - `getActiveSprint()`
-  - `startSprint(type, user)`
-  - `completeSprint()`
-  - `getSprintKPIs(user)`
-  - `getSprintHistory()`
-  - State management (`loadState()`, `saveState()`)
-
-### Pages:
-- **[app/dashboard/sprints/page.js](../../src/app/dashboard/sprints/page.js)**
-
-### Components:
-- **[components/ViewSprintPage.jsx](../../src/components/ViewSprintPage.jsx)** ← Primary UI
-- **[components/MonthlySprintExecution.jsx](../../src/components/MonthlySprintExecution.jsx)** ← Monthly variant
-- **[components/QuarterlySprintExecution.jsx](../../src/components/QuarterlySprintExecution.jsx)** ← Quarterly variant
-- **[components/AnnualSprintExecution.jsx](../../src/components/AnnualSprintExecution.jsx)** ← Annual variant
-
----
-
-## Implementation Notes
-
-**KPI updates ONLY after sprint completion**: Metrics are not recalculated mid-sprint.
-
-**Delta calculation is retroactive**: Compares current sprint completion against all previous sprints.
-
-**localSt age is single source of truth**: No server sync; browser-based only.
-
-**Time calculation is calendar-based**: Actual elapsed days don't matter; only sprint type duration.
+**Document Version**: 1.0  
+**Last Updated**: February 2026

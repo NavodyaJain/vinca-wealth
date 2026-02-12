@@ -1,239 +1,109 @@
-# Financial Readiness
-
-## 1. Data Inputs
-
-### Source: Form inputs (Calculator page)
-- `currentAge`: Current age of the user (years)
-- `moneySaved`: Current corpus/lump sum investment (₹)
-- `monthlyIncome`: Current monthly income (₹)
-- `monthlyExpenses`: Current monthly expenses (₹)
-- `retirementAge`: Target retirement age (years)
-- `monthlySIP`: Current monthly SIP amount (₹)
-- `expectedReturns`: Expected annual returns during work phase (%)
-- `sipIncreaseRate`: Annual SIP escalation rate (%)
-- `lifespan`: Expected lifespan (years)
-- `inflationRate`: General inflation rate for expenses (%)
-- `withdrawalIncrease`: Annual increase in withdrawal during retirement (%)
-- `retirementReturns`: Expected annual returns during retirement phase (%)
-
-### Default Values (if missing)
-- currentAge: 26 years
-- moneySaved: ₹500,000
-- monthlyIncome: ₹150,000
-- monthlyExpenses: ₹50,000
-- retirementAge: 60 years
-- monthlySIP: ₹20,000
-- expectedReturns: 12%
-- sipIncreaseRate: 10%
-- lifespan: 85 years
-- inflationRate: 6%
-- withdrawalIncrease: 7%
-- retirementReturns: 9%
+# Financial Readiness Calculator
 
 ---
 
-## 2. Core Calculations
+## 1. Feature Purpose
 
-### A. Conversion of Annual Rates to Monthly Rates
-All calculations use monthly compounding for precision. Annual percentages are converted as:
-
-$$\text{monthlyRate} = (1 + \text{annualRate\%}/100)^{1/12} - 1$$
-
-For example, 12% annual = 0.9488% monthly.
-
-### B. Accumulation Phase (Current Age → Retirement Age)
-
-**Goal**: Calculate corpus at retirement from current savings + monthly SIP.
-
-**Process**:
-1. Start corpus = `moneySaved`
-2. For each month from now until retirement:
-   - Add monthly SIP (with annual step-up applied every 12 months)
-   - Apply monthly returns to entire corpus
-
-**Formula**:
-- Corpus in month $m$:
-  $$C_m = C_{m-1} \times (1 + r_{acc}) + \text{SIP}_m$$
-
-where:
-- $r_{acc}$ = monthly accumulation rate
-- $\text{SIP}_m = \text{baseSIP} \times (1 + \text{sipIncreaseRate})^{\text{years elapsed}}$
-
-At retirement: **`expectedCorpusAtRetirement`** = final corpus after all accumulations.
-
-### C. Required Corpus Calculation
-
-**Goal**: Find minimum corpus needed at retirement to sustain withdrawal until lifespan.
-
-**Process**: Binary search with 40 iterations to find the corpus amount that:
-- Generates desired monthly withdrawal (inflation-adjusted)
-- Maintains positive balance until lifespan
-- Uses monthly compounding and annual withdrawal escalation
-
-**Validation logic**:
-```
-survives(corpus):
-  for each month in retirement period:
-    corpus *= (1 + r_retirement)
-    corpus -= monthlyWithdrawal
-    if corpus <= 0: return FALSE
-  return corpus > 0
-```
-
-**Result**: **`requiredCorpusAtRetirement`** = minimum corpus needed.
-
-### D. SIP Gap Calculation
-
-**Goal**: Calculate additional monthly SIP needed to meet retirement goal.
-
-**Process**:
-1. Calculate required corpus (from above)
-2. Simulate accumulation with different SIP amounts via binary search
-3. Find minimum SIP that grows to required corpus
-4. Gap = Required SIP - Current SIP
-
-**Result**: **`requiredMonthlySIP`** and **`sipGap`** (max of 0 if already sufficient).
-
-### E. Depletion Age Calculation
-
-**Goal**: Find the age when retirement corpus is depleted.
-
-**Process**:
-1. Simulate retirement phase with expected corpus
-2. Each month: apply returns, withdraw expenses (inflated annually)
-3. Track when corpus ≤ 0
-
-**Result**: **`depletionAge`** = age at depletion, or `lifespan` if corpus lasts the full period.
-
-### F. Monthly vs. Annual Calculations
-
-- **Accumulation**: Exact monthly simulation (monthsToRetirement = yearsToRetirement × 12)
-- **SIP step-up**: Applied annually; `SIP_year = baseSIP × (1 + sipIncreaseRate)^year`
-- **Expense inflation**: Applied annually; `withdrawal = withdrawal × (1 + inflationRate)^year`
-- **Returns**: Applied monthly using compounded monthly rates
+The Financial Readiness Calculator assesses whether a user's current financial plan (existing savings, monthly contributions, and expected returns) will support their target retirement age and lifespan. It calculates how much corpus will be available at retirement and how long that corpus will sustain retirement withdrawals.
 
 ---
 
-## 3. Scoring Logic
+## 2. What Inputs Are Used
 
-**Not applicable** — Financial Readiness produces numeric outputs, not a score.
+**From User Input**:
+- **Current age** (years)
+- **Target retirement age** (years)
+- **Expected lifespan** (years)
+- **Current lump sum savings** (₹)
+- **Current monthly income** (₹)
+- **Current monthly expenses** (₹)
+- **Current monthly SIP contribution** (₹)
+- **Annual SIP increase rate** (%)
+- **Expected returns during working years** (% annual)
+- **Expected returns during retirement** (% annual)
+- **Annual expense inflation rate** (%)
+- **Annual withdrawal increase during retirement** (%)
 
-**Output flags instead**:
-- `isReadyForRetirement`: Boolean. TRUE if sipGap ≤ 0 and expectedCorpus ≥ requiredCorpus at target retirementAge
-- `isDesiredAgeFeasible`: Boolean. TRUE if additional SIP needed (additionalSIPNeeded) ≤ investable surplus
-
----
-
-## 4. State Machine / Lifecycle
-
-**Single-phase calculator** — No state machine.
-
-**Lifecycle**:
-1. **User fills form** → inputs stored in component state or localStorage
-2. **User clicks "Calculate"** → `calculateFinancialReadinessResults()` executes immediately
-3. **Results displayed** → Timeline chart, table rows, readiness status shown
-4. **User clicks "Save Reading"** → Results persist to localStorage keys:
-   - `financialReadinessInputs`
-   - `financialReadinessResults`
-   - Also saved to `vincaUserJourney.readings.financialReadiness`
-
-**Data locked**: Once saved, results remain unchanged unless user recalculates with new inputs.
+If any input is missing, the calculator uses default values (e.g., age 26, SIP ₹20,000, returns 12%).
 
 ---
 
-## 5. Persistence & Source of Truth
+## 3. How the Score / Number Is Built
 
-### localStorage Keys:
-- **`financialReadinessInputs`**: User's form inputs (JSON)
-- **`financialReadinessResults`**: Calculated results (corpus, SIP gap, depletion age, etc.) (JSON)
-- **`vincaUserJourney`**: Master journey record, includes `readings.financialReadiness` sub-object
+### Step 1: Accumulation Phase (Current Age → Retirement Age)
 
-### File Ownership:
-- **`financialReadiness/financialReadinessEngine.js`**: Authoritative source for all calculations
-- **Components**: Read from engine, display results
-- **Storage library** (`userJourneyStorage.js`): Persistes results to localStorage
+The calculator simulates month-by-month growth of the user's corpus:
+1. Start with current lump sum savings
+2. For each month until retirement:
+   - Add the monthly SIP contribution (increasing annually by the SIP increase rate)
+   - Apply monthly investment returns to the entire corpus
+3. Result: **Expected corpus at retirement** (a rupee amount)
 
-### Access Pattern:
-1. Component → Engine (`calculateFinancialReadinessResults()`)
-2. Component → Storage (`saveUserReading('financialReadiness', ...)`)
-3. Other features → Storage (`getUserJourney().readings.financialReadiness`)
+### Step 2: Retirement Requirement Calculation
 
----
+The calculator determines the minimum corpus needed at retirement to sustain planned withdrawals:
+1. Starting with current monthly expenses as the base withdrawal
+2. Calculate how much corpus would be needed to generate this withdrawal (adjusted annually for inflation)
+3. Simulate drawdown month-by-month from retirement to expected lifespan, checking if corpus remains positive
+4. Use a binary search to find the exact minimum corpus that prevents depletion before lifespan
+5. Result: **Required corpus at retirement** (a rupee amount)
 
-## 6. Output Values
+### Step 3: Readiness Assessment
 
-### Primary Outputs:
-- **`expectedCorpusAtRetirement`**: ₹ amount (derived, not rounded)
-- **`requiredCorpusAtRetirement`**: ₹ amount (derived)
-- **`sipGap`**: ₹ monthly amount (derived, max 0)
-- **`requiredMonthlySIP`**: ₹ monthly amount (derived)
-- **`depletionAge`**: Age or "Never" string (derived)
-- **`isReadyForRetirement`**: Boolean (derived)
-
-### Secondary Outputs:
-- **`timelineChartData`**: Array of { age, corpus } objects (60 data points: age 26–85+)
-- **`tableRows`**: Array of year-by-year breakdown with phase, SIP, SWP, returns, corpus
-
-### Formatting Rules:
-- Corpus amounts: Rounded to nearest rupee (no decimals in display)
-- Percentages: Displayed as whole numbers (e.g., 12%)
-- Depletion age: Shown as integer year
+The calculator compares actual vs. required:
+1. If expected corpus ≥ required corpus: **Plan is ready** at target retirement age
+2. If expected corpus < required corpus: **Plan is not ready** at target age
+   - Calculator also computes:
+     - Additional monthly SIP required to reach the goal (if achievable)
+     - Age at which the plan becomes ready (if deferred)
+     - Age when corpus depletes (based on expected corpus)
 
 ---
 
-## 7. Edge Conditions
+## 4. What the Score Means
 
-### Missing Data Behavior:
-- **All inputs have defaults** → Calculation always produces output
-- **Zero inputs**: Treated as 0 (e.g., moneySaved = 0 is valid)
-- **Negative inputs**: Not explicitly validated; may produce unexpected results (QA should catch)
+**Readiness Status: YES** — User's expected corpus at target retirement age meets or exceeds the amount needed to sustain withdrawals until expected lifespan. The current plan is on track.
 
-### First-Time User Behavior:
-- **No saved reading**: All defaults applied
-- **Calculate button clicked**: Immediate output based on defaults
-- **Results may show unready state**: Normal (indicates SIP gap)
+**Readiness Status: NO** — User's expected corpus falls short. Further action needed:
+- Increase monthly SIP by X amount
+- Defer retirement by Y years
+- Reduce expected retirement expenses
 
-### Partial Completion Behavior:
-- **User closes form mid-way**: No output generated
-- **User modifies one field**: Entire calculation re-runs (dependency chain)
+**Depletion Age** — The age at which the expected corpus would fully deplete if no changes are made. If this age is before expected lifespan, the plan runs out of money.
 
-### Known Limitations:
-- **No validation on upper bounds**: Very high SIP or corpus may cause numerical overflow
-- **Inflation assumption**: Simple annual escalation; no compound inflation on withdrawal escalation
-- **Market volatility**: Returns are constant; no scenario variance
-- **Tax impact**: No tax deduction on corpus or withdrawals
+**SIP Gap** — The additional monthly contribution (in rupees) required to reach the retirement goal. A zero gap means current SIP is sufficient.
 
 ---
 
-## 8. File Ownership
+## 5. What the Score Does NOT Mean
 
-### Logic / Engines:
-- **[financialReadiness/financialReadinessEngine.js](../../src/lib/financialReadiness/financialReadinessEngine.js)** ← **AUTHORITATIVE**
-  - `calculateFinancialReadinessResults()`
-  - `buildRequiredCorpusByAge()`
-
-### Storage / Persistence:
-- **[lib/userJourneyStorage.js](../../src/lib/userJourneyStorage.js)**
-  - `getUserJourney()`
-  - `setUserJourney()`
-  - `saveUserReading()`
-
-### Pages:
-- **[app/tools/financial-readiness/page.js](../../src/app/tools/financial-readiness/page.js)**
-
-### Components:
-- **[components/financialReadiness/FinancialReadinessResultsDashboard.jsx](../../src/components/financialReadiness/FinancialReadinessResultsDashboard.jsx)** ← Primary UI
-- **[components/financialReadiness/YearOnYearCorpusChart.jsx](../../src/components/financialReadiness/YearOnYearCorpusChart.jsx)** ← Visualization
-- **[components/financialReadiness/YearOnYearCorpusTable.jsx](../../src/components/financialReadiness/YearOnYearCorpusTable.jsx)** ← Table view
+- **Does NOT predict actual market returns** — Assumes returns will match the user-provided percentage every year (ignores volatility and cycles)
+- **Does NOT account for tax impact** — Does not deduct income tax, capital gains tax, or other levies on returns or withdrawals
+- **Does NOT include unexpected life events** — Ignores medical emergencies, job loss, sudden windfall, or family support
+- **Does NOT account for inflation variation** — Uses a single inflation rate; real inflation may differ
+- **Does NOT factor in lifestyle changes** — Assumes expenses remain constant relative to inflation
+- **Does NOT evaluate financial readiness quality** — Only measures numeric sufficiency, not plan robustness or risk
+- **Does NOT provide investment advice** — Does not recommend specific funds, allocations, or asset classes
+- **Does NOT predict lifetime financial fulfillment** — High readiness score does not guarantee financial peace or life satisfaction
 
 ---
 
-## Implementation Notes
+## 6. Boundaries & Constraints
 
-**Engine is pure logic**: No side effects; same inputs → same outputs always.
+- **Assumes constant annual returns** — Returns do not vary year to year; uses average expected return as constant
+- **Monthly compounding model** — All calculations work at monthly intervals; results are precise to monthly accuracy only
+- **Inflation applies uniformly** — Single inflation rate applied to expenses annually; does not differentiate expense categories
+- **No withdrawal flexibility** — Assumes fixed withdrawal amount, adjusted annually; does not model discretionary spending
+- **Retirement date is target-based** — Calculation uses the user's target retirement age; does not model phased retirement
+- **No regulatory or compliance checks** — Does not verify if plan meets minimum savings requirements or pension rules
+- **Lifespan is user-defined** — Uses expected lifespan input; does not use mortality tables or actuarial data
+- **Lump sum and SIP are the only sources** — Does not model bonus income, inheritance, rental returns, or other income
+- **SIP increase is annual fixed percentage** — Assumes linear annual escalation; does not model market-linked increases
+- **Retirement corpus is static** — Does not rebalance or rebuild corpus after retirement begins (assumes withdrawal-only phase)
+- **Single household model** — Assumes one person; does not model joint retirement or survivor benefits
 
-**Monthly compounding is precise**: Uses $e^{r \cdot t}$ equivalent formula instead of simple annual/12 division.
+---
 
-**Binary search for required corpus**: Guarantees convergence within 40 iterations and ₹0.01 accuracy.
+**Document Version**: 1.0  
+**Last Updated**: February 2026
 
-**All calculations are synchronous**: No async operations; results available immediately.
