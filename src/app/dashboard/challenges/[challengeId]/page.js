@@ -151,6 +151,71 @@ export default function ChallengeDetailPage() {
     router.push("/dashboard/journal");
   }
 
+  // Handler for monthly sprint completion - select next sprint
+  function handleSelectNextSprint(sprintType) {
+    const today = new Date().toISOString().slice(0, 10);
+    const state = getChallengeState();
+    state.progress = state.progress || {};
+    
+    // Lock the monthly sprint
+    state.progress["monthly_sip_kickstart"] = {
+      ...state.progress["monthly_sip_kickstart"],
+      status: "completed_final",
+      locked: true
+    };
+
+    if (sprintType === "quarterly") {
+      // Create readings for quarterly sprint plan
+      const readings = {
+        suggestedMonthlySIP: plan?.suggestedSIP || 5000,
+        salaryCycle: plan?.salaryCycle || "Monthly",
+        sipMonth1: plan?.suggestedSIP || 5000,
+        sipMonth2: (plan?.suggestedSIP || 5000) * 1.1,
+        sipMonth3: (plan?.suggestedSIP || 5000) * 1.2,
+        stepUpEnabled: true
+      };
+      
+      // Initialize quarterly sprint
+      state.activeChallengeId = "quarterly_sip_discipline";
+      const quarterly = getChallengeById("quarterly_sip_discipline");
+      const qPlan = quarterly.getPlan(readings);
+      state.progress["quarterly_sip_discipline"] = {
+        startedAt: today,
+        startDate: today,
+        endDate: new Date(new Date(today).setMonth(new Date(today).getMonth() + 3)).toISOString().slice(0, 10),
+        status: "active",
+        plan: qPlan,
+        phaseStatus: ["pending", "pending", "pending"],
+        units: {}
+      };
+      saveChallengeState(state);
+      router.push("/dashboard/challenges/quarterly_sip_discipline");
+    } else if (sprintType === "annual") {
+      // Create readings for annual sprint plan
+      const readings = {
+        suggestedMonthlySIP: plan?.suggestedSIP || 5000,
+        salaryCycle: plan?.salaryCycle || "Monthly",
+        stepUps: [1000, 1000, 1000, 1000]
+      };
+      
+      // Initialize annual sprint
+      state.activeChallengeId = "annual_retirement_consistency";
+      const annual = getChallengeById("annual_retirement_consistency");
+      const aPlan = annual.getPlan(readings);
+      state.progress["annual_retirement_consistency"] = {
+        startedAt: today,
+        startDate: today,
+        endDate: new Date(new Date(today).setMonth(new Date(today).getMonth() + 12)).toISOString().slice(0, 10),
+        status: "active",
+        plan: aPlan,
+        phaseStatus: ["pending", "pending", "pending", "pending"],
+        units: {}
+      };
+      saveChallengeState(state);
+      router.push("/dashboard/challenges/annual_retirement_consistency");
+    }
+  }
+
   // --- PREMIUM FINTECH UI ---
   // ...existing logic...
   // --- PREMIUM FINTECH UI ---
@@ -368,8 +433,32 @@ export default function ChallengeDetailPage() {
                             )}
                           </div>
                         ) : (
-                          <div className="flex flex-col gap-3">
-                            <div className="text-emerald-700 font-semibold">This month is completed.</div>
+                          <div className="flex flex-col gap-4">
+                            {/* Monthly Sprint Completion Section - Only for monthly_sip_kickstart */}
+                            {challenge.id === "monthly_sip_kickstart" && (
+                              <div className="w-full bg-emerald-50 border border-emerald-100 rounded-xl p-5 flex flex-col gap-3">
+                                <div className="flex flex-col gap-1">
+                                  <div className="text-sm font-semibold text-slate-900">Your journey has begun</div>
+                                  <div className="text-xs text-slate-600">You've completed your first SIP. Choose how you want to continue.</div>
+                                </div>
+                                <div className="flex gap-2 pt-1">
+                                  <button
+                                    className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition flex flex-col items-start gap-0.5"
+                                    onClick={() => handleSelectNextSprint("quarterly")}
+                                  >
+                                    <div>Quarterly Sprint</div>
+                                    <div className="text-xs font-normal opacity-90">Review progress every 3 months</div>
+                                  </button>
+                                  <button
+                                    className="flex-1 px-4 py-2 rounded-lg border border-emerald-600 text-emerald-700 text-sm font-medium hover:bg-emerald-50 transition flex flex-col items-start gap-0.5"
+                                    onClick={() => handleSelectNextSprint("annual")}
+                                  >
+                                    <div>Annual Sprint</div>
+                                    <div className="text-xs font-normal opacity-90">Build long-term investing discipline</div>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </>
