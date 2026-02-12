@@ -56,8 +56,30 @@ export const videoSeries = [
     bannerImage: 'https://placehold.co/400x200?text=Resource+Image',
     difficulty: 'Advanced',
     tags: ['Tax', 'Retirement', 'Compliance'],
-    modules: [],
-    totalDurationMinutes: 0,
+    modules: [
+      {
+        moduleId: 'mod1-tax',
+        title: 'Tax Optimization Strategies',
+        description: 'Learn advanced tax-saving techniques for retirement income.',
+        videos: [
+          {
+            videoId: 'v-tax-1',
+            title: 'Income Tax Planning for Retirees',
+            durationMinutes: 12,
+            previewUrl: 'https://placehold.co/400x200?text=template-video',
+            summary: 'Master income tax deductions and exemptions available to retirees in India.'
+          },
+          {
+            videoId: 'v-tax-2',
+            title: 'Capital Gains and Wealth Tax Strategies',
+            durationMinutes: 10,
+            previewUrl: 'https://placehold.co/400x200?text=template-video',
+            summary: 'Understand long-term and short-term capital gains tax implications for retirement portfolios.'
+          }
+        ]
+      }
+    ],
+    totalDurationMinutes: 22,
     createdAt: '2026-01-10'
   }
 ];

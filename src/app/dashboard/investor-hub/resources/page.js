@@ -14,7 +14,8 @@ export default function ResourcesPage() {
   const [mounted, setMounted] = useState(false);
   const {
     getMaturityLevel,
-    getCompletedSeriesByLevel
+    getCompletedSeriesByLevel,
+    getAchievements
   } = useLearningProgress();
 
   // Ensure client-side hydration completes before rendering maturity card
@@ -24,6 +25,7 @@ export default function ResourcesPage() {
 
   const maturityLevel = getMaturityLevel();
   const completedSeriesByLevel = getCompletedSeriesByLevel();
+  const achievements = getAchievements();
 
   return (
     <div className="w-full px-6 lg:px-8 py-6">
@@ -55,6 +57,7 @@ export default function ResourcesPage() {
                 <FinancialMaturityCard
                   maturityLevel={maturityLevel}
                   completedSeriesByLevel={completedSeriesByLevel}
+                  achievements={achievements}
                 />
               </div>
             )}

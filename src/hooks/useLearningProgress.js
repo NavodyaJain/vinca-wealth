@@ -110,12 +110,99 @@ export default function useLearningProgress() {
     return descriptions[level] || descriptions['Getting Started'];
   };
 
+  // Calculate achievements based on completion counts
+  const getAchievements = () => {
+    const { beginner, intermediate, advanced } = progress.completedSeriesByLevel;
+    const totalCompleted = beginner + intermediate + advanced;
+    const achievements = [];
+
+    // Bronze Achievement: Complete 1 beginner series
+    if (beginner >= 1) {
+      achievements.push({
+        id: 'bronze-learner',
+        name: 'Bronze Learner',
+        emoji: '🥉',
+        description: 'Completed your first financial learning series',
+        unlockedAt: 'beginner >= 1'
+      });
+    }
+
+    // Silver Achievement: Complete 2 intermediate series
+    if (intermediate >= 2) {
+      achievements.push({
+        id: 'silver-scholar',
+        name: 'Silver Scholar',
+        emoji: '🥈',
+        description: 'Mastered 2 intermediate financial topics',
+        unlockedAt: 'intermediate >= 2'
+      });
+    }
+
+    // Gold Achievement: Complete 3 advanced series
+    if (advanced >= 3) {
+      achievements.push({
+        id: 'gold-expert',
+        name: 'Gold Expert',
+        emoji: '🥇',
+        description: 'Achieved expertise in 3 advanced financial strategies',
+        unlockedAt: 'advanced >= 3'
+      });
+    }
+
+    // Comprehensive Master: All levels with 2+ each
+    if (beginner >= 2 && intermediate >= 2 && advanced >= 2) {
+      achievements.push({
+        id: 'comprehensive-master',
+        name: 'Comprehensive Master',
+        emoji: '🏅',
+        description: 'Mastered multiple topics across all difficulty levels',
+        unlockedAt: 'beginner >= 2 && intermediate >= 2 && advanced >= 2'
+      });
+    }
+
+    // Lifetime Learner: 5+ total series
+    if (totalCompleted >= 5) {
+      achievements.push({
+        id: 'lifetime-learner',
+        name: 'Lifetime Learner',
+        emoji: '⭐',
+        description: 'Completed 5+ financial learning series',
+        unlockedAt: 'totalCompleted >= 5'
+      });
+    }
+
+    // Advanced Pioneer: 3+ advanced series
+    if (advanced >= 3) {
+      achievements.push({
+        id: 'advanced-pioneer',
+        name: 'Advanced Pioneer',
+        emoji: '🚀',
+        description: 'Ventured deep into advanced financial planning',
+        unlockedAt: 'advanced >= 3'
+      });
+    }
+
+    // Knowledge Guardian: 10+ total series
+    if (totalCompleted >= 10) {
+      achievements.push({
+        id: 'knowledge-guardian',
+        name: 'Knowledge Guardian',
+        emoji: '👑',
+        description: 'Completed 10+ financial learning series - you are a financial expert',
+        unlockedAt: 'totalCompleted >= 10'
+      });
+    }
+
+    return achievements;
+  };
+
   return {
     progress,
     markSeriesCompleted,
     getCompletedSeriesByLevel,
     getMaturityLevel,
     getMaturityLevelIndex,
-    getMaturityDescription
+    getMaturityDescription,
+    getAchievements
   };
 }

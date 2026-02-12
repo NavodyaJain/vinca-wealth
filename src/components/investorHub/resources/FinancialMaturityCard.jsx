@@ -1,10 +1,12 @@
 // src/components/investorHub/resources/FinancialMaturityCard.jsx
 'use client';
 import React from 'react';
+import AchievementBadges from './AchievementBadges';
 
 export default function FinancialMaturityCard({
   maturityLevel,
-  completedSeriesByLevel
+  completedSeriesByLevel,
+  achievements = []
 }) {
   // Color scheme based on maturity level - light green/neutral gradient theme
   const colorSchemes = {
@@ -125,10 +127,15 @@ export default function FinancialMaturityCard({
             </div>
           </div>
 
-          {/* Label below circle */}
-          <p className="text-xs font-semibold text-slate-600 text-center mt-4 leading-tight">
-            Financial Learning Maturity
-          </p>
+          {/* Label and maturity level below circle */}
+          <div className="text-center mt-4 space-y-2">
+            <p className="text-xs font-semibold text-slate-600 leading-tight">
+              Financial Learning Maturity
+            </p>
+            <p className={`text-sm font-bold ${colors.badge} px-3 py-1 rounded-full inline-block`}>
+              {maturityLevel}
+            </p>
+          </div>
         </div>
 
         {/* Left side on desktop, Top on mobile - Content Section */}
@@ -145,6 +152,9 @@ export default function FinancialMaturityCard({
               Your awareness and confidence grows in your financial readiness journey as you learn
             </p>
           </div>
+
+          {/* Achievements Section */}
+          <AchievementBadges achievements={achievements} />
         </div>
       </div>
     </div>
