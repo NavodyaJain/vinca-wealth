@@ -123,26 +123,39 @@ export default function ChallengesHome() {
           </button>
           {drawerOpen && (
             <div className="mt-4 flex flex-col gap-6">
-              {mindsetCards.map(card => (
-                <div
-                  key={card.id}
-                  className="border border-slate-200 bg-white px-8 py-7 flex flex-col gap-3 cursor-pointer hover:bg-emerald-50 transition-all w-full"
-                  style={{ borderRadius: 18, boxShadow: "0 2px 10px 0 rgba(16, 185, 129, 0.04)" }}
-                  onClick={() => router.push(`/dashboard/challenges/${card.id}`)}
-                >
-                  <div className="font-semibold text-xl text-slate-900 leading-tight mb-2">{card.title}</div>
-                  <div className="text-slate-500 text-base mb-3 font-normal">{card.description}</div>
-                  <button
-                    className="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base rounded transition-colors w-fit"
-                    onClick={e => {
-                      e.stopPropagation();
-                      router.push(`/dashboard/challenges/${card.id}`);
-                    }}
+              {mindsetCards.map(card => {
+                const isMonthlyCompleted = card.id === "monthly_sip_kickstart" && challengeState.progress?.["monthly_sip_kickstart"]?.status === "completed_final";
+                return (
+                  <div
+                    key={card.id}
+                    className={`border px-8 py-7 flex flex-col gap-3 transition-all w-full ${
+                      isMonthlyCompleted
+                        ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60"
+                        : "border-slate-200 bg-white cursor-pointer hover:bg-emerald-50"
+                    }`}
+                    style={{ borderRadius: 18, boxShadow: isMonthlyCompleted ? "none" : "0 2px 10px 0 rgba(16, 185, 129, 0.04)" }}
+                    onClick={() => !isMonthlyCompleted && router.push(`/dashboard/challenges/${card.id}`)}
                   >
-                    View Sprint
-                  </button>
-                </div>
-              ))}
+                    <div className="font-semibold text-xl text-slate-900 leading-tight mb-2">{card.title}</div>
+                    <div className="text-slate-500 text-base mb-3 font-normal">{card.description}</div>
+                    {isMonthlyCompleted ? (
+                      <div className="mt-2 px-5 py-2 bg-slate-200 text-slate-600 font-medium text-base rounded w-fit cursor-not-allowed">
+                        Completed ✓
+                      </div>
+                    ) : (
+                      <button
+                        className="mt-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-base rounded transition-colors w-fit"
+                        onClick={e => {
+                          e.stopPropagation();
+                          router.push(`/dashboard/challenges/${card.id}`);
+                        }}
+                      >
+                        View Sprint
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

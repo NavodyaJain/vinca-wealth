@@ -33,8 +33,14 @@ export default function ChallengeDetailPage() {
   }
     // Start Challenge logic
     function handleStart() {
-      // Enforce only one active sprint at a time
+      // Monthly Sprint is one-time only - cannot be restarted
       const state = getChallengeState();
+      if (challenge.id === "monthly_sip_kickstart" && state.progress?.[challenge.id]?.status === "completed_final") {
+        alert("Monthly Sprint has been completed and can only be started once. Please choose Quarterly or Annual Sprint.");
+        return;
+      }
+      
+      // Enforce only one active sprint at a time
       if (state.activeChallengeId && state.activeChallengeId !== challenge.id) {
         alert("You already have an active sprint in progress. Complete it before switching your sprint mindset.");
         return;
@@ -60,7 +66,8 @@ export default function ChallengeDetailPage() {
         endDate: calculatedEnd,
         status: "active",
         plan,
-        phaseStatus: Array(phaseLen).fill("pending")
+        phaseStatus: Array(phaseLen).fill("pending"),
+        units: {}
       };
       saveChallengeState(state);
       setStatus("active");
@@ -357,14 +364,12 @@ export default function ChallengeDetailPage() {
                             {isSaved && (
                               <div className="flex flex-col gap-3 mt-2 p-4 bg-emerald-50 rounded-lg">
                                 <div className="text-emerald-700 font-semibold">Saved. This period is complete.</div>
-                                <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(0, { label, range })}>Log this into Journal</button>
                               </div>
                             )}
                           </div>
                         ) : (
                           <div className="flex flex-col gap-3">
-                            <div className="text-emerald-700 font-semibold">This month is completed and logged.</div>
-                            <button className="px-4 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => logToJournal(0, { label, range })}>View in Journal</button>
+                            <div className="text-emerald-700 font-semibold">This month is completed.</div>
                           </div>
                         )}
                       </>
@@ -619,10 +624,25 @@ export default function ChallengeDetailPage() {
       ) : null}
 
       {/* 6️⃣ START CHALLENGE LOGIC */}
-      {status === "not_started" && (
+      {status === "not_started" && !(challenge.id === "monthly_sip_kickstart" && getChallengeState().progress?.["monthly_sip_kickstart"]?.status === "completed_final") && (
         <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl px-6 py-4 text-xl transition" onClick={handleStart}>
           Start Challenge
         </button>
+      )}
+
+      {/* Monthly Sprint completed_final state - no restart allowed */}
+      {challenge.id === "monthly_sip_kickstart" && getChallengeState().progress?.["monthly_sip_kickstart"]?.status === "completed_final" && (
+        <div className="w-full bg-slate-50 border border-slate-200 rounded-3xl shadow p-8 flex flex-col gap-4 items-center text-center">
+          <div className="text-base text-slate-700">
+            Monthly Sprint has been completed. You've successfully kickstarted your retirement journey.
+          </div>
+          <div className="text-sm text-slate-600">
+            To continue, please start the Quarterly or Annual Sprint from the Sprints page.
+          </div>
+          <button className="px-6 py-2 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700" onClick={() => router.push('/dashboard/sprints')}>
+            Go to Sprints
+          </button>
+        </div>
       )}
 
       {/* 7️⃣ CHALLENGE COMPLETION OR STOPPED STATE */}
@@ -633,101 +653,212 @@ export default function ChallengeDetailPage() {
         (challenge.id === "annual_retirement_consistency" && plan?.quarterlySIPs && plan.quarterlySIPs.filter((_, qIdx) => [0,1,2].every(m => units[qIdx * 3 + m]?.isCompleted)).length === 4)
       )) && (
         <div className="w-full bg-emerald-50 border border-emerald-200 rounded-3xl shadow p-8 flex flex-col gap-4 items-center">
-          <div className="text-2xl font-bold text-emerald-700 mb-2">Challenge Completed <span className="align-middle">✅</span></div>
-          <div className="text-lg text-slate-900">
-            {challenge.id === "monthly_sip_kickstart"
-              ? <>SIP Amount Executed: <span className="font-bold">₹{plan?.suggestedSIP || "-"}</span></>
-              : challenge.id === "annual_retirement_consistency"
-                ? <>Total SIP Invested: <span className="font-bold">₹{plan?.totalAnnualSIP}</span></>
-                : <>Total SIP Invested: <span className="font-bold">₹{plan?.totalQuarterlySIP}</span></>}
-          </div>
-          <div className="text-base text-slate-700">
-            {challenge.id === "monthly_sip_kickstart"
-              ? <>Salary Month Completed: {plan?.monthLabel || "-"}</>
-              : challenge.id === "annual_retirement_consistency"
-                ? "Duration completed: 12 months"
-                : <>Duration completed: {challenge.durationLabel}</>}
-          </div>
-          <div className="text-base text-slate-700">
-            {challenge.id === "monthly_sip_kickstart"
-              ? "You successfully started your retirement SIP this month."
-              : challenge.id === "annual_retirement_consistency"
-                ? "You successfully maintained SIP discipline for an entire year."
-                : "Discipline maintained"}
-          </div>
-          <div className="flex gap-4 mt-2">
-            <button
-              className="px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
-              onClick={() => {
-                // Start Next Sprint logic for Quarterly and Annual
-                const state = getChallengeState();
-                const prev = state.progress?.[challenge.id];
-                if (!prev) return;
-                let newStartDate = prev.endDate;
-                let newEndDate = newStartDate;
-                let phaseLen = 1;
-                let newPlan = null;
-                if (challenge.id === "quarterly_sip_discipline") {
-                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 3)).toISOString().slice(0, 10);
-                  phaseLen = 3;
-                  // Generate new plan for new sprint instance
-                  if (challenge.getPlan) {
-                    newPlan = challenge.getPlan({
-                      ...plan,
+          {challenge.id === "monthly_sip_kickstart" ? (
+            // Mindset Transition UI for Monthly Sprint
+            <>
+              <div className="text-3xl mb-2">🎉</div>
+              <div className="text-2xl font-bold text-emerald-700 mb-2">First step completed!</div>
+              <div className="text-base text-slate-700 text-center max-w-xl mb-4">
+                You've successfully kickstarted your retirement journey. Monthly Sprint is designed only to help you begin.
+              </div>
+              <div className="text-lg text-slate-900 mb-2">
+                <span className="font-bold">₹{plan?.suggestedSIP || "-"}</span> executed in {plan?.monthLabel || "this month"}
+              </div>
+              <div className="text-base text-slate-600 mb-6">Now, choose your sprint mindset:</div>
+              <div className="flex gap-4 mt-2">
+                <button
+                  className="px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+                  onClick={() => {
+                    // Start Quarterly Sprint
+                    const today = new Date().toISOString().slice(0, 10);
+                    const m1 = new Date(today);
+                    m1.setMonth(m1.getMonth() + 1);
+                    const endDate = m1.toISOString().slice(0, 10);
+                    
+                    const readings = {
+                      suggestedMonthlySIP: plan?.suggestedSIP || 5000,
+                      salaryCycle: plan?.salaryCycle || "Monthly",
+                      sipMonth1: plan?.suggestedSIP || 5000,
+                      sipMonth2: (plan?.suggestedSIP || 5000) * 1.1,
+                      sipMonth3: (plan?.suggestedSIP || 5000) * 1.2,
+                      stepUpEnabled: true
+                    };
+                    
+                    const state = getChallengeState();
+                    state.progress = state.progress || {};
+                    // Mark monthly kickstart as completed_final
+                    state.progress["monthly_sip_kickstart"] = {
+                      ...state.progress["monthly_sip_kickstart"],
+                      status: "completed_final"
+                    };
+                    // Start quarterly sprint
+                    state.activeChallengeId = "quarterly_sip_discipline";
+                    const quarterly = getChallengeById("quarterly_sip_discipline");
+                    const qPlan = quarterly.getPlan(readings);
+                    state.progress["quarterly_sip_discipline"] = {
+                      startedAt: today,
+                      startDate: today,
+                      endDate: new Date(new Date(today).setMonth(new Date(today).getMonth() + 3)).toISOString().slice(0, 10),
+                      status: "active",
+                      plan: qPlan,
+                      phaseStatus: ["pending", "pending", "pending"],
+                      units: {}
+                    };
+                    saveChallengeState(state);
+                    router.push("/dashboard/sprints");
+                  }}
+                >
+                  Start Quarterly Sprint
+                </button>
+                <button
+                  className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50"
+                  onClick={() => {
+                    // Start Annual Sprint
+                    const today = new Date().toISOString().slice(0, 10);
+                    
+                    const readings = {
+                      suggestedMonthlySIP: plan?.suggestedSIP || 5000,
+                      salaryCycle: plan?.salaryCycle || "Monthly",
+                      stepUps: [1000, 1000, 1000, 1000]
+                    };
+                    
+                    const state = getChallengeState();
+                    state.progress = state.progress || {};
+                    // Mark monthly kickstart as completed_final
+                    state.progress["monthly_sip_kickstart"] = {
+                      ...state.progress["monthly_sip_kickstart"],
+                      status: "completed_final"
+                    };
+                    // Start annual sprint
+                    state.activeChallengeId = "annual_retirement_consistency";
+                    const annual = getChallengeById("annual_retirement_consistency");
+                    const aPlan = annual.getPlan(readings);
+                    state.progress["annual_retirement_consistency"] = {
+                      startedAt: today,
+                      startDate: today,
+                      endDate: new Date(new Date(today).setMonth(new Date(today).getMonth() + 12)).toISOString().slice(0, 10),
+                      status: "active",
+                      plan: aPlan,
+                      phaseStatus: ["pending", "pending", "pending", "pending"],
+                      units: {}
+                    };
+                    saveChallengeState(state);
+                    router.push("/dashboard/sprints");
+                  }}
+                >
+                  Start Annual Sprint
+                </button>
+              </div>
+            </>
+          ) : (
+            // Original completion UI for Quarterly and Annual sprints
+            <>
+              <div className="text-2xl font-bold text-emerald-700 mb-2">Challenge Completed <span className="align-middle">✅</span></div>
+              <div className="text-lg text-slate-900">
+                {challenge.id === "annual_retirement_consistency"
+                  ? <>Total SIP Invested: <span className="font-bold">₹{plan?.totalAnnualSIP}</span></>
+                  : <>Total SIP Invested: <span className="font-bold">₹{plan?.totalQuarterlySIP}</span></>}
+              </div>
+              <div className="text-base text-slate-700">
+                {challenge.id === "annual_retirement_consistency"
+                  ? "Duration completed: 12 months"
+                  : <>Duration completed: {challenge.durationLabel}</>}
+              </div>
+              <div className="text-base text-slate-700">
+                {challenge.id === "annual_retirement_consistency"
+                  ? "You successfully maintained SIP discipline for an entire year."
+                  : "Discipline maintained"}
+              </div>
+              <div className="flex gap-4 mt-2">
+                <button
+                  className="px-6 py-3 rounded-full bg-emerald-600 text-white font-semibold hover:bg-emerald-700"
+                  onClick={() => {
+                    // Start Next Sprint logic for Quarterly and Annual
+                    const state = getChallengeState();
+                    const prev = state.progress?.[challenge.id];
+                    if (!prev || !prev.endDate) {
+                      console.warn('No previous sprint data or end date found');
+                      return;
+                    }
+                    
+                    // Helper function to safely add months to a date string
+                    const addMonthsToDate = (dateStr, months) => {
+                      if (!dateStr) {
+                        console.error('Date string is empty or undefined');
+                        return null;
+                      }
+                      const d = new Date(dateStr);
+                      if (isNaN(d.getTime())) {
+                        console.error('Invalid date:', dateStr);
+                        return null;
+                      }
+                      d.setMonth(d.getMonth() + months);
+                      if (isNaN(d.getTime())) {
+                        console.error('Invalid date after adding months');
+                        return null;
+                      }
+                      return d.toISOString().slice(0, 10);
+                    };
+                    
+                    let newStartDate = prev.endDate;
+                    let newEndDate = newStartDate;
+                    let phaseLen = 1;
+                    let newPlan = null;
+                    if (challenge.id === "quarterly_sip_discipline") {
+                      newEndDate = addMonthsToDate(newStartDate, 3);
+                      if (!newEndDate) return;
+                      phaseLen = 3;
+                      // Generate new plan for new sprint instance
+                      if (challenge.getPlan) {
+                        newPlan = challenge.getPlan({
+                          ...plan,
+                          startDate: newStartDate,
+                          endDate: newEndDate
+                        });
+                      }
+                    } else if (challenge.id === "annual_retirement_consistency") {
+                      newEndDate = addMonthsToDate(newStartDate, 12);
+                      if (!newEndDate) return;
+                      phaseLen = 4;
+                      if (challenge.getPlan) {
+                        newPlan = challenge.getPlan({
+                          ...plan,
+                          startDate: newStartDate,
+                          endDate: newEndDate
+                        });
+                      }
+                    }
+                    // Create new sprint instance
+                    state.activeChallengeId = challenge.id;
+                    state.progress = state.progress || {};
+                    state.progress[challenge.id] = {
+                      startedAt: newStartDate,
                       startDate: newStartDate,
-                      endDate: newEndDate
-                    });
-                  }
-                } else if (challenge.id === "annual_retirement_consistency") {
-                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 12)).toISOString().slice(0, 10);
-                  phaseLen = 4;
-                  if (challenge.getPlan) {
-                    newPlan = challenge.getPlan({
-                      ...plan,
-                      startDate: newStartDate,
-                      endDate: newEndDate
-                    });
-                  }
-                } else {
-                  // fallback for monthly
-                  newEndDate = new Date(new Date(newStartDate).setMonth(new Date(newStartDate).getMonth() + 1)).toISOString().slice(0, 10);
-                  phaseLen = 1;
-                  if (challenge.getPlan) {
-                    newPlan = challenge.getPlan({
-                      ...plan,
-                      startDate: newStartDate,
-                      endDate: newEndDate
-                    });
-                  }
-                }
-                // Create new sprint instance
-                state.activeChallengeId = challenge.id;
-                state.progress = state.progress || {};
-                state.progress[challenge.id] = {
-                  startedAt: newStartDate,
-                  startDate: newStartDate,
-                  endDate: newEndDate,
-                  status: "active",
-                  plan: newPlan,
-                  phaseStatus: Array(phaseLen).fill("pending")
-                };
-                saveChallengeState(state);
-                setStatus("active");
-                setStartDate(newStartDate);
-                setEndDate(newEndDate);
-                setPhaseStatus(Array(phaseLen).fill("pending"));
-                setShowSuccess(false);
-                setUnits({});
-                // Set plan for new sprint instance
-                setPlan(newPlan);
-              }}
-            >
-              Start Next Sprint
-            </button>
-            <button className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
-              Switch Sprint Mindset
-            </button>
-          </div>
+                      endDate: newEndDate,
+                      status: "active",
+                      plan: newPlan,
+                      phaseStatus: Array(phaseLen).fill("pending"),
+                      units: {}
+                    };
+                    saveChallengeState(state);
+                    setStatus("active");
+                    setStartDate(newStartDate);
+                    setEndDate(newEndDate);
+                    setPhaseStatus(Array(phaseLen).fill("pending"));
+                    setShowSuccess(false);
+                    setUnits({});
+                    // Set plan for new sprint instance
+                    setPlan(newPlan);
+                  }}
+                >
+                  Start Next Sprint
+                </button>
+                <button className="px-6 py-3 rounded-full border border-emerald-600 text-emerald-700 font-semibold hover:bg-emerald-50" onClick={() => router.push('/dashboard/challenges')}>
+                  Switch Sprint Mindset
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
