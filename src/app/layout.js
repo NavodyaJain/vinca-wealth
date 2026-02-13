@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ['latin'] });
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${inter.className} bg-gray-50 h-full`}>
+      <body className={`${inter.className} bg-gray-50 h-full`} suppressHydrationWarning>
         <PremiumProvider>
           <CalculatorProvider>
             <div className="min-h-screen flex flex-col">

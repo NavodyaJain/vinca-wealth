@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }) {
   const isPerksPage = pathname?.startsWith('/dashboard/investor-hub/perks');
 
   return (
-    <div className="min-h-screen w-full bg-slate-50">
+    <div className="min-h-screen w-full bg-slate-50" suppressHydrationWarning>
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r pt-16">
         <DashboardSidebar />

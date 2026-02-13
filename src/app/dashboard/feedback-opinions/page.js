@@ -28,7 +28,7 @@ const validateFeedback = (type, state) => {
 
 const FeedbackOpinionsPage = () => {
   const [state, setState] = useState({
-    activeTab: 'feedback',
+    activeTab: 'opinions',
     // Feedback Section
     overallRating: 0,
     overallComment: '',
@@ -140,18 +140,20 @@ const FeedbackOpinionsPage = () => {
 
   // --- UI Components ---
   return (
-    <div className="feedback-opinions-root">
+    <div className="feedback-opinions-root" suppressHydrationWarning>
       <h3 className="page-header">Your reflection helps us strengthen the financial readiness experience we're building for you.</h3>
       <div className="tabs-bar">
         <button
           className={`tab-btn${state.activeTab === 'feedback' ? ' active' : ''}`}
           onClick={() => handleTabChange('feedback')}
+          suppressHydrationWarning
         >
           Review
         </button>
         <button
           className={`tab-btn${state.activeTab === 'opinions' ? ' active' : ''}`}
           onClick={() => handleTabChange('opinions')}
+          suppressHydrationWarning
         >
           Raise
         </button>
@@ -188,9 +190,8 @@ const FeedbackOpinionsPage = () => {
           --inactive: #9CA3AF;
         }
         .feedback-opinions-root {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 32px 16px 48px 16px;
+          width: 100%;
+          padding: 32px 24px 48px 24px;
           font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
         }
         .page-header {
@@ -814,6 +815,7 @@ function OpinionsSection({ state, setState, handleVote, handleProblemSubmit }) {
             onChange={e => setOpinionText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={state.loading}
+            suppressHydrationWarning
           />
           <button
             className="opinion-send-btn"
@@ -821,6 +823,7 @@ function OpinionsSection({ state, setState, handleVote, handleProblemSubmit }) {
             disabled={!opinionText.trim() || state.loading}
             title="Send opinion"
             aria-label="Send"
+            suppressHydrationWarning
           >
             <Send size={18} />
           </button>
