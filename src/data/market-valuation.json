@@ -1,0 +1,59 @@
+{
+  "current_date": "2025-02-13",
+  "nifty_50": {
+    "current_pe": 22.5,
+    "historical_average_pe": 20.0,
+    "cheap_threshold": 16.0,
+    "fair_lower": 18.0,
+    "fair_upper": 22.0,
+    "expensive_threshold": 25.0,
+    "current_zone": "fair",
+    "zone_rationale": "Nifty 50 PE is near historical average"
+  },
+  "sensex": {
+    "current_pe": 24.3,
+    "historical_average_pe": 21.5,
+    "cheap_threshold": 17.0,
+    "fair_lower": 19.5,
+    "fair_upper": 24.0,
+    "expensive_threshold": 27.0,
+    "current_zone": "fair",
+    "zone_rationale": "Sensex PE is slightly above average but within normal range"
+  },
+  "gold": {
+    "current_valuation": "above_average",
+    "historical_basis": "Price-to-inflation trend",
+    "current_zone": "expensive",
+    "zone_rationale": "Gold priced above long-term historical average",
+    "current_price": "₹62,400",
+    "price_change_percent": 3.2,
+    "price_change_direction": "up"
+  },
+  "silver": {
+    "current_valuation": "near_average",
+    "historical_basis": "Price-to-inflation trend",
+    "current_zone": "fair",
+    "zone_rationale": "Silver priced near long-term historical average",
+    "current_price": "₹73,850",
+    "price_change_percent": 1.5,
+    "price_change_direction": "up"
+  },
+  "zones": {
+    "cheap": {
+      "label": "Cheap",
+      "description": "Markets priced lower than long-term historical averages",
+      "color": "emerald"
+    },
+    "fair": {
+      "label": "Fair",
+      "description": "Markets near long-term historical average PE",
+      "color": "slate"
+    },
+    "expensive": {
+      "label": "Expensive",
+      "description": "Markets priced higher than long-term historical averages",
+      "color": "amber"
+    }
+  },
+  "disclaimer": "Valuations describe market context, not future returns. This is educational information only and does not constitute investment advice or market predictions."
+}

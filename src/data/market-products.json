@@ -1,0 +1,222 @@
+[
+  {
+    "id": "equity-mutual-funds",
+    "category": "Long-term Wealth",
+    "product_group": "Equity Mutual Funds",
+    "description": "Funds that invest in company shares for long-term growth",
+    "time_horizon": "10+ years",
+    "risk_level": "High",
+    "purpose": "Wealth creation",
+    "return_hint": "Historically ~10–14% over long periods",
+    "status": "active"
+  },
+  {
+    "id": "growth-stocks",
+    "category": "Long-term Wealth",
+    "product_group": "Direct Equity",
+    "description": "Ownership stakes in companies with growth potential",
+    "time_horizon": "10+ years",
+    "risk_level": "High",
+    "purpose": "Long-term capital appreciation",
+    "return_hint": "Historically variable; depends on company performance",
+    "status": "active"
+  },
+  {
+    "id": "balanced-funds",
+    "category": "Long-term Wealth",
+    "product_group": "Balanced/Hybrid Funds",
+    "description": "Mix of stocks and bonds for moderate growth with lower volatility",
+    "time_horizon": "7+ years",
+    "risk_level": "Medium",
+    "purpose": "Growth with partial stability",
+    "return_hint": "Historically ~8–10% over long periods",
+    "status": "active"
+  },
+  {
+    "id": "international-funds",
+    "category": "Global Exposure",
+    "product_group": "International Funds",
+    "description": "Invest in stocks and bonds of companies outside India",
+    "time_horizon": "10+ years",
+    "risk_level": "High",
+    "purpose": "Portfolio diversification globally",
+    "return_hint": "Historically ~10–12% in USD terms; INR conversion varies",
+    "status": "active"
+  },
+  {
+    "id": "gold-funds",
+    "category": "Capital Protection",
+    "product_group": "Gold/Precious Metals",
+    "description": "Tracks price of gold; provides hedge against inflation",
+    "time_horizon": "3+ years",
+    "risk_level": "Medium",
+    "purpose": "Inflation protection; diversification",
+    "return_hint": "Generally tracks gold price; no fixed returns",
+    "status": "active"
+  },
+  {
+    "id": "bonds-govt-securities",
+    "category": "Regular Income",
+    "product_group": "Government Securities & Bonds",
+    "description": "Fixed-income debt issued by government; very low default risk",
+    "time_horizon": "1-10 years",
+    "risk_level": "Low",
+    "purpose": "Stable income with safety",
+    "return_hint": "Typically 5–7% depending on maturity",
+    "status": "active"
+  },
+  {
+    "id": "fixed-deposits",
+    "category": "Regular Income",
+    "product_group": "Fixed Deposits",
+    "description": "Bank deposits with fixed interest rate and fixed tenure",
+    "time_horizon": "1-5 years",
+    "risk_level": "Very Low",
+    "purpose": "Safe, predictable income",
+    "return_hint": "Typically 4–7% depending on tenure and bank",
+    "status": "active"
+  },
+  {
+    "id": "dividend-funds",
+    "category": "Regular Income",
+    "product_group": "Dividend-Focused Funds",
+    "description": "Invest in stocks that pay dividends; distributes periodic income",
+    "time_horizon": "5+ years",
+    "risk_level": "Medium-High",
+    "purpose": "Regular income with growth",
+    "return_hint": "Historically ~6–8% yield plus capital growth",
+    "status": "active"
+  },
+  {
+    "id": "debt-funds",
+    "category": "Regular Income",
+    "product_group": "Debt Funds",
+    "description": "Invest in bonds and fixed-income instruments",
+    "time_horizon": "1-5 years",
+    "risk_level": "Low-Medium",
+    "purpose": "Regular income with moderate safety",
+    "return_hint": "Typically 5–7% depending on maturity profile",
+    "status": "active"
+  },
+  {
+    "id": "elss-funds",
+    "category": "Tax Saving",
+    "product_group": "ELSS Mutual Funds",
+    "description": "Equity-linked savings scheme with 3-year lock-in; tax benefits under 80C",
+    "time_horizon": "3+ years",
+    "risk_level": "Medium-High",
+    "purpose": "Tax savings with growth potential",
+    "return_hint": "Historically ~10–12% over lock-in period",
+    "status": "active"
+  },
+  {
+    "id": "national-pension-scheme",
+    "category": "Tax Saving",
+    "product_group": "National Pension System (NPS)",
+    "description": "Government-backed retirement savings with tax benefits",
+    "time_horizon": "15+ years",
+    "risk_level": "Low-Medium",
+    "purpose": "Retirement planning with tax deductions",
+    "return_hint": "Historically ~7–9% depending on allocation",
+    "status": "active"
+  },
+  {
+    "id": "sukanya-samriddhi",
+    "category": "Tax Saving",
+    "product_group": "Sukanya Samriddhi Yojana",
+    "description": "Government scheme for girl child education and marriage savings",
+    "time_horizon": "21 years (deposit until age 14)",
+    "risk_level": "Very Low",
+    "purpose": "Child education/marriage savings with guaranteed returns",
+    "return_hint": "Currently ~8% (rates reviewed yearly)",
+    "status": "active"
+  },
+  {
+    "id": "ppf",
+    "category": "Tax Saving",
+    "product_group": "Public Provident Fund (PPF)",
+    "description": "Government-backed savings scheme with tax benefits and guaranteed returns",
+    "time_horizon": "15 years (extendable)",
+    "risk_level": "Very Low",
+    "purpose": "Long-term tax-advantaged savings",
+    "return_hint": "Currently ~7.1% (rates reviewed quarterly)",
+    "status": "active"
+  },
+  {
+    "id": "small-cap-funds",
+    "category": "High Growth",
+    "product_group": "Small Cap Funds",
+    "description": "Invest in smaller, emerging companies with high growth potential",
+    "time_horizon": "10+ years",
+    "risk_level": "Very High",
+    "purpose": "Aggressive growth; high volatility expected",
+    "return_hint": "Historically ~12–16% but with high fluctuation",
+    "status": "active"
+  },
+  {
+    "id": "mid-cap-funds",
+    "category": "High Growth",
+    "product_group": "Mid Cap Funds",
+    "description": "Invest in medium-sized companies; balance between growth and stability",
+    "time_horizon": "7+ years",
+    "risk_level": "High",
+    "purpose": "Growth with moderate volatility",
+    "return_hint": "Historically ~11–13% over long periods",
+    "status": "active"
+  },
+  {
+    "id": "thematic-sector-funds",
+    "category": "High Growth",
+    "product_group": "Thematic & Sector Funds",
+    "description": "Concentrate on specific industries (banking, IT, pharma, etc.)",
+    "time_horizon": "5+ years",
+    "risk_level": "High",
+    "purpose": "Concentrated exposure to growing sectors",
+    "return_hint": "Highly variable; depends on sector performance",
+    "status": "active"
+  },
+  {
+    "id": "crypto-tokens",
+    "category": "High Growth",
+    "product_group": "Cryptocurrency",
+    "description": "Digital assets based on blockchain technology",
+    "time_horizon": "Highly speculative",
+    "risk_level": "Very High",
+    "purpose": "Speculative growth; diversification from traditional assets",
+    "return_hint": "Extremely volatile; no historical norms apply",
+    "status": "active"
+  },
+  {
+    "id": "reverse-mortgages",
+    "category": "Capital Protection",
+    "product_group": "Reverse Mortgages",
+    "description": "Property-backed loans for seniors; convert home equity into regular income",
+    "time_horizon": "Lifetime",
+    "risk_level": "Low",
+    "purpose": "Retirement income using home asset",
+    "return_hint": "Returns depend on interest rates; typically 5–7%",
+    "status": "active"
+  },
+  {
+    "id": "insurance-linked-funds",
+    "category": "Capital Protection",
+    "product_group": "Insurance-Linked Funds",
+    "description": "Combine insurance protection with investment growth",
+    "time_horizon": "10-20 years",
+    "risk_level": "Low-Medium",
+    "purpose": "Protection + wealth creation",
+    "return_hint": "Typically 6–9% depending on component allocation",
+    "status": "active"
+  },
+  {
+    "id": "liquid-funds",
+    "category": "Capital Protection",
+    "product_group": "Liquid Funds",
+    "description": "Invest in short-term debt instruments; highly liquid and safe",
+    "time_horizon": "Days to months",
+    "risk_level": "Very Low",
+    "purpose": "Emergency fund; parking cash safely",
+    "return_hint": "Typically 4–6% depending on money market rates",
+    "status": "active"
+  }
+]

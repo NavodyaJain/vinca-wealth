@@ -19,7 +19,9 @@ import {
   Timer,
   Footprints,
   MessageSquare,
-  Zap
+  Zap,
+  Globe,
+  TrendingUp
 } from 'lucide-react';
 import { usePremium } from '@/lib/premium';
 import { getJoinedClubIds } from '@/lib/userJourneyStorage';
@@ -78,6 +80,20 @@ export default function DashboardSidebar({ onNav }) {
       path: '/dashboard/investor-hub/perks',
       icon: <Gift className="h-5 w-5" />
     },
+
+       {
+          id: 'market-products',
+          label: 'Market Products',
+          path: '/dashboard/market-products',
+          icon: <Globe className="h-4 w-4" />
+        },
+        {
+          id: 'market-valuation',
+          label: 'Market Valuation',
+          path: '/dashboard/market-valuation',
+          icon: <TrendingUp className="h-4 w-4" />
+        },
+
         {
           id: 'resources',
           label: 'Learning',
