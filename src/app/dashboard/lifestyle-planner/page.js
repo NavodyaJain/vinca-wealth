@@ -351,7 +351,8 @@ export default function LifestylePlannerPage() {
                       {premiumData.tier === 'Comfortable' && 'Comfort upgrades and hobbies with flexibility.'}
                       {premiumData.tier === 'Premium' && 'Experiences, travel, and higher flexibility.'}
                     </div>
-                    <div className="text-sm text-slate-700">Selected Monthly Expense: <span className="font-semibold text-slate-900">{formatINR(premiumData.targetMonthlyToday)}</span></div>
+                    <div className="text-sm text-slate-700">Monthly Expense at Retirement: <span className="font-semibold text-slate-900">{formatINR(premiumData.requiredMonthlyAtRetirement)}</span></div>
+                    <div className="text-xs text-slate-500 mt-1">Shown after adjusting today's lifestyle cost for inflation till retirement.</div>
                   </div>
                 </div>
               </div>
